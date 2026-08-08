@@ -197,6 +197,8 @@ const authSlice = createSlice({
       .addCase(registerUser.fulfilled, (state, action) => {
         state.isLoading = false;
         state.successMessage = action.payload.message;
+        if (action.payload.token) state.token = action.payload.token;
+        if (action.payload.user) state.user = action.payload.user;
         state.pendingToken = action.payload.pendingToken || state.pendingToken;
         if (action.payload.user && typeof window !== 'undefined') {
           localStorage.setItem('tichi_user', JSON.stringify(action.payload.user));
