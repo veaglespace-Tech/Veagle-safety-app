@@ -59,7 +59,7 @@ export const BottomNavigation = () => {
     setMounted(true);
   }, []);
 
-  if (!mounted || isSuperAdmin) return null;
+  if (!mounted || isSuperAdmin || isParent || isOrganization) return null;
 
   return (
     <>

@@ -73,17 +73,9 @@ export const DesktopSidebar = () => {
     { path: '/subscription', label: 'Subscription', icon: ShieldCheck, desc: 'Active Plan & Validity' },
   ];
 
-  const parentNavItems = [
-    { path: '/parent', label: 'Child Safety Monitor', icon: ShieldCheck, desc: 'Live Child GPS & Safety' },
-    { path: '/parent', label: 'Linked Children', icon: Users, desc: 'Child Guardian Overview' },
-    { path: '/profile', label: 'My Profile', icon: User, desc: 'Parent Account Details' },
-  ];
+  const parentNavItems = [];
 
-  const orgNavItems = [
-    { path: '/organization', label: 'Safety Monitor', icon: ShieldCheck, desc: 'Member Live Safety' },
-    { path: '/organization', label: 'Member Directory', icon: Users, desc: 'Enrolled Members' },
-    { path: '/profile', label: 'My Profile', icon: User, desc: 'Organization Profile' },
-  ];
+  const orgNavItems = [];
 
   const adminNavItems = [
     { path: '/admin', label: 'Emergency Command', icon: AlertOctagon, desc: 'Active SOS & Incident HQ' },
@@ -195,23 +187,7 @@ export const DesktopSidebar = () => {
 
         {/* FOOTER USER PROFILE AREA */}
         <div className="px-5 py-5 border-t border-[#FFCCE1]/60 bg-white/70 backdrop-blur-md space-y-3">
-          {isParent ? (
-            <Link
-              href="/parent"
-              className="flex items-center justify-center space-x-2.5 w-full bg-gradient-to-r from-[#FF5C8A] via-[#FF2A6D] to-[#E01A4F] text-white font-black px-4 py-3.5 rounded-2xl text-xs shadow-md shadow-[#FF2A6D]/25 hover:shadow-lg border border-white/30 uppercase tracking-wider"
-            >
-              <ShieldCheck className="w-4 h-4" />
-              <span>CHILD SAFETY MONITOR</span>
-            </Link>
-          ) : isOrganization ? (
-            <Link
-              href="/organization"
-              className="flex items-center justify-center space-x-2.5 w-full bg-gradient-to-r from-[#FF5C8A] via-[#FF2A6D] to-[#E01A4F] text-white font-black px-4 py-3.5 rounded-2xl text-xs shadow-md shadow-[#FF2A6D]/25 hover:shadow-lg border border-white/30 uppercase tracking-wider"
-            >
-              <ShieldCheck className="w-4 h-4" />
-              <span>ORGANIZATION MONITOR</span>
-            </Link>
-          ) : (
+          {!isParent && !isOrganization && (
             <Link
               href={isSuperAdmin ? '/admin?tab=overview' : (activeSession ? '/active-sos' : '/dashboard')}
               className="flex items-center justify-center space-x-2.5 w-full bg-gradient-to-r from-[#FF5C8A] via-[#FF2A6D] to-[#E01A4F] text-white font-black px-4 py-3.5 rounded-2xl text-xs shadow-md shadow-[#FF2A6D]/25 hover:shadow-lg hover:shadow-[#FF2A6D]/35 hover:scale-[1.01] active:scale-95 transition-all uppercase tracking-wider border border-white/30"
