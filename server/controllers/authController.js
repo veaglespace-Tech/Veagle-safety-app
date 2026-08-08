@@ -141,7 +141,7 @@ export const register = asyncHandler(async (req, res) => {
       emergencyContactPhone: emergencyContactPhone || null,
       parentEmail: parentEmail ? parentEmail.trim().toLowerCase() : null,
       medicalNotes: medicalNotes || null,
-      isEmailVerified: assignedRole === 'SUPER_ADMIN',
+      isEmailVerified: assignedRole !== 'USER',
       emailOtp: assignedRole === 'USER' ? otp : null,
       emailOtpExpiresAt: assignedRole === 'USER' ? otpExpires : null,
       subscriptionStatus: assignedRole === 'SUPER_ADMIN' ? 'ACTIVE' : 'INACTIVE',
@@ -169,6 +169,7 @@ export const register = asyncHandler(async (req, res) => {
   if (assignedRole === 'USER') {
     const pendingRegistrationToken = jwt.sign(
       {
+        id: user.id,
         userId: user.id,
         fullName: user.fullName,
         email: user.email,
@@ -198,15 +199,15 @@ export const register = asyncHandler(async (req, res) => {
     });
   }
 
-  // SuperAdmin gets immediate DB creation & JWT login
+  // Non-USER roles (SuperAdmin, Organization, Parent) get immediate JWT login
   const token = jwt.sign(
-    { userId: user.id, role: user.role, email: user.email },
+    { id: user.id, userId: user.id, role: user.role, email: user.email },
     config.jwt.secret,
     { expiresIn: config.jwt.expiresIn }
   );
 
   res.status(201).json({
-    message: 'SuperAdmin account registered successfully',
+    message: `${user.role} account registered successfully`,
     token,
     user: {
       id: user.id,
@@ -480,8 +481,13 @@ export const login = asyncHandler(async (req, res) => {
  * Get Profile of Logged-in User
  */
 export const getProfile = asyncHandler(async (req, res) => {
+  const targetId = req.user?.id || req.user?.userId;
+  if (!targetId) {
+    return res.status(401).json({ error: 'Invalid user token payload' });
+  }
+
   const user = await prisma.user.findUnique({
-    where: { id: req.user.id },
+    where: { id: targetId },
     select: {
       id: true,
       fullName: true,

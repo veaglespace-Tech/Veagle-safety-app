@@ -1,22 +1,31 @@
 import { createSlice, createAsyncThunk } from '@reduxjs/toolkit';
 import { authApi } from '../api/authApi.js';
 
-const initialToken = typeof window !== 'undefined' ? localStorage.getItem('tichi_token') : null;
-const initialRegToken = typeof window !== 'undefined' ? localStorage.getItem('tichi_reg_token') : null;
-const initialPendingToken = typeof window !== 'undefined' ? localStorage.getItem('tichi_pending_token') : null;
+const initialUser = typeof window !== 'undefined' ? (() => {
+  try {
+    const item = localStorage.getItem('tichi_user');
+    return item ? JSON.parse(item) : null;
+  } catch (e) { return null; }
+})() : null;
 
 export const fetchUser = createAsyncThunk('auth/fetchUser', async (_, { rejectWithValue }) => {
   if (typeof window !== 'undefined' && !localStorage.getItem('tichi_token')) {
-    return rejectWithValue('No auth token');
+    return rejectWithValue({ status: 401, error: 'No auth token' });
   }
   try {
     const data = await authApi.getProfile();
     return data.user;
   } catch (err) {
-    if (typeof window !== 'undefined') {
-      localStorage.removeItem('tichi_token');
+    const status = err?.response?.status;
+    const errorMsg = err?.response?.data?.error || 'Session expired';
+    if (status === 401 || status === 403) {
+      if (typeof window !== 'undefined') {
+        localStorage.removeItem('tichi_token');
+        localStorage.removeItem('tichi_user');
+      }
+      return rejectWithValue({ status, error: errorMsg });
     }
-    return rejectWithValue(err.response?.data?.error || 'Session expired');
+    return rejectWithValue({ status: status || 500, error: errorMsg, isNetworkError: true });
   }
 });
 
@@ -25,6 +34,9 @@ export const loginUser = createAsyncThunk('auth/loginUser', async ({ email, pass
     const data = await authApi.login({ email, password });
     if (data.token) {
       localStorage.setItem('tichi_token', data.token);
+    }
+    if (data.user) {
+      localStorage.setItem('tichi_user', JSON.stringify(data.user));
     }
     return data;
   } catch (err) {
@@ -39,6 +51,12 @@ export const loginUser = createAsyncThunk('auth/loginUser', async ({ email, pass
 export const registerUser = createAsyncThunk('auth/registerUser', async (formData, { rejectWithValue }) => {
   try {
     const data = await authApi.register(formData);
+    if (data.token && typeof window !== 'undefined') {
+      localStorage.setItem('tichi_token', data.token);
+    }
+    if (data.user && typeof window !== 'undefined') {
+      localStorage.setItem('tichi_user', JSON.stringify(data.user));
+    }
     if (data.pendingToken && typeof window !== 'undefined') {
       localStorage.setItem('tichi_pending_token', data.pendingToken);
     }
@@ -85,7 +103,7 @@ const authSlice = createSlice({
   name: 'auth',
   initialState: {
     token: initialToken,
-    user: null,
+    user: initialUser,
     registrationToken: initialRegToken,
     pendingToken: initialPendingToken,
     isLoading: false,
@@ -136,11 +154,13 @@ const authSlice = createSlice({
       })
       .addCase(fetchUser.rejected, (state, action) => {
         state.isLoading = false;
-        state.token = null;
-        state.user = null;
-        if (typeof window !== 'undefined') {
-          localStorage.removeItem('tichi_token');
-          localStorage.removeItem('tichi_user');
+        if (action.payload?.status === 401 || action.payload?.status === 403) {
+          state.token = null;
+          state.user = null;
+          if (typeof window !== 'undefined') {
+            localStorage.removeItem('tichi_token');
+            localStorage.removeItem('tichi_user');
+          }
         }
       })
 

@@ -31,6 +31,8 @@ export const AppLayout = ({ children, fullScreen = false }) => {
       '/settings',
       '/profile',
       '/admin',
+      '/organization',
+      '/parent',
     ];
 
     const isProtected = protectedPaths.some((path) => pathname === path || pathname.startsWith(path + '/'));

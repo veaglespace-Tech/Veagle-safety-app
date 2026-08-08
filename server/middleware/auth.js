@@ -11,7 +11,12 @@ export const authenticateToken = (req, res, next) => {
 
   try {
     const decoded = jwt.verify(token, config.jwtSecret);
-    req.user = decoded;
+    const resolvedId = decoded.id || decoded.userId;
+    req.user = {
+      ...decoded,
+      id: resolvedId,
+      userId: resolvedId,
+    };
     next();
   } catch (err) {
     return res.status(403).json({ error: 'Invalid or expired session token' });
