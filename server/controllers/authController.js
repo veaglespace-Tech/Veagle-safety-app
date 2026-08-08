@@ -43,55 +43,37 @@ export const register = asyncHandler(async (req, res) => {
     return res.status(400).json({ error: 'Email Address and Password are required.' });
   }
 
-  // Field Validations
-  if (assignedRole === 'SUPER_ADMIN' || assignedRole === 'ORGANIZATION' || assignedRole === 'PARENT') {
-    if (!cleanFullName || !cleanEmail || !cleanPhone || !password) {
-      return res.status(400).json({ error: 'Full Name, Email, Mobile Phone, and Password are required.' });
-    }
-  } else {
-    // USER requires all essential details
-    if (
-      !cleanFullName ||
-      !cleanEmail ||
-      !cleanPhone ||
-      !password ||
-      !bloodGroup ||
-      !address ||
-      !city ||
-      !state ||
-      !pincode ||
-      !emergencyContactName ||
-      !emergencyContactPhone
-    ) {
-      return res.status(400).json({
-        error: 'Please fill in all required fields: Full Name, Email, Mobile Number, Password, Blood Group, Address, City, State, Pincode, Guardian Name, and Guardian Phone.',
-      });
-    }
+  // Universal Field Validations for ALL Roles (USER, PARENT, ORGANIZATION, SUPER_ADMIN)
+  if (!cleanFullName || !cleanEmail || !cleanPhone || !password) {
+    return res.status(400).json({ error: 'Please fill in all required fields: Full Name, Email, Mobile Phone, and Password.' });
+  }
 
-    // Email format validation
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    if (!emailRegex.test(cleanEmail)) {
-      return res.status(400).json({ error: 'Please enter a valid email address.' });
-    }
+  // Email format validation
+  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+  if (!emailRegex.test(cleanEmail)) {
+    return res.status(400).json({ error: 'Please enter a valid email address.' });
+  }
 
-    if (parentEmail && typeof parentEmail === 'string' && parentEmail.trim()) {
-      if (!emailRegex.test(parentEmail.trim())) {
-        return res.status(400).json({ error: 'Please enter a valid Parent Email address.' });
-      }
+  if (parentEmail && typeof parentEmail === 'string' && parentEmail.trim()) {
+    if (!emailRegex.test(parentEmail.trim())) {
+      return res.status(400).json({ error: 'Please enter a valid Parent Email address.' });
     }
+  }
 
-    // Mobile number validation (10 digits Indian format)
-    const phoneRegex = /^[6-9]\d{9}$/;
-    if (!phoneRegex.test(cleanPhone)) {
-      return res.status(400).json({ error: 'Please enter a valid 10-digit mobile number starting with 6, 7, 8, or 9.' });
-    }
+  // Mobile number validation (10 digits Indian format)
+  const phoneRegex = /^[6-9]\d{9}$/;
+  if (!phoneRegex.test(cleanPhone)) {
+    return res.status(400).json({ error: 'Please enter a valid 10-digit mobile number starting with 6, 7, 8, or 9.' });
+  }
 
-    const cleanEmergencyPhone = emergencyContactPhone ? emergencyContactPhone.replace(/\D/g, '') : '';
-    if (!phoneRegex.test(cleanEmergencyPhone)) {
+  if (emergencyContactPhone) {
+    const cleanEmergencyPhone = emergencyContactPhone.replace(/\D/g, '');
+    if (cleanEmergencyPhone && !phoneRegex.test(cleanEmergencyPhone)) {
       return res.status(400).json({ error: 'Please enter a valid 10-digit mobile number for Emergency Guardian Contact.' });
     }
+  }
 
-    // Pincode validation (6 digits)
+  if (pincode && pincode.trim() && pincode !== '411001') {
     const pincodeRegex = /^\d{6}$/;
     if (!pincodeRegex.test(pincode.trim())) {
       return res.status(400).json({ error: 'Please enter a valid 6-digit Pincode.' });

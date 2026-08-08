@@ -159,43 +159,8 @@ function UserAuthForm() {
       return true;
     }
 
-    if (selectedRole === 'PARENT' || selectedRole === 'ORGANIZATION') {
-      if (!fullName.trim() || !email.trim() || !phone.trim() || !password) {
-        setValidationError('Please fill in all required fields: Full Name, Email, Phone, and Password.');
-        return false;
-      }
-      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-      if (!emailRegex.test(email.trim())) {
-        setValidationError('Please enter a valid email address.');
-        return false;
-      }
-      const phoneRegex = /^[6-9]\d{9}$/;
-      const cleanPhone = phone.replace(/\D/g, '');
-      if (!phoneRegex.test(cleanPhone)) {
-        setValidationError('Please enter a valid 10-digit mobile number starting with 6, 7, 8, or 9.');
-        return false;
-      }
-      if (password.length < 6) {
-        setValidationError('Password must be at least 6 characters long.');
-        return false;
-      }
-      return true;
-    }
-
-    if (
-      !fullName.trim() ||
-      !email.trim() ||
-      !phone.trim() ||
-      !password ||
-      !bloodGroup ||
-      !address.trim() ||
-      !city.trim() ||
-      !state.trim() ||
-      !pincode.trim() ||
-      !emergencyContactName.trim() ||
-      !emergencyContactPhone.trim()
-    ) {
-      setValidationError('Please fill in all required fields marked with *.');
+    if (!fullName.trim() || !email.trim() || !phone.trim() || !password) {
+      setValidationError('Please fill in all required fields: Full Name, Email, Mobile Number, and Password.');
       return false;
     }
 
@@ -205,7 +170,7 @@ function UserAuthForm() {
       return false;
     }
 
-    if (parentEmail.trim() && !emailRegex.test(parentEmail.trim())) {
+    if (parentEmail && parentEmail.trim() && !emailRegex.test(parentEmail.trim())) {
       setValidationError('Please enter a valid Parent Email address.');
       return false;
     }
@@ -214,18 +179,6 @@ function UserAuthForm() {
     const cleanPhone = phone.replace(/\D/g, '');
     if (!phoneRegex.test(cleanPhone)) {
       setValidationError('Please enter a valid 10-digit mobile number starting with 6, 7, 8, or 9.');
-      return false;
-    }
-
-    const cleanGuardianPhone = emergencyContactPhone.replace(/\D/g, '');
-    if (!phoneRegex.test(cleanGuardianPhone)) {
-      setValidationError('Please enter a valid 10-digit mobile number for Guardian Emergency Contact.');
-      return false;
-    }
-
-    const pincodeRegex = /^\d{6}$/;
-    if (!pincodeRegex.test(pincode.trim())) {
-      setValidationError('Please enter a valid 6-digit Pincode.');
       return false;
     }
 

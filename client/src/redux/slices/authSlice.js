@@ -66,7 +66,8 @@ export const registerUser = createAsyncThunk('auth/registerUser', async (formDat
     }
     return data;
   } catch (err) {
-    return rejectWithValue(err.response?.data?.error || 'Registration failed');
+    const errorMsg = err.response?.data?.error || err.response?.data?.message || err.message || 'Registration failed';
+    return rejectWithValue(errorMsg);
   }
 });
 
