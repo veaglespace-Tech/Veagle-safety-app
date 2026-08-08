@@ -207,57 +207,63 @@ export const register = asyncHandler(async (req, res) => {
     }
   }
 
-  if (assignedRole === 'USER') {
-    const pendingRegistrationToken = jwt.sign(
-      {
+  try {
+    if (assignedRole === 'USER') {
+      const pendingRegistrationToken = jwt.sign(
+        {
+          id: user.id,
+          userId: user.id,
+          fullName: user.fullName,
+          email: user.email,
+          phone: user.phone,
+          parentEmail: user.parentEmail,
+          role: 'USER',
+          otp,
+          otpExpiresAt: otpExpires.getTime(),
+          type: 'PENDING_REGISTRATION',
+        },
+        config.jwt.secret,
+        { expiresIn: '2h' }
+      );
+
+      try {
+        await sendEmailVerificationOtp({ recipientEmail: cleanEmail, userName: cleanFullName, otp });
+      } catch (emailErr) {
+        console.warn('[Register Email Notice] Verification email notice:', emailErr.message);
+      }
+
+      return res.status(200).json({
+        message: `OTP code sent to ${cleanEmail}. (OTP Code: ${otp})`,
+        requiresVerification: true,
+        pendingToken: pendingRegistrationToken,
+        email: cleanEmail,
+        debugOtp: otp,
+      });
+    }
+
+    // Non-USER roles (SuperAdmin, Organization, Parent) get immediate JWT login
+    const token = jwt.sign(
+      { id: user.id, userId: user.id, role: user.role, email: user.email },
+      config.jwt.secret,
+      { expiresIn: config.jwt.expiresIn }
+    );
+
+    return res.status(201).json({
+      message: `${user.role} account registered successfully`,
+      token,
+      user: {
         id: user.id,
-        userId: user.id,
         fullName: user.fullName,
         email: user.email,
         phone: user.phone,
-        parentEmail: user.parentEmail,
-        role: 'USER',
-        otp,
-        otpExpiresAt: otpExpires.getTime(),
-        type: 'PENDING_REGISTRATION',
+        role: user.role,
+        subscriptionStatus: user.subscriptionStatus,
       },
-      config.jwt.secret,
-      { expiresIn: '2h' }
-    );
-
-    try {
-      await sendEmailVerificationOtp({ recipientEmail: email, userName: fullName, otp });
-    } catch (emailErr) {
-      console.warn('[Register Email Notice] Verification email notice:', emailErr.message);
-    }
-
-    return res.status(200).json({
-      message: `OTP code sent to ${email}. (OTP Code: ${otp})`,
-      requiresVerification: true,
-      pendingToken: pendingRegistrationToken,
-      email,
-      debugOtp: otp,
     });
+  } catch (err) {
+    console.error('❌ [Register Controller Error]:', err);
+    return res.status(500).json({ error: err.message || 'Registration processing failed. Please try again.' });
   }
-
-  // Non-USER roles (SuperAdmin, Organization, Parent) get immediate JWT login
-  const token = jwt.sign(
-    { id: user.id, userId: user.id, role: user.role, email: user.email },
-    config.jwt.secret,
-    { expiresIn: config.jwt.expiresIn }
-  );
-
-  res.status(201).json({
-    message: `${user.role} account registered successfully`,
-    token,
-    user: {
-      id: user.id,
-      fullName: user.fullName,
-      email: user.email,
-      role: user.role,
-      subscriptionStatus: user.subscriptionStatus,
-    },
-  });
 });
 
 /**
