@@ -715,14 +715,61 @@ function UserAuthForm() {
               ) : (
                 /* LOGIN FORM */
                 <div className="space-y-4">
+                  {/* ROLE SELECTION SWITCHER FOR LOGIN */}
+                  <div className="space-y-1.5">
+                    <label className="block text-[11px] font-black uppercase text-[#FF2A6D] tracking-wider text-left">
+                      Select Account Type / Role
+                    </label>
+                    <div className="grid grid-cols-3 gap-2 bg-[#FFF0F3] p-1.5 rounded-2xl border-1.5 border-[#FFCCE1]">
+                      <button
+                        type="button"
+                        onClick={() => setSelectedRole('USER')}
+                        className={`py-2 px-2 text-xs font-black rounded-xl transition-all flex items-center justify-center space-x-1 cursor-pointer ${
+                          selectedRole === 'USER'
+                            ? 'bg-gradient-to-r from-[#FF5C8A] to-[#FF2A6D] text-white shadow-sm'
+                            : 'text-[#684E67] hover:text-[#FF2A6D]'
+                        }`}
+                      >
+                        <UserIcon className="w-3.5 h-3.5" />
+                        <span className="truncate">Personal</span>
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setSelectedRole('PARENT')}
+                        className={`py-2 px-2 text-xs font-black rounded-xl transition-all flex items-center justify-center space-x-1 cursor-pointer ${
+                          selectedRole === 'PARENT'
+                            ? 'bg-gradient-to-r from-[#FF5C8A] to-[#FF2A6D] text-white shadow-sm'
+                            : 'text-[#684E67] hover:text-[#FF2A6D]'
+                        }`}
+                      >
+                        <Users className="w-3.5 h-3.5" />
+                        <span className="truncate">Parent</span>
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setSelectedRole('ORGANIZATION')}
+                        className={`py-2 px-2 text-xs font-black rounded-xl transition-all flex items-center justify-center space-x-1 cursor-pointer ${
+                          selectedRole === 'ORGANIZATION'
+                            ? 'bg-gradient-to-r from-[#FF5C8A] to-[#FF2A6D] text-white shadow-sm'
+                            : 'text-[#684E67] hover:text-[#FF2A6D]'
+                        }`}
+                      >
+                        <Building className="w-3.5 h-3.5" />
+                        <span className="truncate">Org</span>
+                      </button>
+                    </div>
+                  </div>
+
                   <div>
-                    <label className="block text-[#684E67] font-extrabold mb-1">Email Address *</label>
+                    <label className="block text-[#684E67] font-extrabold mb-1">
+                      {selectedRole === 'ORGANIZATION' ? 'Organization Admin Email *' : selectedRole === 'PARENT' ? 'Parent Registered Email *' : 'Email Address *'}
+                    </label>
                     <div className="relative">
                       <Mail className="w-4 h-4 text-[#684E67] absolute left-3.5 top-1/2 -translate-y-1/2" />
                       <input
                         type="email"
                         required
-                        placeholder="priya@example.com"
+                        placeholder={selectedRole === 'ORGANIZATION' ? 'admin@organization.com' : selectedRole === 'PARENT' ? 'parent@example.com' : 'priya@example.com'}
                         value={email}
                         onChange={(e) => setEmail(e.target.value)}
                         className="w-full pl-10 pr-4 py-3 bg-[#FFF0F3] border-1.5 border-[#FFCCE1] rounded-xl text-[#2A0826] font-bold focus:border-[#FF2A6D] focus:bg-white transition-all outline-none"
@@ -770,7 +817,17 @@ function UserAuthForm() {
                 className="w-full btn-3d-rose-pop py-4 rounded-full text-xs font-black uppercase tracking-wider flex items-center justify-center space-x-2.5 mt-6 cursor-pointer"
               >
                 <Zap className="w-4 h-4 text-white animate-pulse" />
-                <span>{(mounted && isLoading) ? 'PROCESSING...' : isLogin ? 'SIGN IN TO DASHBOARD' : 'REGISTER & PROCEED TO OTP'}</span>
+                <span>
+                  {(mounted && isLoading)
+                    ? 'PROCESSING...'
+                    : isLogin
+                      ? selectedRole === 'ORGANIZATION'
+                        ? 'SIGN IN TO ORGANIZATION HQ'
+                        : selectedRole === 'PARENT'
+                          ? 'SIGN IN TO PARENT PORTAL'
+                          : 'SIGN IN TO DASHBOARD'
+                      : 'REGISTER & PROCEED TO OTP'}
+                </span>
                 <ArrowRight className="w-4 h-4 text-white" />
               </button>
 
