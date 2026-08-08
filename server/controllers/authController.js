@@ -415,13 +415,20 @@ export const resendOtp = asyncHandler(async (req, res) => {
 export const login = asyncHandler(async (req, res) => {
   const { email, password } = req.body;
 
-  if (!email || !password) {
-    return res.status(400).json({ error: 'Email address and password are required' });
-  }
+  const inputStr = email?.trim() || '';
+  const cleanPhone = inputStr.replace(/\D/g, '');
 
-  const user = await prisma.user.findUnique({ where: { email } });
+  const user = await prisma.user.findFirst({
+    where: {
+      OR: [
+        { email: inputStr.toLowerCase() },
+        cleanPhone.length >= 10 ? { phone: { contains: cleanPhone } } : undefined,
+      ].filter(Boolean),
+    },
+  });
+
   if (!user) {
-    return res.status(401).json({ error: 'Invalid email or password' });
+    return res.status(401).json({ error: 'Invalid email/phone or password' });
   }
 
   const isPasswordValid = await bcrypt.compare(password, user.passwordHash);

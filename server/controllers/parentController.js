@@ -7,7 +7,69 @@ import { asyncHandler } from '../middleware/asyncHandler.js';
 export const getParentOverview = asyncHandler(async (req, res) => {
   const parentId = req.user.id;
 
-  // Fetch all children linked to this Parent
+  // 1. Fetch parent user details to match email & phone
+  const parentUser = await prisma.user.findUnique({ where: { id: parentId } });
+
+  if (parentUser) {
+    const parentEmailClean = parentUser.email ? parentUser.email.trim().toLowerCase() : '';
+    const parentPhoneClean = parentUser.phone ? parentUser.phone.replace(/\D/g, '') : '';
+
+    // Find children who listed this parent's email or phone in their user record
+    const autoMatchingChildren = await prisma.user.findMany({
+      where: {
+        id: { not: parentId },
+        OR: [
+          parentEmailClean ? { parentEmail: parentEmailClean } : undefined,
+          parentPhoneClean ? { emergencyContactPhone: { contains: parentPhoneClean } } : undefined,
+        ].filter(Boolean),
+      },
+    });
+
+    // Find children who listed this parent's email/phone in TrustedContact records
+    const matchingContacts = await prisma.trustedContact.findMany({
+      where: {
+        OR: [
+          parentEmailClean ? { email: parentEmailClean } : undefined,
+          parentPhoneClean ? { phone: { contains: parentPhoneClean } } : undefined,
+        ].filter(Boolean),
+      },
+      select: { userId: true },
+    });
+
+    const contactUserIds = matchingContacts.map((tc) => tc.userId);
+
+    const allMatchingChildIds = Array.from(
+      new Set([
+        ...autoMatchingChildren.map((c) => c.id),
+        ...contactUserIds.filter((id) => id !== parentId),
+      ])
+    );
+
+    // Auto-create active ParentChildLink records for all discovered children
+    for (const childId of allMatchingChildIds) {
+      try {
+        await prisma.parentChildLink.upsert({
+          where: {
+            parentId_childId: {
+              parentId,
+              childId,
+            },
+          },
+          update: { status: 'ACTIVE' },
+          create: {
+            parentId,
+            childId,
+            relationship: 'Parent',
+            status: 'ACTIVE',
+          },
+        });
+      } catch (e) {
+        console.log('[Auto Parent-Child Link] Notice:', e.message);
+      }
+    }
+  }
+
+  // 2. Fetch all linked children with live SOS and active journey status
   const links = await prisma.parentChildLink.findMany({
     where: { parentId },
     include: {
