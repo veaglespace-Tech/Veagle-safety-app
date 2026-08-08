@@ -360,6 +360,7 @@ export default function UserProfileSettingsPage() {
   if (!mounted) return null;
 
   const isSuperAdmin = user?.role === 'SUPER_ADMIN';
+  const isParent = user?.role === 'PARENT';
   const displayName = user?.fullName || 'Sakhi Member';
   const displayEmail = user?.email || 'N/A';
   const displayPhone = user?.phone || 'N/A';
@@ -483,10 +484,12 @@ export default function UserProfileSettingsPage() {
                     <PhoneCall className="w-3.5 h-3.5 text-[#FF2A6D]" />
                     <span>{displayPhone}</span>
                   </div>
-                  <div className="flex items-center space-x-1.5 bg-[#FFF0F3] px-3 py-1.5 rounded-full text-[#FF2A6D] font-black border border-[#FFCCE1] shadow-xs">
-                    <Heart className="w-3.5 h-3.5 fill-[#FF2A6D]/20" />
-                    <span>Blood Group: {displayBloodGroup}</span>
-                  </div>
+                  {!isParent && (
+                    <div className="flex items-center space-x-1.5 bg-[#FFF0F3] px-3 py-1.5 rounded-full text-[#FF2A6D] font-black border border-[#FFCCE1] shadow-xs">
+                      <Heart className="w-3.5 h-3.5 fill-[#FF2A6D]/20" />
+                      <span>Blood Group: {displayBloodGroup}</span>
+                    </div>
+                  )}
                 </div>
 
                 {avatarToast && (
@@ -541,24 +544,37 @@ export default function UserProfileSettingsPage() {
                   }}
                   className="flex items-center gap-2 overflow-x-auto whitespace-nowrap scroll-smooth no-scrollbar [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden flex-1 px-1"
                 >
-                  <a href="#sec-1" className="px-4 py-2 bg-[#FFF0F3] hover:bg-[#FF2A6D] hover:text-white text-[#FF2A6D] rounded-full text-xs font-black transition-all border border-[#FFCCE1] shrink-0 hover:scale-105 active:scale-95 shadow-xs">
-                    1. Personal Details
-                  </a>
-                  <a href="#sec-2" className="px-4 py-2 bg-[#FFF0F3] hover:bg-[#FF2A6D] hover:text-white text-[#FF2A6D] rounded-full text-xs font-black transition-all border border-[#FFCCE1] shrink-0 hover:scale-105 active:scale-95 shadow-xs">
-                    2. Address & Location
-                  </a>
-                  <a href="#sec-3" className="px-4 py-2 bg-[#FFF0F3] hover:bg-[#FF2A6D] hover:text-white text-[#FF2A6D] rounded-full text-xs font-black transition-all border border-[#FFCCE1] shrink-0 hover:scale-105 active:scale-95 shadow-xs">
-                    3. Emergency Guardian
-                  </a>
-                  <a href="#sec-4" className="px-4 py-2 bg-[#FFF0F3] hover:bg-[#FF2A6D] hover:text-white text-[#FF2A6D] rounded-full text-xs font-black transition-all border border-[#FFCCE1] shrink-0 hover:scale-105 active:scale-95 shadow-xs">
-                    4. Security & Password
-                  </a>
-                  <a href="#sec-5" className="px-4 py-2 bg-[#FFF0F3] hover:bg-[#FF2A6D] hover:text-white text-[#FF2A6D] rounded-full text-xs font-black transition-all border border-[#FFCCE1] shrink-0 hover:scale-105 active:scale-95 shadow-xs">
-                    5. Medical Notes
-                  </a>
-                  <a href="#sec-6" className="px-4 py-2 bg-[#FFF0F3] hover:bg-[#FF2A6D] hover:text-white text-[#FF2A6D] rounded-full text-xs font-black transition-all border border-[#FFCCE1] shrink-0 hover:scale-105 active:scale-95 shadow-xs">
-                    6. System Health
-                  </a>
+                  {isParent ? (
+                    <>
+                      <a href="#sec-1" className="px-4 py-2 bg-[#FFF0F3] hover:bg-[#FF2A6D] hover:text-white text-[#FF2A6D] rounded-full text-xs font-black transition-all border border-[#FFCCE1] shrink-0 hover:scale-105 active:scale-95 shadow-xs">
+                        1. Personal Details
+                      </a>
+                      <a href="#sec-4" className="px-4 py-2 bg-[#FFF0F3] hover:bg-[#FF2A6D] hover:text-white text-[#FF2A6D] rounded-full text-xs font-black transition-all border border-[#FFCCE1] shrink-0 hover:scale-105 active:scale-95 shadow-xs">
+                        2. Security & Password
+                      </a>
+                    </>
+                  ) : (
+                    <>
+                      <a href="#sec-1" className="px-4 py-2 bg-[#FFF0F3] hover:bg-[#FF2A6D] hover:text-white text-[#FF2A6D] rounded-full text-xs font-black transition-all border border-[#FFCCE1] shrink-0 hover:scale-105 active:scale-95 shadow-xs">
+                        1. Personal Details
+                      </a>
+                      <a href="#sec-2" className="px-4 py-2 bg-[#FFF0F3] hover:bg-[#FF2A6D] hover:text-white text-[#FF2A6D] rounded-full text-xs font-black transition-all border border-[#FFCCE1] shrink-0 hover:scale-105 active:scale-95 shadow-xs">
+                        2. Address & Location
+                      </a>
+                      <a href="#sec-3" className="px-4 py-2 bg-[#FFF0F3] hover:bg-[#FF2A6D] hover:text-white text-[#FF2A6D] rounded-full text-xs font-black transition-all border border-[#FFCCE1] shrink-0 hover:scale-105 active:scale-95 shadow-xs">
+                        3. Emergency Guardian
+                      </a>
+                      <a href="#sec-4" className="px-4 py-2 bg-[#FFF0F3] hover:bg-[#FF2A6D] hover:text-white text-[#FF2A6D] rounded-full text-xs font-black transition-all border border-[#FFCCE1] shrink-0 hover:scale-105 active:scale-95 shadow-xs">
+                        4. Security & Password
+                      </a>
+                      <a href="#sec-5" className="px-4 py-2 bg-[#FFF0F3] hover:bg-[#FF2A6D] hover:text-white text-[#FF2A6D] rounded-full text-xs font-black transition-all border border-[#FFCCE1] shrink-0 hover:scale-105 active:scale-95 shadow-xs">
+                        5. Medical Notes
+                      </a>
+                      <a href="#sec-6" className="px-4 py-2 bg-[#FFF0F3] hover:bg-[#FF2A6D] hover:text-white text-[#FF2A6D] rounded-full text-xs font-black transition-all border border-[#FFCCE1] shrink-0 hover:scale-105 active:scale-95 shadow-xs">
+                        6. System Health
+                      </a>
+                    </>
+                  )}
                 </div>
 
                 {/* RIGHT SCROLL BUTTON */}
@@ -581,7 +597,9 @@ export default function UserProfileSettingsPage() {
                     </div>
                     <div className="min-w-0">
                       <h3 className="font-black text-base sm:text-lg text-[#2A0826] tracking-tight">1. Personal Member Details</h3>
-                      <p className="text-xs text-[#684E67] font-bold leading-snug">Update your full legal name, email address, phone number, and blood group</p>
+                      <p className="text-xs text-[#684E67] font-bold leading-snug">
+                        {isParent ? 'Update your full legal name, email address, and mobile phone number' : 'Update your full legal name, email address, phone number, and blood group'}
+                      </p>
                     </div>
                   </div>
 
@@ -752,180 +770,184 @@ export default function UserProfileSettingsPage() {
                 </div>
               </div>
 
-              {/* FORM SECTION 2: RESIDENTIAL ADDRESS & LOCATION */}
-              <div id="sec-2" className="scroll-mt-24 border-b-2 border-[#FFCCE1]/60 pb-8 space-y-6">
-                <div className="flex items-start sm:items-center space-x-3.5 border-b-2 border-[#FFCCE1] pb-4 min-w-0">
-                  <div className="w-10 h-10 rounded-2xl bg-[#FFF0F3] text-[#FF2A6D] flex items-center justify-center border border-[#FFCCE1] shrink-0 mt-0.5 sm:mt-0">
-                    <MapPin className="w-5 h-5 text-[#FF2A6D]" />
-                  </div>
-                  <div className="min-w-0 flex-1">
-                    <h3 className="font-black text-base sm:text-lg text-[#2A0826] tracking-tight">2. Residential Location & Address</h3>
-                    <p className="text-xs text-[#684E67] font-bold leading-relaxed">Address details used for emergency dispatch & guardian response</p>
-                  </div>
-                </div>
+              {!isParent && (
+                <>
+                  {/* FORM SECTION 2: RESIDENTIAL ADDRESS & LOCATION */}
+                  <div id="sec-2" className="scroll-mt-24 border-b-2 border-[#FFCCE1]/60 pb-8 space-y-6">
+                    <div className="flex items-start sm:items-center space-x-3.5 border-b-2 border-[#FFCCE1] pb-4 min-w-0">
+                      <div className="w-10 h-10 rounded-2xl bg-[#FFF0F3] text-[#FF2A6D] flex items-center justify-center border border-[#FFCCE1] shrink-0 mt-0.5 sm:mt-0">
+                        <MapPin className="w-5 h-5 text-[#FF2A6D]" />
+                      </div>
+                      <div className="min-w-0 flex-1">
+                        <h3 className="font-black text-base sm:text-lg text-[#2A0826] tracking-tight">2. Residential Location & Address</h3>
+                        <p className="text-xs text-[#684E67] font-bold leading-relaxed">Address details used for emergency dispatch & guardian response</p>
+                      </div>
+                    </div>
 
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                  <div className="sm:col-span-2">
-                    <label className="block text-xs font-black text-[#684E67] mb-1">Full Residential Address *</label>
-                    <div className="relative">
-                      <MapPin className="w-4 h-4 text-[#684E67] absolute left-3.5 top-1/2 -translate-y-1/2" />
-                      <input
-                        type="text"
-                        required
-                        disabled={!isEditing}
-                        placeholder="House/Flat No, Street area, Landmark"
-                        value={address}
-                        onChange={(e) => setAddress(e.target.value)}
-                        className={`w-full pl-10 pr-4 py-3 border-1.5 rounded-xl text-xs text-[#2A0826] font-bold outline-none transition-all ${
-                          isEditing
-                            ? 'bg-[#FFF0F3] border-[#FF2A6D] focus:bg-white'
-                            : 'bg-gray-50 border-gray-200 cursor-not-allowed text-gray-700'
-                        }`}
-                      />
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                      <div className="sm:col-span-2">
+                        <label className="block text-xs font-black text-[#684E67] mb-1">Full Residential Address *</label>
+                        <div className="relative">
+                          <MapPin className="w-4 h-4 text-[#684E67] absolute left-3.5 top-1/2 -translate-y-1/2" />
+                          <input
+                            type="text"
+                            required
+                            disabled={!isEditing}
+                            placeholder="House/Flat No, Street area, Landmark"
+                            value={address}
+                            onChange={(e) => setAddress(e.target.value)}
+                            className={`w-full pl-10 pr-4 py-3 border-1.5 rounded-xl text-xs text-[#2A0826] font-bold outline-none transition-all ${
+                              isEditing
+                                ? 'bg-[#FFF0F3] border-[#FF2A6D] focus:bg-white'
+                                : 'bg-gray-50 border-gray-200 cursor-not-allowed text-gray-700'
+                            }`}
+                          />
+                        </div>
+                      </div>
+
+                      <div>
+                        <label className="block text-xs font-black text-[#684E67] mb-1">City *</label>
+                        <div className="relative">
+                          <Building className="w-4 h-4 text-[#684E67] absolute left-3.5 top-1/2 -translate-y-1/2" />
+                          <input
+                            type="text"
+                            required
+                            disabled={!isEditing}
+                            placeholder="e.g. Pune"
+                            value={city}
+                            onChange={(e) => setCity(e.target.value)}
+                            className={`w-full pl-10 pr-4 py-3 border-1.5 rounded-xl text-xs text-[#2A0826] font-bold outline-none transition-all ${
+                              isEditing
+                                ? 'bg-[#FFF0F3] border-[#FF2A6D] focus:bg-white'
+                                : 'bg-gray-50 border-gray-200 cursor-not-allowed text-gray-700'
+                            }`}
+                          />
+                        </div>
+                      </div>
+
+                      <div>
+                        <label className="block text-xs font-black text-[#684E67] mb-1">State *</label>
+                        <div className="relative">
+                          <Map className="w-4 h-4 text-[#684E67] absolute left-3.5 top-1/2 -translate-y-1/2" />
+                          <input
+                            type="text"
+                            required
+                            disabled={!isEditing}
+                            placeholder="e.g. Maharashtra"
+                            value={state}
+                            onChange={(e) => setState(e.target.value)}
+                            className={`w-full pl-10 pr-4 py-3 border-1.5 rounded-xl text-xs text-[#2A0826] font-bold outline-none transition-all ${
+                              isEditing
+                                ? 'bg-[#FFF0F3] border-[#FF2A6D] focus:bg-white'
+                                : 'bg-gray-50 border-gray-200 cursor-not-allowed text-gray-700'
+                            }`}
+                          />
+                        </div>
+                      </div>
+
+                      <div>
+                        <label className="block text-xs font-black text-[#684E67] mb-1">Pincode *</label>
+                        <input
+                          type="text"
+                          required
+                          disabled={!isEditing}
+                          maxLength={6}
+                          placeholder="e.g. 411001"
+                          value={pincode}
+                          onChange={(e) => setPincode(e.target.value.replace(/\D/g, ''))}
+                          className={`w-full px-4 py-3 border-1.5 rounded-xl text-xs text-[#2A0826] font-mono font-bold outline-none transition-all ${
+                            isEditing
+                              ? 'bg-[#FFF0F3] border-[#FF2A6D] focus:bg-white'
+                              : 'bg-gray-50 border-gray-200 cursor-not-allowed text-gray-700'
+                          }`}
+                        />
+                      </div>
                     </div>
                   </div>
 
-                  <div>
-                    <label className="block text-xs font-black text-[#684E67] mb-1">City *</label>
-                    <div className="relative">
-                      <Building className="w-4 h-4 text-[#684E67] absolute left-3.5 top-1/2 -translate-y-1/2" />
-                      <input
-                        type="text"
-                        required
-                        disabled={!isEditing}
-                        placeholder="e.g. Pune"
-                        value={city}
-                        onChange={(e) => setCity(e.target.value)}
-                        className={`w-full pl-10 pr-4 py-3 border-1.5 rounded-xl text-xs text-[#2A0826] font-bold outline-none transition-all ${
-                          isEditing
-                            ? 'bg-[#FFF0F3] border-[#FF2A6D] focus:bg-white'
-                            : 'bg-gray-50 border-gray-200 cursor-not-allowed text-gray-700'
-                        }`}
-                      />
+                  {/* FORM SECTION 3: EMERGENCY GUARDIAN CONTACT DETAILS */}
+                  <div id="sec-3" className="scroll-mt-24 border-b-2 border-[#FFCCE1]/60 pb-8 space-y-6">
+                    <div className="flex items-start sm:items-center space-x-3.5 border-b-2 border-[#FFCCE1] pb-4 min-w-0">
+                      <div className="w-10 h-10 rounded-2xl bg-[#FFF0F3] text-[#FF2A6D] flex items-center justify-center border border-[#FFCCE1] shrink-0 mt-0.5 sm:mt-0">
+                        <Users className="w-5 h-5 text-[#FF2A6D]" />
+                      </div>
+                      <div className="min-w-0 flex-1">
+                        <h3 className="font-black text-base sm:text-lg text-[#2A0826] tracking-tight">3. Primary Emergency Guardian Contact</h3>
+                        <p className="text-xs text-[#684E67] font-bold leading-relaxed">First guardian notified automatically during an emergency SOS broadcast</p>
+                      </div>
+                    </div>
+
+                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                      <div>
+                        <label className="block text-xs font-black text-[#684E67] mb-1">Guardian Name *</label>
+                        <div className="relative">
+                          <Users className="w-4 h-4 text-[#684E67] absolute left-3.5 top-1/2 -translate-y-1/2" />
+                          <input
+                            type="text"
+                            required
+                            disabled={!isEditing}
+                            placeholder="e.g. Rajesh Sharma"
+                            value={emergencyContactName}
+                            onChange={(e) => setEmergencyContactName(e.target.value)}
+                            className={`w-full pl-10 pr-3 py-3 border-1.5 rounded-xl text-xs text-[#2A0826] font-bold outline-none transition-all ${
+                              isEditing
+                                ? 'bg-[#FFF0F3] border-[#FF2A6D] focus:bg-white'
+                                : 'bg-gray-50 border-gray-200 cursor-not-allowed text-gray-700'
+                            }`}
+                          />
+                        </div>
+                      </div>
+
+                      <div>
+                        <label className="block text-xs font-black text-[#684E67] mb-1">Relationship *</label>
+                        {isEditing ? (
+                          <CustomSelect
+                            options={[
+                              { value: 'Parent', label: 'Parent' },
+                              { value: 'Spouse', label: 'Spouse' },
+                              { value: 'Sibling', label: 'Sibling' },
+                              { value: 'Friend', label: 'Friend' },
+                              { value: 'Guardian', label: 'Guardian' },
+                              { value: 'Relative', label: 'Relative' },
+                              { value: 'Other', label: 'Other' },
+                            ]}
+                            value={emergencyContactRelation}
+                            onChange={(e) => setEmergencyContactRelation(e.target.value)}
+                            alignRight={true}
+                          />
+                        ) : (
+                          <input
+                            disabled
+                            value={emergencyContactRelation}
+                            className="w-full px-3 py-3 border-1.5 rounded-xl text-xs text-gray-700 font-bold bg-gray-50 border-gray-200 cursor-not-allowed outline-none"
+                          />
+                        )}
+                      </div>
+
+                      <div>
+                        <label className="block text-xs font-black text-[#684E67] mb-1">Guardian Mobile Number *</label>
+                        <div className="relative">
+                          <PhoneCall className="w-4 h-4 text-[#684E67] absolute left-3.5 top-1/2 -translate-y-1/2" />
+                          <input
+                            type="tel"
+                            required
+                            disabled={!isEditing}
+                            maxLength={10}
+                            placeholder="10-digit number"
+                            value={emergencyContactPhone}
+                            onChange={(e) => setEmergencyContactPhone(e.target.value.replace(/\D/g, ''))}
+                            className={`w-full pl-10 pr-3 py-3 border-1.5 rounded-xl text-xs text-[#2A0826] font-mono font-bold outline-none transition-all ${
+                              isEditing
+                                ? 'bg-[#FFF0F3] border-[#FF2A6D] focus:bg-white'
+                                : 'bg-gray-50 border-gray-200 cursor-not-allowed text-gray-700'
+                            }`}
+                          />
+                        </div>
+                      </div>
                     </div>
                   </div>
-
-                  <div>
-                    <label className="block text-xs font-black text-[#684E67] mb-1">State *</label>
-                    <div className="relative">
-                      <Map className="w-4 h-4 text-[#684E67] absolute left-3.5 top-1/2 -translate-y-1/2" />
-                      <input
-                        type="text"
-                        required
-                        disabled={!isEditing}
-                        placeholder="e.g. Maharashtra"
-                        value={state}
-                        onChange={(e) => setState(e.target.value)}
-                        className={`w-full pl-10 pr-4 py-3 border-1.5 rounded-xl text-xs text-[#2A0826] font-bold outline-none transition-all ${
-                          isEditing
-                            ? 'bg-[#FFF0F3] border-[#FF2A6D] focus:bg-white'
-                            : 'bg-gray-50 border-gray-200 cursor-not-allowed text-gray-700'
-                        }`}
-                      />
-                    </div>
-                  </div>
-
-                  <div>
-                    <label className="block text-xs font-black text-[#684E67] mb-1">Pincode *</label>
-                    <input
-                      type="text"
-                      required
-                      disabled={!isEditing}
-                      maxLength={6}
-                      placeholder="e.g. 411001"
-                      value={pincode}
-                      onChange={(e) => setPincode(e.target.value.replace(/\D/g, ''))}
-                      className={`w-full px-4 py-3 border-1.5 rounded-xl text-xs text-[#2A0826] font-mono font-bold outline-none transition-all ${
-                        isEditing
-                          ? 'bg-[#FFF0F3] border-[#FF2A6D] focus:bg-white'
-                          : 'bg-gray-50 border-gray-200 cursor-not-allowed text-gray-700'
-                      }`}
-                    />
-                  </div>
-                </div>
-              </div>
-
-              {/* FORM SECTION 3: EMERGENCY GUARDIAN CONTACT DETAILS */}
-              <div id="sec-3" className="scroll-mt-24 border-b-2 border-[#FFCCE1]/60 pb-8 space-y-6">
-                <div className="flex items-start sm:items-center space-x-3.5 border-b-2 border-[#FFCCE1] pb-4 min-w-0">
-                  <div className="w-10 h-10 rounded-2xl bg-[#FFF0F3] text-[#FF2A6D] flex items-center justify-center border border-[#FFCCE1] shrink-0 mt-0.5 sm:mt-0">
-                    <Users className="w-5 h-5 text-[#FF2A6D]" />
-                  </div>
-                  <div className="min-w-0 flex-1">
-                    <h3 className="font-black text-base sm:text-lg text-[#2A0826] tracking-tight">3. Primary Emergency Guardian Contact</h3>
-                    <p className="text-xs text-[#684E67] font-bold leading-relaxed">First guardian notified automatically during an emergency SOS broadcast</p>
-                  </div>
-                </div>
-
-                <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                  <div>
-                    <label className="block text-xs font-black text-[#684E67] mb-1">Guardian Name *</label>
-                    <div className="relative">
-                      <Users className="w-4 h-4 text-[#684E67] absolute left-3.5 top-1/2 -translate-y-1/2" />
-                      <input
-                        type="text"
-                        required
-                        disabled={!isEditing}
-                        placeholder="e.g. Rajesh Sharma"
-                        value={emergencyContactName}
-                        onChange={(e) => setEmergencyContactName(e.target.value)}
-                        className={`w-full pl-10 pr-3 py-3 border-1.5 rounded-xl text-xs text-[#2A0826] font-bold outline-none transition-all ${
-                          isEditing
-                            ? 'bg-[#FFF0F3] border-[#FF2A6D] focus:bg-white'
-                            : 'bg-gray-50 border-gray-200 cursor-not-allowed text-gray-700'
-                        }`}
-                      />
-                    </div>
-                  </div>
-
-                  <div>
-                    <label className="block text-xs font-black text-[#684E67] mb-1">Relationship *</label>
-                    {isEditing ? (
-                      <CustomSelect
-                        options={[
-                          { value: 'Parent', label: 'Parent' },
-                          { value: 'Spouse', label: 'Spouse' },
-                          { value: 'Sibling', label: 'Sibling' },
-                          { value: 'Friend', label: 'Friend' },
-                          { value: 'Guardian', label: 'Guardian' },
-                          { value: 'Relative', label: 'Relative' },
-                          { value: 'Other', label: 'Other' },
-                        ]}
-                        value={emergencyContactRelation}
-                        onChange={(e) => setEmergencyContactRelation(e.target.value)}
-                        alignRight={true}
-                      />
-                    ) : (
-                      <input
-                        disabled
-                        value={emergencyContactRelation}
-                        className="w-full px-3 py-3 border-1.5 rounded-xl text-xs text-gray-700 font-bold bg-gray-50 border-gray-200 cursor-not-allowed outline-none"
-                      />
-                    )}
-                  </div>
-
-                  <div>
-                    <label className="block text-xs font-black text-[#684E67] mb-1">Guardian Mobile Number *</label>
-                    <div className="relative">
-                      <PhoneCall className="w-4 h-4 text-[#684E67] absolute left-3.5 top-1/2 -translate-y-1/2" />
-                      <input
-                        type="tel"
-                        required
-                        disabled={!isEditing}
-                        maxLength={10}
-                        placeholder="10-digit number"
-                        value={emergencyContactPhone}
-                        onChange={(e) => setEmergencyContactPhone(e.target.value.replace(/\D/g, ''))}
-                        className={`w-full pl-10 pr-3 py-3 border-1.5 rounded-xl text-xs text-[#2A0826] font-mono font-bold outline-none transition-all ${
-                          isEditing
-                            ? 'bg-[#FFF0F3] border-[#FF2A6D] focus:bg-white'
-                            : 'bg-gray-50 border-gray-200 cursor-not-allowed text-gray-700'
-                        }`}
-                      />
-                    </div>
-                  </div>
-                </div>
-              </div>
+                </>
+              )}
 
               {/* FORM SECTION 4: SECURITY & PASSWORD UPDATE */}
               <div id="sec-4" className="scroll-mt-24 border-b-2 border-[#FFCCE1]/60 pb-8 space-y-6">
@@ -986,33 +1008,37 @@ export default function UserProfileSettingsPage() {
                 </div>
               </div>
 
-              {/* FORM SECTION 5: MEDICAL / HEALTH NOTES FOR RESPONDERS */}
-              <div id="sec-5" className="scroll-mt-24 border-b-2 border-[#FFCCE1]/60 pb-8 space-y-6">
-                <div className="flex items-start sm:items-center space-x-3.5 border-b-2 border-[#FFCCE1] pb-4 min-w-0">
-                  <div className="w-10 h-10 rounded-2xl bg-[#FFF0F3] text-[#FF2A6D] flex items-center justify-center border border-[#FFCCE1] shrink-0 mt-0.5 sm:mt-0">
-                    <FileText className="w-5 h-5 text-[#FF2A6D]" />
-                  </div>
-                  <div className="min-w-0 flex-1">
-                    <h3 className="font-black text-base sm:text-lg text-[#2A0826] tracking-tight">5. Emergency Medical Notes & Instructions</h3>
-                    <p className="text-xs text-[#684E67] font-bold leading-relaxed">Allergies, medical conditions, or specific emergency instructions for guardians</p>
-                  </div>
-                </div>
+              {!isParent && (
+                <>
+                  {/* FORM SECTION 5: MEDICAL / HEALTH NOTES FOR RESPONDERS */}
+                  <div id="sec-5" className="scroll-mt-24 border-b-2 border-[#FFCCE1]/60 pb-8 space-y-6">
+                    <div className="flex items-start sm:items-center space-x-3.5 border-b-2 border-[#FFCCE1] pb-4 min-w-0">
+                      <div className="w-10 h-10 rounded-2xl bg-[#FFF0F3] text-[#FF2A6D] flex items-center justify-center border border-[#FFCCE1] shrink-0 mt-0.5 sm:mt-0">
+                        <FileText className="w-5 h-5 text-[#FF2A6D]" />
+                      </div>
+                      <div className="min-w-0 flex-1">
+                        <h3 className="font-black text-base sm:text-lg text-[#2A0826] tracking-tight">5. Emergency Medical Notes & Instructions</h3>
+                        <p className="text-xs text-[#684E67] font-bold leading-relaxed">Allergies, medical conditions, or specific emergency instructions for guardians</p>
+                      </div>
+                    </div>
 
-                <div>
-                  <textarea
-                    rows={3}
-                    disabled={!isEditing}
-                    placeholder="e.g. Asthmatic, allergic to penicillin, emergency key available with neighbor."
-                    value={medicalNotes}
-                    onChange={(e) => setMedicalNotes(e.target.value)}
-                    className={`w-full p-4 border-1.5 rounded-2xl text-xs text-[#2A0826] font-bold outline-none resize-none transition-all ${
-                      isEditing
-                        ? 'bg-[#FFF0F3] border-[#FF2A6D] focus:bg-white'
-                        : 'bg-gray-50 border-gray-200 cursor-not-allowed text-gray-700'
-                    }`}
-                  />
-                </div>
-              </div>
+                    <div>
+                      <textarea
+                        rows={3}
+                        disabled={!isEditing}
+                        placeholder="e.g. Asthmatic, allergic to penicillin, emergency key available with neighbor."
+                        value={medicalNotes}
+                        onChange={(e) => setMedicalNotes(e.target.value)}
+                        className={`w-full p-4 border-1.5 rounded-2xl text-xs text-[#2A0826] font-bold outline-none resize-none transition-all ${
+                          isEditing
+                            ? 'bg-[#FFF0F3] border-[#FF2A6D] focus:bg-white'
+                            : 'bg-gray-50 border-gray-200 cursor-not-allowed text-gray-700'
+                        }`}
+                      />
+                    </div>
+                  </div>
+                </>
+              )}
 
               {/* MASTER STICKY SUBMIT ACTION BAR (VISIBLE IN EDIT MODE) */}
               {isEditing && (
@@ -1043,79 +1069,82 @@ export default function UserProfileSettingsPage() {
                 </div>
               )}
 
-              {/* SECTION 6: 24/7 SYSTEM HEALTH DIAGNOSTICS & SOS DRILL RUNNER */}
-              <div id="sec-6" className="scroll-mt-24 pt-4 space-y-6">
-                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b-2 border-[#FFCCE1] pb-4">
-                  <div className="flex items-start sm:items-center space-x-3.5 min-w-0 flex-1">
-                    <div className="w-10 h-10 rounded-2xl bg-[#FFF0F3] text-[#FF2A6D] flex items-center justify-center border border-[#FFCCE1] shrink-0 mt-0.5 sm:mt-0">
-                      <Shield className="w-5 h-5 text-[#FF2A6D]" />
-                    </div>
-                    <div className="min-w-0 flex-1">
-                      <h3 className="font-black text-base sm:text-lg text-[#2A0826] tracking-tight">24/7 System Health Metrics & SOS Drill Runner</h3>
-                      <p className="text-xs text-[#684E67] font-bold leading-relaxed">Verify device sensors, GPS stream, and siren audio capability</p>
-                    </div>
-                  </div>
-                  <span className="text-[11px] font-black text-emerald-600 bg-emerald-50 px-3 py-1.5 rounded-full border border-emerald-300 shrink-0 whitespace-nowrap self-start sm:self-auto">
-                    100% Operational
-                  </span>
-                </div>
-
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                  {diagnostics.map((item) => {
-                    const Icon = item.icon;
-                    return (
-                      <div key={item.label} className="bg-[#FFF0F3] border border-[#FFCCE1] rounded-2xl p-4 flex items-center justify-between">
-                        <div className="flex items-center space-x-3">
-                          <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${item.status ? 'bg-emerald-50 text-emerald-600 border border-emerald-200' : 'bg-amber-50 text-amber-600 border border-amber-200'}`}>
-                            <Icon className="w-5 h-5" />
-                          </div>
-                          <div>
-                            <p className="text-xs font-black text-[#2A0826]">{item.label}</p>
-                            <p className={`text-[11px] font-extrabold mt-0.5 ${item.status ? 'text-emerald-600' : 'text-amber-600'}`}>
-                              {item.value}
-                            </p>
-                          </div>
+              {!isParent && (
+                <>
+                  {/* SECTION 6: 24/7 SYSTEM HEALTH DIAGNOSTICS & SOS DRILL RUNNER */}
+                  <div id="sec-6" className="scroll-mt-24 pt-4 space-y-6">
+                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b-2 border-[#FFCCE1] pb-4">
+                      <div className="flex items-start sm:items-center space-x-3.5 min-w-0 flex-1">
+                        <div className="w-10 h-10 rounded-2xl bg-[#FFF0F3] text-[#FF2A6D] flex items-center justify-center border border-[#FFCCE1] shrink-0 mt-0.5 sm:mt-0">
+                          <Shield className="w-5 h-5 text-[#FF2A6D]" />
+                        </div>
+                        <div className="min-w-0 flex-1">
+                          <h3 className="font-black text-base sm:text-lg text-[#2A0826] tracking-tight">24/7 System Health Metrics & SOS Drill Runner</h3>
+                          <p className="text-xs text-[#684E67] font-bold leading-relaxed">Verify device sensors, GPS stream, and siren audio capability</p>
                         </div>
                       </div>
-                    );
-                  })}
-                </div>
-
-                <div className="bg-gradient-to-r from-[#2A0826] via-[#3D0C38] to-[#2A0826] text-white p-6 rounded-3xl shadow-[0_12px_35px_rgba(42,8,38,0.35)] space-y-4 border-2 border-[#FF2A6D]">
-                  <div className="flex items-start space-x-3.5">
-                    <div className="w-11 h-11 rounded-2xl bg-[#FF2A6D]/20 text-[#FF5C8A] flex items-center justify-center shrink-0 border border-[#FF2A6D]/40">
-                      <Play className="w-5 h-5 text-[#FF5C8A] animate-pulse" />
+                      <span className="text-[11px] font-black text-emerald-600 bg-emerald-50 px-3 py-1.5 rounded-full border border-emerald-300 shrink-0 whitespace-nowrap self-start sm:self-auto">
+                        100% Operational
+                      </span>
                     </div>
-                    <div>
-                      <h4 className="font-black text-base text-white">Run SOS Emergency Drill</h4>
-                      <p className="text-xs text-white/80 font-extrabold mt-0.5 leading-relaxed">
-                        Test device vibration, siren audio & GPS stream safely without notifying guardians.
-                      </p>
+
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                      {diagnostics.map((item) => {
+                        const Icon = item.icon;
+                        return (
+                          <div key={item.label} className="bg-[#FFF0F3] border border-[#FFCCE1] rounded-2xl p-4 flex items-center justify-between">
+                            <div className="flex items-center space-x-3">
+                              <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${item.status ? 'bg-emerald-50 text-emerald-600 border border-emerald-200' : 'bg-amber-50 text-amber-600 border border-amber-200'}`}>
+                                <Icon className="w-5 h-5" />
+                              </div>
+                              <div>
+                                <p className="text-xs font-black text-[#2A0826]">{item.label}</p>
+                                <p className={`text-[11px] font-extrabold mt-0.5 ${item.status ? 'text-emerald-600' : 'text-amber-600'}`}>
+                                  {item.value}
+                                </p>
+                              </div>
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+
+                    <div className="bg-gradient-to-r from-[#2A0826] via-[#3D0C38] to-[#2A0826] text-white p-6 rounded-3xl shadow-[0_12px_35px_rgba(42,8,38,0.35)] space-y-4 border-2 border-[#FF2A6D]">
+                      <div className="flex items-start space-x-3.5">
+                        <div className="w-11 h-11 rounded-2xl bg-[#FF2A6D]/20 text-[#FF5C8A] flex items-center justify-center shrink-0 border border-[#FF2A6D]/40">
+                          <Play className="w-5 h-5 text-[#FF5C8A] animate-pulse" />
+                        </div>
+                        <div>
+                          <h4 className="font-black text-base text-white">Run SOS Emergency Drill</h4>
+                          <p className="text-xs text-white/80 font-extrabold mt-0.5 leading-relaxed">
+                            Test device vibration, siren audio & GPS stream safely without notifying guardians.
+                          </p>
+                        </div>
+                      </div>
+
+                      <div className="flex flex-col sm:flex-row gap-3">
+                        <button
+                          type="button"
+                          onClick={handleRunTest}
+                          className="flex-1 bg-gradient-to-r from-[#FF5C8A] via-[#FF2A6D] to-[#E01A4F] text-white py-3.5 rounded-full text-xs uppercase tracking-wider font-black shadow-[0_8px_25px_rgba(255,42,109,0.4)] flex items-center justify-center space-x-2 hover:scale-[1.02] active:scale-95 transition-all cursor-pointer"
+                        >
+                          <Play className="w-4 h-4" />
+                          <span>{testSuccess ? '✓ DRILL PASSED!' : 'START DRILL READINESS TEST'}</span>
+                        </button>
+
+                        <button
+                          type="button"
+                          onClick={handleTestSirenAudio}
+                          className="bg-white/10 hover:bg-white/20 text-white border border-white/30 py-3.5 px-5 rounded-full text-xs font-black flex items-center justify-center space-x-2 transition-all cursor-pointer"
+                        >
+                          <Volume2 className="w-4 h-4 text-[#FF5C8A]" />
+                          <span>{isTestingSiren ? 'TESTING SIREN...' : 'TEST SIREN AUDIO'}</span>
+                        </button>
+                      </div>
                     </div>
                   </div>
-
-                  <div className="flex flex-col sm:flex-row gap-3">
-                    <button
-                      type="button"
-                      onClick={handleRunTest}
-                      className="flex-1 bg-gradient-to-r from-[#FF5C8A] via-[#FF2A6D] to-[#E01A4F] text-white py-3.5 rounded-full text-xs uppercase tracking-wider font-black shadow-[0_8px_25px_rgba(255,42,109,0.4)] flex items-center justify-center space-x-2 hover:scale-[1.02] active:scale-95 transition-all cursor-pointer"
-                    >
-                      <Play className="w-4 h-4" />
-                      <span>{testSuccess ? '✓ DRILL PASSED!' : 'START DRILL READINESS TEST'}</span>
-                    </button>
-
-                    <button
-                      type="button"
-                      onClick={handleTestSirenAudio}
-                      className="bg-white/10 hover:bg-white/20 text-white border border-white/30 py-3.5 px-5 rounded-full text-xs font-black flex items-center justify-center space-x-2 transition-all cursor-pointer"
-                    >
-                      <Volume2 className="w-4 h-4 text-[#FF5C8A]" />
-                      <span>{isTestingSiren ? 'TESTING SIREN...' : 'TEST SIREN AUDIO'}</span>
-                    </button>
-                  </div>
-                </div>
-              </div>
-
+                </>
+              )}
             </div>
           </form>
 
