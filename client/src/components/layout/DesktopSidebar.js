@@ -63,11 +63,26 @@ export const DesktopSidebar = () => {
     }
   };
 
+  const isParent = mounted && currentUser?.role === 'PARENT';
+  const isOrganization = mounted && currentUser?.role === 'ORGANIZATION';
+
   const memberNavItems = [
     { path: '/dashboard', label: 'Home', icon: Home, desc: 'Safety Dashboard' },
     { path: '/track-journey', label: 'Track Journey', icon: MapPin, desc: 'Journey & Check-ins' },
     { path: '/contacts', label: 'Contacts', icon: Users, desc: 'Trusted Network' },
     { path: '/subscription', label: 'Subscription', icon: ShieldCheck, desc: 'Active Plan & Validity' },
+  ];
+
+  const parentNavItems = [
+    { path: '/parent', label: 'Child Safety Monitor', icon: ShieldCheck, desc: 'Live Child GPS & Safety' },
+    { path: '/parent', label: 'Linked Children', icon: Users, desc: 'Child Guardian Overview' },
+    { path: '/profile', label: 'My Profile', icon: User, desc: 'Parent Account Details' },
+  ];
+
+  const orgNavItems = [
+    { path: '/organization', label: 'Safety Monitor', icon: ShieldCheck, desc: 'Member Live Safety' },
+    { path: '/organization', label: 'Member Directory', icon: Users, desc: 'Enrolled Members' },
+    { path: '/profile', label: 'My Profile', icon: User, desc: 'Organization Profile' },
   ];
 
   const adminNavItems = [
@@ -79,6 +94,14 @@ export const DesktopSidebar = () => {
     { path: '/contacts', label: 'My Guardians', icon: Users, desc: 'Personal Safety Contacts' },
     { path: '/track-journey', label: 'Track My Journey', icon: MapPin, desc: 'Live Route Sharing' },
   ];
+
+  const activeNavItems = isSuperAdmin
+    ? adminNavItems
+    : isParent
+      ? parentNavItems
+      : isOrganization
+        ? orgNavItems
+        : memberNavItems;
 
   const displayName = mounted
     ? (currentUser?.fullName || currentUser?.name || (currentUser?.email ? currentUser.email.split('@')[0] : 'Kaveri'))
@@ -102,14 +125,14 @@ export const DesktopSidebar = () => {
                 Sakhi Suraksha
               </h1>
               <p className="text-[10px] font-extrabold text-[#FF2A6D] tracking-widest uppercase mt-0.5">
-                24/7 Safety Command
+                {isParent ? 'Parental Command' : isOrganization ? 'Organization Portal' : '24/7 Safety Command'}
               </p>
             </div>
           </Link>
         </div>
 
         {/* ACTIVE EMERGENCY SOS NOTICE */}
-        {activeSession && (
+        {activeSession && !isParent && !isOrganization && (
           <div className="mx-5 mt-5 bg-gradient-to-r from-[#FF2A6D] to-[#E01A4F] text-white text-xs font-black p-4 rounded-2xl flex items-center space-x-3 shadow-lg shadow-[#FF2A6D]/25 border border-white/30 animate-pulse">
             <AlertTriangle className="w-4 h-4 shrink-0 animate-bounce" />
             <span>SOS ACTIVE — LIVE MAP SHARING</span>
@@ -118,89 +141,85 @@ export const DesktopSidebar = () => {
 
         {/* NAVIGATION LINKS LIST */}
         <nav className="flex-1 px-5 py-6 space-y-6 overflow-y-auto scrollbar-none">
-          {isSuperAdmin ? (
-            /* SUPERADMIN UNIFIED NAVIGATION LIST */
-            <div className="space-y-3">
+          <div className="space-y-3">
+            {isSuperAdmin && (
               <div className="flex items-center space-x-2 px-2 pb-1 text-[11px] font-black text-[#FF2A6D] uppercase tracking-wider">
                 <Command className="w-4 h-4 text-[#FF2A6D]" />
                 <span>SuperAdmin Command HQ</span>
               </div>
+            )}
+            {isParent && (
+              <div className="flex items-center space-x-2 px-2 pb-1 text-[11px] font-black text-[#FF2A6D] uppercase tracking-wider">
+                <ShieldCheck className="w-4 h-4 text-[#FF2A6D]" />
+                <span>Child Safety Guardian HQ</span>
+              </div>
+            )}
+            {isOrganization && (
+              <div className="flex items-center space-x-2 px-2 pb-1 text-[11px] font-black text-[#FF2A6D] uppercase tracking-wider">
+                <Users className="w-4 h-4 text-[#FF2A6D]" />
+                <span>Organization Member Monitor</span>
+              </div>
+            )}
 
-              {adminNavItems.map((item) => {
-                const Icon = item.icon;
-                const isActive = pathname === item.path;
+            {activeNavItems.map((item) => {
+              const Icon = item.icon;
+              const isActive = pathname === item.path;
 
-                return (
-                  <Link
-                    key={item.path}
-                    href={item.path}
-                    className={`flex items-center space-x-3.5 px-4 py-3.5 rounded-2xl text-xs font-bold transition-all duration-300 group border ${isActive
-                        ? 'bg-gradient-to-r from-[#FF5C8A] via-[#FF2A6D] to-[#E01A4F] text-white font-black shadow-md shadow-[#FF2A6D]/20 border-white scale-[1.02]'
-                        : 'bg-white/80 text-[#2A0826] border-[#FFCCE1]/60 hover:border-[#FF2A6D]/60 hover:bg-[#FFF0F3]/80'
-                      }`}
-                  >
-                    <div className={`p-2.5 rounded-xl shrink-0 transition-transform group-hover:scale-105 ${isActive ? 'bg-white/20 text-white' : 'bg-[#FFF0F3] text-[#FF2A6D]'
-                      }`}>
-                      <Icon className="w-4 h-4" />
-                    </div>
+              return (
+                <Link
+                  key={item.path}
+                  href={item.path}
+                  className={`flex items-center space-x-3.5 px-4 py-3.5 rounded-2xl text-xs transition-all duration-300 group relative border ${isActive
+                      ? 'bg-gradient-to-r from-[#FF5C8A] via-[#FF2A6D] to-[#E01A4F] text-white font-black shadow-lg shadow-[#FF2A6D]/25 border-white/30 scale-[1.02]'
+                      : 'bg-white/80 text-[#2A0826] border-[#FFCCE1]/60 hover:border-[#FF2A6D]/60 hover:bg-[#FFF0F3]/80 hover:shadow-md hover:shadow-[#FF2A6D]/5 hover:-translate-y-0.5'
+                    }`}
+                >
+                  <div className={`p-2.5 rounded-xl shrink-0 transition-transform group-hover:scale-105 ${isActive ? 'bg-white/20 text-white' : 'bg-[#FFF0F3] text-[#FF2A6D]'
+                    }`}>
+                    <Icon className="w-4 h-4" />
+                  </div>
 
-                    <div className="flex-1 min-w-0">
-                      <p className={`font-black text-xs tracking-tight truncate ${isActive ? 'text-white' : 'text-[#2A0826] group-hover:text-[#FF2A6D]'}`}>
-                        {item.label}
-                      </p>
-                      <p className={`text-[10px] font-semibold truncate mt-0.5 ${isActive ? 'text-white/90' : 'text-[#684E67]'}`}>
-                        {item.desc}
-                      </p>
-                    </div>
-                  </Link>
-                );
-              })}
-            </div>
-          ) : (
-            /* MEMBER NAVIGATION SECTION ONLY */
-            <div className="space-y-3">
-              {memberNavItems.map((item) => {
-                const Icon = item.icon;
-                const isActive = pathname === item.path;
-
-                return (
-                  <Link
-                    key={item.path}
-                    href={item.path}
-                    className={`flex items-center space-x-3.5 px-4 py-3.5 rounded-2xl text-xs transition-all duration-300 group relative border ${isActive
-                        ? 'bg-gradient-to-r from-[#FF5C8A] via-[#FF2A6D] to-[#E01A4F] text-white font-black shadow-lg shadow-[#FF2A6D]/25 border-white/30 scale-[1.02]'
-                        : 'bg-white/80 text-[#2A0826] border-[#FFCCE1]/60 hover:border-[#FF2A6D]/60 hover:bg-[#FFF0F3]/80 hover:shadow-md hover:shadow-[#FF2A6D]/5 hover:-translate-y-0.5'
-                      }`}
-                  >
-                    <div className={`p-2.5 rounded-xl shrink-0 transition-transform group-hover:scale-105 ${isActive ? 'bg-white/20 text-white' : 'bg-[#FFF0F3] text-[#FF2A6D]'
-                      }`}>
-                      <Icon className="w-4 h-4" />
-                    </div>
-
-                    <div className="flex-1 min-w-0">
-                      <p className={`font-black text-xs tracking-tight ${isActive ? 'text-white' : 'text-[#2A0826] group-hover:text-[#FF2A6D]'}`}>
-                        {item.label}
-                      </p>
-                      <p className={`text-[10.5px] font-semibold truncate mt-0.5 ${isActive ? 'text-white/90' : 'text-[#684E67]'}`}>
-                        {item.desc}
-                      </p>
-                    </div>
-                  </Link>
-                );
-              })}
-            </div>
-          )}
+                  <div className="flex-1 min-w-0">
+                    <p className={`font-black text-xs tracking-tight ${isActive ? 'text-white' : 'text-[#2A0826] group-hover:text-[#FF2A6D]'}`}>
+                      {item.label}
+                    </p>
+                    <p className={`text-[10.5px] font-semibold truncate mt-0.5 ${isActive ? 'text-white/90' : 'text-[#684E67]'}`}>
+                      {item.desc}
+                    </p>
+                  </div>
+                </Link>
+              );
+            })}
+          </div>
         </nav>
 
         {/* FOOTER USER PROFILE AREA */}
         <div className="px-5 py-5 border-t border-[#FFCCE1]/60 bg-white/70 backdrop-blur-md space-y-3">
-          <Link
-            href={isSuperAdmin ? '/admin?tab=overview' : (activeSession ? '/active-sos' : '/dashboard')}
-            className="flex items-center justify-center space-x-2.5 w-full bg-gradient-to-r from-[#FF5C8A] via-[#FF2A6D] to-[#E01A4F] text-white font-black px-4 py-3.5 rounded-2xl text-xs shadow-md shadow-[#FF2A6D]/25 hover:shadow-lg hover:shadow-[#FF2A6D]/35 hover:scale-[1.01] active:scale-95 transition-all uppercase tracking-wider border border-white/30"
-          >
-            <AlertTriangle className="w-4 h-4 animate-pulse" />
-            <span>{isSuperAdmin ? '🚨 EMERGENCY COMMAND' : (activeSession ? '🚨 VIEW SOS STATUS' : 'EMERGENCY SOS')}</span>
-          </Link>
+          {isParent ? (
+            <Link
+              href="/parent"
+              className="flex items-center justify-center space-x-2.5 w-full bg-gradient-to-r from-[#FF5C8A] via-[#FF2A6D] to-[#E01A4F] text-white font-black px-4 py-3.5 rounded-2xl text-xs shadow-md shadow-[#FF2A6D]/25 hover:shadow-lg border border-white/30 uppercase tracking-wider"
+            >
+              <ShieldCheck className="w-4 h-4" />
+              <span>CHILD SAFETY MONITOR</span>
+            </Link>
+          ) : isOrganization ? (
+            <Link
+              href="/organization"
+              className="flex items-center justify-center space-x-2.5 w-full bg-gradient-to-r from-[#FF5C8A] via-[#FF2A6D] to-[#E01A4F] text-white font-black px-4 py-3.5 rounded-2xl text-xs shadow-md shadow-[#FF2A6D]/25 hover:shadow-lg border border-white/30 uppercase tracking-wider"
+            >
+              <ShieldCheck className="w-4 h-4" />
+              <span>ORGANIZATION MONITOR</span>
+            </Link>
+          ) : (
+            <Link
+              href={isSuperAdmin ? '/admin?tab=overview' : (activeSession ? '/active-sos' : '/dashboard')}
+              className="flex items-center justify-center space-x-2.5 w-full bg-gradient-to-r from-[#FF5C8A] via-[#FF2A6D] to-[#E01A4F] text-white font-black px-4 py-3.5 rounded-2xl text-xs shadow-md shadow-[#FF2A6D]/25 hover:shadow-lg hover:shadow-[#FF2A6D]/35 hover:scale-[1.01] active:scale-95 transition-all uppercase tracking-wider border border-white/30"
+            >
+              <AlertTriangle className="w-4 h-4 animate-pulse" />
+              <span>{isSuperAdmin ? '🚨 EMERGENCY COMMAND' : (activeSession ? '🚨 VIEW SOS STATUS' : 'EMERGENCY SOS')}</span>
+            </Link>
+          )}
 
           {/* LOGGED IN USER CARD WITH SIGN OUT */}
           <div className="bg-[#FFF0F3]/80 border border-[#FFCCE1] p-3 rounded-2xl flex items-center justify-between shadow-xs">
