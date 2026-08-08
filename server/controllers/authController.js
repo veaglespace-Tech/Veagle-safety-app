@@ -35,17 +35,25 @@ export const register = asyncHandler(async (req, res) => {
   else if (role === 'ORGANIZATION') assignedRole = 'ORGANIZATION';
   else if (role === 'PARENT') assignedRole = 'PARENT';
 
+  const cleanEmail = email && typeof email === 'string' ? email.trim().toLowerCase() : '';
+  const cleanPhone = phone && typeof phone === 'string' ? phone.replace(/\D/g, '') : '';
+  const cleanFullName = fullName && typeof fullName === 'string' ? fullName.trim() : '';
+
+  if (!cleanEmail || !password) {
+    return res.status(400).json({ error: 'Email Address and Password are required.' });
+  }
+
   // Field Validations
   if (assignedRole === 'SUPER_ADMIN' || assignedRole === 'ORGANIZATION' || assignedRole === 'PARENT') {
-    if (!fullName || !email || !phone || !password) {
+    if (!cleanFullName || !cleanEmail || !cleanPhone || !password) {
       return res.status(400).json({ error: 'Full Name, Email, Mobile Phone, and Password are required.' });
     }
   } else {
     // USER requires all essential details
     if (
-      !fullName ||
-      !email ||
-      !phone ||
+      !cleanFullName ||
+      !cleanEmail ||
+      !cleanPhone ||
       !password ||
       !bloodGroup ||
       !address ||
@@ -62,7 +70,7 @@ export const register = asyncHandler(async (req, res) => {
 
     // Email format validation
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    if (!emailRegex.test(email)) {
+    if (!emailRegex.test(cleanEmail)) {
       return res.status(400).json({ error: 'Please enter a valid email address.' });
     }
 
@@ -74,12 +82,11 @@ export const register = asyncHandler(async (req, res) => {
 
     // Mobile number validation (10 digits Indian format)
     const phoneRegex = /^[6-9]\d{9}$/;
-    const cleanPhone = phone.replace(/\D/g, '');
     if (!phoneRegex.test(cleanPhone)) {
       return res.status(400).json({ error: 'Please enter a valid 10-digit mobile number starting with 6, 7, 8, or 9.' });
     }
 
-    const cleanEmergencyPhone = emergencyContactPhone.replace(/\D/g, '');
+    const cleanEmergencyPhone = emergencyContactPhone ? emergencyContactPhone.replace(/\D/g, '') : '';
     if (!phoneRegex.test(cleanEmergencyPhone)) {
       return res.status(400).json({ error: 'Please enter a valid 10-digit mobile number for Emergency Guardian Contact.' });
     }
@@ -91,9 +98,6 @@ export const register = asyncHandler(async (req, res) => {
     }
   }
 
-  const cleanEmail = email ? email.trim().toLowerCase() : '';
-  const cleanPhone = phone ? phone.replace(/\D/g, '') : '';
-
   const existingUser = await prisma.user.findUnique({ where: { email: cleanEmail } });
   if (existingUser) {
     if (assignedRole === 'PARENT' || assignedRole === 'ORGANIZATION') {
@@ -101,7 +105,7 @@ export const register = asyncHandler(async (req, res) => {
       const updatedUser = await prisma.user.update({
         where: { id: existingUser.id },
         data: {
-          fullName: fullName || existingUser.fullName,
+          fullName: cleanFullName || existingUser.fullName,
           phone: cleanPhone || existingUser.phone,
           passwordHash,
           role: assignedRole,
@@ -141,7 +145,7 @@ export const register = asyncHandler(async (req, res) => {
       data: { emailOtp: otp, emailOtpExpiresAt: otpExpires },
     });
     try {
-      await sendEmailVerificationOtp({ recipientEmail: cleanEmail, userName: fullName, otp });
+      await sendEmailVerificationOtp({ recipientEmail: cleanEmail, userName: cleanFullName || fullName, otp });
     } catch (emailErr) {
       console.warn('[Register Email Notice] Verification email notice:', emailErr.message);
     }
@@ -162,7 +166,7 @@ export const register = asyncHandler(async (req, res) => {
   // Create User entry in Database immediately upon registration
   const user = await prisma.user.create({
     data: {
-      fullName,
+      fullName: cleanFullName,
       email: cleanEmail,
       phone: cleanPhone || '+91 98765 43210',
       passwordHash,
@@ -174,8 +178,8 @@ export const register = asyncHandler(async (req, res) => {
       state: state || 'Maharashtra',
       country: country || 'India',
       pincode: pincode || '411001',
-      emergencyContactName: emergencyContactName || null,
-      emergencyContactPhone: emergencyContactPhone || null,
+      emergencyContactName: assignedRole === 'USER' ? (emergencyContactName || null) : null,
+      emergencyContactPhone: assignedRole === 'USER' ? (emergencyContactPhone || null) : null,
       parentEmail: parentEmail ? parentEmail.trim().toLowerCase() : null,
       medicalNotes: medicalNotes || null,
       isEmailVerified: assignedRole !== 'USER',
@@ -185,7 +189,7 @@ export const register = asyncHandler(async (req, res) => {
     },
   });
 
-  if (emergencyContactName && emergencyContactPhone) {
+  if (assignedRole === 'USER' && emergencyContactName && emergencyContactPhone && emergencyContactName !== 'N/A') {
     try {
       await prisma.trustedContact.create({
         data: {
@@ -193,7 +197,7 @@ export const register = asyncHandler(async (req, res) => {
           name: emergencyContactName,
           relationship: emergencyContactRelation || 'Guardian',
           phone: emergencyContactPhone,
-          email: user.parentEmail || '',   // ← use parentEmail entered during registration
+          email: user.parentEmail || '',
           isVerified: true,
           priorityOrder: 1,
         },
