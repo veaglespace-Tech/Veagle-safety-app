@@ -107,8 +107,8 @@ function UserAuthForm() {
         router.push('/pricing');
         return;
       }
-      // Case 2: Existing DB user verified but subscription still INACTIVE
-      if (user && user.subscriptionStatus !== 'ACTIVE' && token) {
+      // Case 2: Existing DB user verified
+      if (user && token) {
         if (user.role === 'ORGANIZATION') {
           router.push('/organization');
           return;
@@ -117,7 +117,11 @@ function UserAuthForm() {
           router.push('/parent');
           return;
         }
-        router.push('/pricing');
+        if (user.role === 'SUPER_ADMIN') {
+          router.push('/admin');
+          return;
+        }
+        router.push('/dashboard');
         return;
       }
     }
@@ -131,7 +135,7 @@ function UserAuthForm() {
         router.push('/organization');
       } else if (user.role === 'PARENT') {
         router.push('/parent');
-      } else if (user.subscriptionStatus === 'ACTIVE') {
+      } else {
         router.push('/dashboard');
       }
     }
