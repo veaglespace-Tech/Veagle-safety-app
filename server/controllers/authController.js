@@ -91,11 +91,48 @@ export const register = asyncHandler(async (req, res) => {
     }
   }
 
-  const existingUser = await prisma.user.findUnique({ where: { email } });
+  const cleanEmail = email ? email.trim().toLowerCase() : '';
+  const cleanPhone = phone ? phone.replace(/\D/g, '') : '';
+
+  const existingUser = await prisma.user.findUnique({ where: { email: cleanEmail } });
   if (existingUser) {
-    if (existingUser.isEmailVerified) {
-      return res.status(409).json({ error: 'An account with this email already exists' });
+    if (assignedRole === 'PARENT' || assignedRole === 'ORGANIZATION') {
+      const passwordHash = await bcrypt.hash(password, 10);
+      const updatedUser = await prisma.user.update({
+        where: { id: existingUser.id },
+        data: {
+          fullName: fullName || existingUser.fullName,
+          phone: cleanPhone || existingUser.phone,
+          passwordHash,
+          role: assignedRole,
+          isEmailVerified: true,
+        },
+      });
+
+      const token = jwt.sign(
+        { id: updatedUser.id, userId: updatedUser.id, role: updatedUser.role, email: updatedUser.email },
+        config.jwt.secret,
+        { expiresIn: config.jwt.expiresIn }
+      );
+
+      return res.status(200).json({
+        message: `${assignedRole} account logged in successfully`,
+        token,
+        user: {
+          id: updatedUser.id,
+          fullName: updatedUser.fullName,
+          email: updatedUser.email,
+          phone: updatedUser.phone,
+          role: updatedUser.role,
+          subscriptionStatus: updatedUser.subscriptionStatus,
+        },
+      });
     }
+
+    if (existingUser.isEmailVerified) {
+      return res.status(409).json({ error: 'An account with this email already exists. Please Sign In instead.' });
+    }
+
     // Update existing unverified user with new OTP
     const otp = Math.floor(100000 + Math.random() * 900000).toString();
     const otpExpires = new Date(Date.now() + 10 * 60 * 1000);
@@ -104,14 +141,14 @@ export const register = asyncHandler(async (req, res) => {
       data: { emailOtp: otp, emailOtpExpiresAt: otpExpires },
     });
     try {
-      await sendEmailVerificationOtp({ recipientEmail: email, userName: fullName, otp });
+      await sendEmailVerificationOtp({ recipientEmail: cleanEmail, userName: fullName, otp });
     } catch (emailErr) {
       console.warn('[Register Email Notice] Verification email notice:', emailErr.message);
     }
     return res.status(200).json({
-      message: `OTP code sent to ${email}. (OTP Code: ${otp})`,
+      message: `OTP code sent to ${cleanEmail}. (OTP Code: ${otp})`,
       requiresVerification: true,
-      email,
+      email: cleanEmail,
       debugOtp: otp,
     });
   }
@@ -126,8 +163,8 @@ export const register = asyncHandler(async (req, res) => {
   const user = await prisma.user.create({
     data: {
       fullName,
-      email,
-      phone: phone || '+91 98765 43210',
+      email: cleanEmail,
+      phone: cleanPhone || '+91 98765 43210',
       passwordHash,
       role: assignedRole,
       profilePhoto: profilePhoto || 'https://ik.imagekit.io/m5ei0wbuw/avatar-woman-1.png',
