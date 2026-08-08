@@ -64,6 +64,10 @@ export const Header = () => {
 
   const isSuperAdmin = mounted && user?.role === 'SUPER_ADMIN';
 
+  const logoHref = mounted && user?.role === 'PARENT'
+    ? '/parent'
+    : (mounted && user?.role === 'ORGANIZATION' ? '/organization' : '/');
+
   return (
     <header style={{
       position: 'sticky', top: 0, zIndex: 30,
@@ -78,7 +82,7 @@ export const Header = () => {
 
         {/* BRAND LOGO */}
         <Link 
-          href="/" 
+          href={logoHref} 
           className="group flex items-center gap-2 no-underline shrink min-w-0 overflow-hidden"
         >
           <Logo3DFlip size={40} className="shrink-0" />

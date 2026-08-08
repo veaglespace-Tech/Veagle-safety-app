@@ -141,16 +141,30 @@ export const DesktopSidebar = () => {
               </div>
             )}
             {isParent && (
-              <div className="flex items-center space-x-2 px-2 pb-1 text-[11px] font-black text-[#FF2A6D] uppercase tracking-wider">
-                <ShieldCheck className="w-4 h-4 text-[#FF2A6D]" />
-                <span>Child Safety Guardian HQ</span>
-              </div>
+              <Link
+                href="/parent"
+                className={`flex items-center space-x-3 px-4 py-3.5 rounded-2xl text-xs font-black uppercase tracking-wider transition-all border shadow-sm cursor-pointer ${
+                  pathname === '/parent'
+                    ? 'bg-gradient-to-r from-[#FF5C8A] via-[#FF2A6D] to-[#E01A4F] text-white shadow-md border-white'
+                    : 'bg-[#FFF0F3] text-[#FF2A6D] border-[#FFCCE1] hover:bg-[#FF2A6D] hover:text-white'
+                }`}
+              >
+                <ShieldCheck className="w-5 h-5 shrink-0" />
+                <span>CHILD SAFETY GUARDIAN HQ</span>
+              </Link>
             )}
             {isOrganization && (
-              <div className="flex items-center space-x-2 px-2 pb-1 text-[11px] font-black text-[#FF2A6D] uppercase tracking-wider">
-                <Users className="w-4 h-4 text-[#FF2A6D]" />
-                <span>Organization Member Monitor</span>
-              </div>
+              <Link
+                href="/organization"
+                className={`flex items-center space-x-3 px-4 py-3.5 rounded-2xl text-xs font-black uppercase tracking-wider transition-all border shadow-sm cursor-pointer ${
+                  pathname === '/organization'
+                    ? 'bg-gradient-to-r from-[#FF5C8A] via-[#FF2A6D] to-[#E01A4F] text-white shadow-md border-white'
+                    : 'bg-[#FFF0F3] text-[#FF2A6D] border-[#FFCCE1] hover:bg-[#FF2A6D] hover:text-white'
+                }`}
+              >
+                <Users className="w-5 h-5 shrink-0" />
+                <span>ORGANIZATION MONITOR HQ</span>
+              </Link>
             )}
 
             {activeNavItems.map((item) => {
