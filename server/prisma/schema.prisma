@@ -46,6 +46,10 @@ model User {
   safetyCheckins        SafetyCheckin[]
   auditLogs             AuditLog[]
   paymentHistories      PaymentHistory[]
+  organizationMemberships OrganizationMember[] @relation("OrgMemberUser")
+  managedOrganizations   OrganizationMember[] @relation("OrgOwner")
+  parentLinks             ParentChildLink[]    @relation("ParentLinks")
+  childLinks              ParentChildLink[]    @relation("ChildLinks")
 }
 
 model Plan {
@@ -231,4 +235,32 @@ model ContactEnquiry {
   resolvedAt     DateTime?
   createdAt      DateTime  @default(now())
   updatedAt      DateTime  @updatedAt
+}
+
+model OrganizationMember {
+  id             Int      @id @default(autoincrement())
+  organizationId Int
+  organization   User     @relation("OrgOwner", fields: [organizationId], references: [id], onDelete: Cascade)
+  userId         Int
+  user           User     @relation("OrgMemberUser", fields: [userId], references: [id], onDelete: Cascade)
+  memberCode     String?
+  department     String?
+  status         String   @default("ACTIVE") // ACTIVE, PENDING
+  createdAt      DateTime @default(now())
+
+  @@unique([organizationId, userId])
+}
+
+model ParentChildLink {
+  id           Int      @id @default(autoincrement())
+  parentId     Int
+  parent       User     @relation("ParentLinks", fields: [parentId], references: [id], onDelete: Cascade)
+  childId      Int
+  child        User     @relation("ChildLinks", fields: [childId], references: [id], onDelete: Cascade)
+  relationship String   @default("Parent")
+  linkingCode  String?
+  status       String   @default("ACTIVE") // ACTIVE, PENDING
+  createdAt    DateTime @default(now())
+
+  @@unique([parentId, childId])
 }

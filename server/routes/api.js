@@ -5,6 +5,8 @@ import * as sosController from '../controllers/sosController.js';
 import * as journeyController from '../controllers/journeyController.js';
 import * as checkinController from '../controllers/checkinController.js';
 import * as adminController from '../controllers/adminController.js';
+import * as organizationController from '../controllers/organizationController.js';
+import * as parentController from '../controllers/parentController.js';
 import * as paymentController from '../controllers/paymentController.js';
 import * as pushController from '../controllers/pushController.js';
 import { authenticateToken, optionalAuthToken, requireSuperAdmin } from '../middleware/auth.js';
@@ -85,6 +87,16 @@ router.put('/admin/gst', authenticateToken, requireSuperAdmin, adminController.u
 router.get('/admin/payments', authenticateToken, requireSuperAdmin, adminController.getPaymentHistory);
 router.get('/admin/enquiries', authenticateToken, requireSuperAdmin, adminController.getContactEnquiries);
 router.post('/admin/enquiries/:id/resolve', authenticateToken, requireSuperAdmin, adminController.resolveContactEnquiry);
+
+// Organization Portal Routes
+router.get('/organization/overview', authenticateToken, organizationController.getOrganizationOverview);
+router.post('/organization/members', authenticateToken, organizationController.addMember);
+router.delete('/organization/members/:membershipId', authenticateToken, organizationController.removeMember);
+
+// Parent Portal Routes
+router.get('/parent/overview', authenticateToken, parentController.getParentOverview);
+router.post('/parent/link-child', authenticateToken, parentController.linkChild);
+router.delete('/parent/children/:linkId', authenticateToken, parentController.unlinkChild);
 
 // Web Push Notifications
 router.get('/push/vapid-key', pushController.getVapidPublicKey);

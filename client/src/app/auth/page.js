@@ -54,6 +54,7 @@ function UserAuthForm() {
   }, [searchParams]);
 
   // Registration Fields State
+  const [selectedRole, setSelectedRole] = useState('USER'); // USER, PARENT, ORGANIZATION
   const [fullName, setFullName] = useState('');
   const [email, setEmail] = useState('');
   const [phone, setPhone] = useState('');
@@ -108,6 +109,14 @@ function UserAuthForm() {
       }
       // Case 2: Existing DB user verified but subscription still INACTIVE
       if (user && user.subscriptionStatus !== 'ACTIVE' && token) {
+        if (user.role === 'ORGANIZATION') {
+          router.push('/organization');
+          return;
+        }
+        if (user.role === 'PARENT') {
+          router.push('/parent');
+          return;
+        }
         router.push('/pricing');
         return;
       }
@@ -118,6 +127,10 @@ function UserAuthForm() {
     if (token && user) {
       if (user.role === 'SUPER_ADMIN') {
         router.push('/admin');
+      } else if (user.role === 'ORGANIZATION') {
+        router.push('/organization');
+      } else if (user.role === 'PARENT') {
+        router.push('/parent');
       } else if (user.subscriptionStatus === 'ACTIVE') {
         router.push('/dashboard');
       }
@@ -137,6 +150,29 @@ function UserAuthForm() {
     if (isLogin) {
       if (!email || !password) {
         setValidationError('Email and Password are required.');
+        return false;
+      }
+      return true;
+    }
+
+    if (selectedRole === 'PARENT' || selectedRole === 'ORGANIZATION') {
+      if (!fullName.trim() || !email.trim() || !phone.trim() || !password) {
+        setValidationError('Please fill in all required fields: Full Name, Email, Phone, and Password.');
+        return false;
+      }
+      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+      if (!emailRegex.test(email.trim())) {
+        setValidationError('Please enter a valid email address.');
+        return false;
+      }
+      const phoneRegex = /^[6-9]\d{9}$/;
+      const cleanPhone = phone.replace(/\D/g, '');
+      if (!phoneRegex.test(cleanPhone)) {
+        setValidationError('Please enter a valid 10-digit mobile number starting with 6, 7, 8, or 9.');
+        return false;
+      }
+      if (password.length < 6) {
+        setValidationError('Password must be at least 6 characters long.');
         return false;
       }
       return true;
@@ -211,16 +247,17 @@ function UserAuthForm() {
           fullName: fullName.trim(),
           email: email.trim(),
           phone: phone.replace(/\D/g, ''),
-          bloodGroup,
-          address: address.trim(),
-          city: city.trim(),
-          state: state.trim(),
+          role: selectedRole,
+          bloodGroup: selectedRole === 'USER' ? bloodGroup : 'N/A',
+          address: selectedRole === 'USER' ? address.trim() : 'N/A',
+          city: selectedRole === 'USER' ? city.trim() : 'N/A',
+          state: selectedRole === 'USER' ? state.trim() : 'N/A',
           country: 'India',
-          pincode: pincode.trim(),
-          emergencyContactName: emergencyContactName.trim(),
-          emergencyContactRelation,
-          emergencyContactPhone: emergencyContactPhone.replace(/\D/g, ''),
-          parentEmail: parentEmail.trim(),
+          pincode: selectedRole === 'USER' ? pincode.trim() : '411001',
+          emergencyContactName: selectedRole === 'USER' ? emergencyContactName.trim() : 'N/A',
+          emergencyContactRelation: selectedRole === 'USER' ? emergencyContactRelation : 'N/A',
+          emergencyContactPhone: selectedRole === 'USER' ? emergencyContactPhone.replace(/\D/g, '') : '9999999999',
+          parentEmail: selectedRole === 'USER' ? parentEmail.trim() : '',
           password,
         })
       );
@@ -392,16 +429,66 @@ function UserAuthForm() {
               
               {!isLogin ? (
                 <div className="space-y-4">
-                  
+                  {/* ROLE SELECTION SWITCHER */}
+                  <div className="space-y-1.5">
+                    <label className="block text-[11px] font-black uppercase text-[#FF2A6D] tracking-wider text-left">
+                      Account Type / Role
+                    </label>
+                    <div className="grid grid-cols-3 gap-2 bg-[#FFF0F3] p-1.5 rounded-2xl border-1.5 border-[#FFCCE1]">
+                      <button
+                        type="button"
+                        onClick={() => setSelectedRole('USER')}
+                        className={`py-2 px-2 text-xs font-black rounded-xl transition-all flex items-center justify-center space-x-1 cursor-pointer ${
+                          selectedRole === 'USER'
+                            ? 'bg-gradient-to-r from-[#FF5C8A] to-[#FF2A6D] text-white shadow-sm'
+                            : 'text-[#684E67] hover:text-[#FF2A6D]'
+                        }`}
+                      >
+                        <UserIcon className="w-3.5 h-3.5" />
+                        <span className="truncate">Personal</span>
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setSelectedRole('PARENT')}
+                        className={`py-2 px-2 text-xs font-black rounded-xl transition-all flex items-center justify-center space-x-1 cursor-pointer ${
+                          selectedRole === 'PARENT'
+                            ? 'bg-gradient-to-r from-[#FF5C8A] to-[#FF2A6D] text-white shadow-sm'
+                            : 'text-[#684E67] hover:text-[#FF2A6D]'
+                        }`}
+                      >
+                        <Users className="w-3.5 h-3.5" />
+                        <span className="truncate">Parent</span>
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setSelectedRole('ORGANIZATION')}
+                        className={`py-2 px-2 text-xs font-black rounded-xl transition-all flex items-center justify-center space-x-1 cursor-pointer ${
+                          selectedRole === 'ORGANIZATION'
+                            ? 'bg-gradient-to-r from-[#FF5C8A] to-[#FF2A6D] text-white shadow-sm'
+                            : 'text-[#684E67] hover:text-[#FF2A6D]'
+                        }`}
+                      >
+                        <Building className="w-3.5 h-3.5" />
+                        <span className="truncate">Org</span>
+                      </button>
+                    </div>
+                  </div>
+
                   {/* FULL NAME */}
                   <div>
-                    <label className="block text-[#684E67] font-extrabold mb-1">Full Name *</label>
+                    <label className="block text-[#684E67] font-extrabold mb-1">
+                      {selectedRole === 'ORGANIZATION' ? 'Organization / Institution Name *' : selectedRole === 'PARENT' ? 'Parent Full Name *' : 'Full Name *'}
+                    </label>
                     <div className="relative">
-                      <UserIcon className="w-4 h-4 text-[#684E67] absolute left-3.5 top-1/2 -translate-y-1/2" />
+                      {selectedRole === 'ORGANIZATION' ? (
+                        <Building className="w-4 h-4 text-[#684E67] absolute left-3.5 top-1/2 -translate-y-1/2" />
+                      ) : (
+                        <UserIcon className="w-4 h-4 text-[#684E67] absolute left-3.5 top-1/2 -translate-y-1/2" />
+                      )}
                       <input
                         type="text"
                         required
-                        placeholder="e.g. Priya Sharma"
+                        placeholder={selectedRole === 'ORGANIZATION' ? 'e.g. St. Marys Academy / Apex Corp' : selectedRole === 'PARENT' ? 'e.g. Rajesh Sharma' : 'e.g. Priya Sharma'}
                         value={fullName}
                         onChange={(e) => setFullName(e.target.value)}
                         className="w-full pl-10 pr-4 py-3 bg-[#FFF0F3] border-1.5 border-[#FFCCE1] rounded-xl text-[#2A0826] font-bold focus:border-[#FF2A6D] focus:bg-white transition-all outline-none"
@@ -418,7 +505,7 @@ function UserAuthForm() {
                         <input
                           type="email"
                           required
-                          placeholder="priya@example.com"
+                          placeholder="email@example.com"
                           value={email}
                           onChange={(e) => setEmail(e.target.value)}
                           className="w-full pl-10 pr-4 py-3 bg-[#FFF0F3] border-1.5 border-[#FFCCE1] rounded-xl text-[#2A0826] font-bold focus:border-[#FF2A6D] focus:bg-white transition-all outline-none"
@@ -443,154 +530,156 @@ function UserAuthForm() {
                     </div>
                   </div>
 
-                  {/* BLOOD GROUP & PASSWORD */}
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                    <div>
-                      <label className="block text-[#684E67] font-extrabold mb-1">Blood Group *</label>
-                      <select
-                        required
-                        value={bloodGroup}
-                        onChange={(e) => setBloodGroup(e.target.value)}
-                        className="w-full px-4 py-3 bg-[#FFF0F3] border-1.5 border-[#FFCCE1] rounded-xl text-[#2A0826] font-bold focus:border-[#FF2A6D] focus:bg-white transition-all outline-none"
-                      >
-                        <option value="" disabled>Select Blood Group</option>
-                        {['A+', 'A-', 'B+', 'B-', 'AB+', 'AB-', 'O+', 'O-'].map((bg) => (
-                          <option key={bg} value={bg}>{bg}</option>
-                        ))}
-                      </select>
-                    </div>
-
-                    <div>
-                      <label className="block text-[#684E67] font-extrabold mb-1">Password *</label>
-                      <div className="relative">
-                        <Lock className="w-4 h-4 text-[#684E67] absolute left-3.5 top-1/2 -translate-y-1/2" />
-                        <input
-                          type={showPass ? 'text' : 'password'}
-                          required
-                          placeholder="••••••••"
-                          value={password}
-                          onChange={(e) => setPassword(e.target.value)}
-                          className="w-full pl-10 pr-12 py-3 bg-[#FFF0F3] border-1.5 border-[#FFCCE1] rounded-xl text-[#2A0826] font-bold focus:border-[#FF2A6D] focus:bg-white transition-all outline-none"
-                        />
-                        <button
-                          type="button"
-                          onClick={() => setShowPass(!showPass)}
-                          className="absolute right-3.5 top-1/2 -translate-y-1/2 text-[#684E67] hover:text-[#FF2A6D] transition-colors"
-                        >
-                          {showPass ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-                        </button>
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* ADDRESS & CITY */}
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                    <div>
-                      <label className="block text-[#684E67] font-extrabold mb-1">Full Address *</label>
-                      <div className="relative">
-                        <MapPin className="w-4 h-4 text-[#684E67] absolute left-3.5 top-1/2 -translate-y-1/2" />
-                        <input
-                          type="text"
-                          required
-                          placeholder="House no, Street area"
-                          value={address}
-                          onChange={(e) => setAddress(e.target.value)}
-                          className="w-full pl-10 pr-4 py-3 bg-[#FFF0F3] border-1.5 border-[#FFCCE1] rounded-xl text-[#2A0826] font-bold focus:border-[#FF2A6D] focus:bg-white transition-all outline-none"
-                        />
-                      </div>
-                    </div>
-
-                    <div>
-                      <label className="block text-[#684E67] font-extrabold mb-1">City *</label>
-                      <div className="relative">
-                        <Building className="w-4 h-4 text-[#684E67] absolute left-3.5 top-1/2 -translate-y-1/2" />
-                        <input
-                          type="text"
-                          required
-                          placeholder="e.g. Pune"
-                          value={city}
-                          onChange={(e) => setCity(e.target.value)}
-                          className="w-full pl-10 pr-4 py-3 bg-[#FFF0F3] border-1.5 border-[#FFCCE1] rounded-xl text-[#2A0826] font-bold focus:border-[#FF2A6D] focus:bg-white transition-all outline-none"
-                        />
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* STATE & PINCODE */}
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                    <div>
-                      <label className="block text-[#684E67] font-extrabold mb-1">State *</label>
-                      <div className="relative">
-                        <Map className="w-4 h-4 text-[#684E67] absolute left-3.5 top-1/2 -translate-y-1/2" />
-                        <input
-                          type="text"
-                          required
-                          placeholder="e.g. Maharashtra"
-                          value={state}
-                          onChange={(e) => setState(e.target.value)}
-                          className="w-full pl-10 pr-4 py-3 bg-[#FFF0F3] border-1.5 border-[#FFCCE1] rounded-xl text-[#2A0826] font-bold focus:border-[#FF2A6D] focus:bg-white transition-all outline-none"
-                        />
-                      </div>
-                    </div>
-
-                    <div>
-                      <label className="block text-[#684E67] font-extrabold mb-1">Pincode *</label>
+                  {/* PASSWORD */}
+                  <div>
+                    <label className="block text-[#684E67] font-extrabold mb-1">Password *</label>
+                    <div className="relative">
+                      <Lock className="w-4 h-4 text-[#684E67] absolute left-3.5 top-1/2 -translate-y-1/2" />
                       <input
-                        type="text"
+                        type={showPass ? 'text' : 'password'}
                         required
-                        maxLength={6}
-                        placeholder="e.g. 411001"
-                        value={pincode}
-                        onChange={(e) => setPincode(e.target.value.replace(/\D/g, ''))}
-                        className="w-full px-4 py-3 bg-[#FFF0F3] border-1.5 border-[#FFCCE1] rounded-xl text-[#2A0826] font-mono font-bold focus:border-[#FF2A6D] focus:bg-white transition-all outline-none"
+                        placeholder="••••••••"
+                        value={password}
+                        onChange={(e) => setPassword(e.target.value)}
+                        className="w-full pl-10 pr-12 py-3 bg-[#FFF0F3] border-1.5 border-[#FFCCE1] rounded-xl text-[#2A0826] font-bold focus:border-[#FF2A6D] focus:bg-white transition-all outline-none"
                       />
+                      <button
+                        type="button"
+                        onClick={() => setShowPass(!showPass)}
+                        className="absolute right-3.5 top-1/2 -translate-y-1/2 text-[#684E67] hover:text-[#FF2A6D] transition-colors"
+                      >
+                        {showPass ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                      </button>
                     </div>
                   </div>
 
-                  {/* EMERGENCY GUARDIAN CONTACT & RELATIONSHIP */}
-                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                    <div>
-                      <label className="block text-[#684E67] font-extrabold mb-1">Guardian Name *</label>
-                      <div className="relative">
-                        <Users className="w-4 h-4 text-[#684E67] absolute left-3.5 top-1/2 -translate-y-1/2" />
-                        <input
-                          type="text"
+                  {/* PERSONAL USER SPECIFIC ONBOARDING FIELDS */}
+                  {selectedRole === 'USER' && (
+                    <>
+                      {/* BLOOD GROUP */}
+                      <div>
+                        <label className="block text-[#684E67] font-extrabold mb-1">Blood Group *</label>
+                        <select
                           required
-                          placeholder="e.g. Rajesh Sharma"
-                          value={emergencyContactName}
-                          onChange={(e) => setEmergencyContactName(e.target.value)}
-                          className="w-full pl-10 pr-3 py-3 bg-[#FFF0F3] border-1.5 border-[#FFCCE1] rounded-xl text-[#2A0826] font-bold focus:border-[#FF2A6D] focus:bg-white transition-all outline-none text-xs"
-                        />
+                          value={bloodGroup}
+                          onChange={(e) => setBloodGroup(e.target.value)}
+                          className="w-full px-4 py-3 bg-[#FFF0F3] border-1.5 border-[#FFCCE1] rounded-xl text-[#2A0826] font-bold focus:border-[#FF2A6D] focus:bg-white transition-all outline-none"
+                        >
+                          <option value="" disabled>Select Blood Group</option>
+                          {['A+', 'A-', 'B+', 'B-', 'AB+', 'AB-', 'O+', 'O-'].map((bg) => (
+                            <option key={bg} value={bg}>{bg}</option>
+                          ))}
+                        </select>
                       </div>
-                    </div>
 
-                    <div>
-                      <label className="block text-[#684E67] font-extrabold mb-1">Relationship *</label>
-                      <select
-                        value={emergencyContactRelation}
-                        onChange={(e) => setEmergencyContactRelation(e.target.value)}
-                        className="w-full px-3 py-3 bg-[#FFF0F3] border-1.5 border-[#FFCCE1] rounded-xl text-[#2A0826] font-bold focus:border-[#FF2A6D] focus:bg-white transition-all outline-none text-xs cursor-pointer"
-                      >
-                        <option value="Parent">Parent</option>
-                        <option value="Spouse">Spouse</option>
-                        <option value="Sibling">Sibling</option>
-                        <option value="Friend">Friend</option>
-                        <option value="Guardian">Guardian</option>
-                        <option value="Relative">Relative</option>
-                        <option value="Other">Other</option>
-                      </select>
-                    </div>
+                      {/* ADDRESS & CITY */}
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                        <div>
+                          <label className="block text-[#684E67] font-extrabold mb-1">Full Address *</label>
+                          <div className="relative">
+                            <MapPin className="w-4 h-4 text-[#684E67] absolute left-3.5 top-1/2 -translate-y-1/2" />
+                            <input
+                              type="text"
+                              required
+                              placeholder="House no, Street area"
+                              value={address}
+                              onChange={(e) => setAddress(e.target.value)}
+                              className="w-full pl-10 pr-4 py-3 bg-[#FFF0F3] border-1.5 border-[#FFCCE1] rounded-xl text-[#2A0826] font-bold focus:border-[#FF2A6D] focus:bg-white transition-all outline-none"
+                            />
+                          </div>
+                        </div>
 
-                    <div>
-                      <label className="block text-[#684E67] font-extrabold mb-1">Mobile Number *</label>
-                      <div className="relative">
-                        <Phone className="w-4 h-4 text-[#684E67] absolute left-3.5 top-1/2 -translate-y-1/2" />
-                        <input
-                          type="tel"
-                          required
-                          maxLength={10}
-                          placeholder="10-digit number"
-                          value={emergencyContactPhone}
+                        <div>
+                          <label className="block text-[#684E67] font-extrabold mb-1">City *</label>
+                          <div className="relative">
+                            <Building className="w-4 h-4 text-[#684E67] absolute left-3.5 top-1/2 -translate-y-1/2" />
+                            <input
+                              type="text"
+                              required
+                              placeholder="e.g. Pune"
+                              value={city}
+                              onChange={(e) => setCity(e.target.value)}
+                              className="w-full pl-10 pr-4 py-3 bg-[#FFF0F3] border-1.5 border-[#FFCCE1] rounded-xl text-[#2A0826] font-bold focus:border-[#FF2A6D] focus:bg-white transition-all outline-none"
+                            />
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* STATE & PINCODE */}
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                        <div>
+                          <label className="block text-[#684E67] font-extrabold mb-1">State *</label>
+                          <div className="relative">
+                            <Map className="w-4 h-4 text-[#684E67] absolute left-3.5 top-1/2 -translate-y-1/2" />
+                            <input
+                              type="text"
+                              required
+                              placeholder="e.g. Maharashtra"
+                              value={state}
+                              onChange={(e) => setState(e.target.value)}
+                              className="w-full pl-10 pr-4 py-3 bg-[#FFF0F3] border-1.5 border-[#FFCCE1] rounded-xl text-[#2A0826] font-bold focus:border-[#FF2A6D] focus:bg-white transition-all outline-none"
+                            />
+                          </div>
+                        </div>
+
+                        <div>
+                          <label className="block text-[#684E67] font-extrabold mb-1">Pincode *</label>
+                          <input
+                            type="text"
+                            required
+                            maxLength={6}
+                            placeholder="e.g. 411001"
+                            value={pincode}
+                            onChange={(e) => setPincode(e.target.value.replace(/\D/g, ''))}
+                            className="w-full px-4 py-3 bg-[#FFF0F3] border-1.5 border-[#FFCCE1] rounded-xl text-[#2A0826] font-mono font-bold focus:border-[#FF2A6D] focus:bg-white transition-all outline-none"
+                          />
+                        </div>
+                      </div>
+
+                      {/* EMERGENCY GUARDIAN CONTACT */}
+                      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                        <div>
+                          <label className="block text-[#684E67] font-extrabold mb-1">Guardian Name *</label>
+                          <div className="relative">
+                            <Users className="w-4 h-4 text-[#684E67] absolute left-3.5 top-1/2 -translate-y-1/2" />
+                            <input
+                              type="text"
+                              required
+                              placeholder="e.g. Rajesh Sharma"
+                              value={emergencyContactName}
+                              onChange={(e) => setEmergencyContactName(e.target.value)}
+                              className="w-full pl-10 pr-3 py-3 bg-[#FFF0F3] border-1.5 border-[#FFCCE1] rounded-xl text-[#2A0826] font-bold focus:border-[#FF2A6D] focus:bg-white transition-all outline-none text-xs"
+                            />
+                          </div>
+                        </div>
+
+                        <div>
+                          <label className="block text-[#684E67] font-extrabold mb-1">Relationship *</label>
+                          <select
+                            value={emergencyContactRelation}
+                            onChange={(e) => setEmergencyContactRelation(e.target.value)}
+                            className="w-full px-3 py-3 bg-[#FFF0F3] border-1.5 border-[#FFCCE1] rounded-xl text-[#2A0826] font-bold focus:border-[#FF2A6D] focus:bg-white transition-all outline-none text-xs cursor-pointer"
+                          >
+                            <option value="Parent">Parent</option>
+                            <option value="Spouse">Spouse</option>
+                            <option value="Sibling">Sibling</option>
+                            <option value="Friend">Friend</option>
+                            <option value="Guardian">Guardian</option>
+                            <option value="Relative">Relative</option>
+                            <option value="Other">Other</option>
+                          </select>
+                        </div>
+
+                        <div>
+                          <label className="block text-[#684E67] font-extrabold mb-1">Mobile Number *</label>
+                          <div className="relative">
+                            <Phone className="w-4 h-4 text-[#684E67] absolute left-3.5 top-1/2 -translate-y-1/2" />
+                            <input
+                              type="tel"
+                              required
+                              maxLength={10}
+                              placeholder="10-digit number"
+                              value={emergencyContactPhone}
                           onChange={(e) => setEmergencyContactPhone(e.target.value.replace(/\D/g, ''))}
                           className="w-full pl-10 pr-3 py-3 bg-[#FFF0F3] border-1.5 border-[#FFCCE1] rounded-xl text-[#2A0826] font-mono font-bold focus:border-[#FF2A6D] focus:bg-white transition-all outline-none text-xs"
                         />
@@ -615,6 +704,8 @@ function UserAuthForm() {
                       💡 Emergency SOS emails will automatically be dispatched to this Parent email along with admin alerts.
                     </p>
                   </div>
+                    </>
+                  )}
 
                 </div>
               ) : (

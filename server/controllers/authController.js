@@ -30,12 +30,15 @@ export const register = asyncHandler(async (req, res) => {
     medicalNotes,
   } = req.body;
 
-  const assignedRole = role === 'SUPER_ADMIN' ? 'SUPER_ADMIN' : 'USER';
+  let assignedRole = 'USER';
+  if (role === 'SUPER_ADMIN') assignedRole = 'SUPER_ADMIN';
+  else if (role === 'ORGANIZATION') assignedRole = 'ORGANIZATION';
+  else if (role === 'PARENT') assignedRole = 'PARENT';
 
   // Field Validations
-  if (assignedRole === 'SUPER_ADMIN') {
-    if (!fullName || !email || !password) {
-      return res.status(400).json({ error: 'fullName, email, and password are required for SuperAdmin' });
+  if (assignedRole === 'SUPER_ADMIN' || assignedRole === 'ORGANIZATION' || assignedRole === 'PARENT') {
+    if (!fullName || !email || !phone || !password) {
+      return res.status(400).json({ error: 'Full Name, Email, Mobile Phone, and Password are required.' });
     }
   } else {
     // USER requires all essential details

@@ -17,6 +17,8 @@ export const BottomNavigation = () => {
   const isLoggedIn = mounted && (token || (typeof window !== 'undefined' && localStorage.getItem('tichi_token')));
 
   const isSuperAdmin = mounted && user?.role === 'SUPER_ADMIN';
+  const isOrganization = mounted && user?.role === 'ORGANIZATION';
+  const isParent = mounted && user?.role === 'PARENT';
 
   const memberNavItems = [
     { path: '/profile', label: 'Profile', icon: User },
@@ -26,6 +28,18 @@ export const BottomNavigation = () => {
     { path: '/subscription', label: 'Plan', icon: ShieldCheck },
   ];
 
+  const orgNavItems = [
+    { path: '/organization', label: 'Monitor', icon: ShieldCheck },
+    { path: '/organization', label: 'Members', icon: Users },
+    { path: '/profile', label: 'Profile', icon: User },
+  ];
+
+  const parentNavItems = [
+    { path: '/parent', label: 'Safety', icon: ShieldCheck },
+    { path: '/parent', label: 'Children', icon: Users },
+    { path: '/profile', label: 'Profile', icon: User },
+  ];
+
   const adminNavItems = [
     { path: '/admin', label: 'SOS HQ', icon: AlertOctagon },
     { path: '/admin/users', label: 'Users', icon: Users },
@@ -33,7 +47,13 @@ export const BottomNavigation = () => {
     { path: '/admin/payments', label: 'Pay', icon: CreditCard },
   ];
 
-  const navItems = isSuperAdmin ? adminNavItems : memberNavItems;
+  const navItems = isSuperAdmin
+    ? adminNavItems
+    : isOrganization
+      ? orgNavItems
+      : isParent
+        ? parentNavItems
+        : memberNavItems;
 
   useEffect(() => {
     setMounted(true);
