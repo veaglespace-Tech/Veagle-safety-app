@@ -1,6 +1,10 @@
 import { createSlice, createAsyncThunk } from '@reduxjs/toolkit';
 import { authApi } from '../api/authApi.js';
 
+const initialToken = typeof window !== 'undefined' ? localStorage.getItem('tichi_token') : null;
+const initialRegToken = typeof window !== 'undefined' ? localStorage.getItem('tichi_reg_token') : null;
+const initialPendingToken = typeof window !== 'undefined' ? localStorage.getItem('tichi_pending_token') : null;
+
 const initialUser = typeof window !== 'undefined' ? (() => {
   try {
     const item = localStorage.getItem('tichi_user');
