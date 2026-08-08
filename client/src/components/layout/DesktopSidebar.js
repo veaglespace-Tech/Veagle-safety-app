@@ -19,6 +19,9 @@ import {
   ChevronRight,
   CreditCard,
   AlertOctagon,
+  Navigation,
+  Activity,
+  Heart,
   Menu,
   X,
 } from 'lucide-react';
@@ -73,9 +76,18 @@ export const DesktopSidebar = () => {
     { path: '/subscription', label: 'Subscription', icon: ShieldCheck, desc: 'Active Plan & Validity' },
   ];
 
-  const parentNavItems = [];
+  const parentNavItems = [
+    { path: '/parent', label: 'Live Child GPS Tracking', icon: MapPin, desc: 'Real-Time Location Stream' },
+    { path: '/parent', label: 'Active Trips & ETAs', icon: Navigation, desc: 'Live Route & Destination' },
+    { path: '/parent', label: 'Emergency Alerts Monitor', icon: AlertTriangle, desc: 'SOS Broadcast Logs' },
+    { path: '/profile', label: 'Parent Account Details', icon: User, desc: 'Profile & Security' },
+  ];
 
-  const orgNavItems = [];
+  const orgNavItems = [
+    { path: '/organization', label: 'Live Member GPS Monitor', icon: MapPin, desc: 'Real-Time Safety Stream' },
+    { path: '/organization', label: 'Enrolled Member Directory', icon: Users, desc: 'Organization Roster' },
+    { path: '/profile', label: 'Organization Profile', icon: User, desc: 'Organization Account' },
+  ];
 
   const adminNavItems = [
     { path: '/admin', label: 'Emergency Command', icon: AlertOctagon, desc: 'Active SOS & Incident HQ' },
