@@ -1,6 +1,6 @@
 /**
  * Helper to trigger immediate WhatsApp emergency navigation when SOS is activated.
- * Formats emergency message with Google Maps GPS pin and Live tracking link.
+ * Launches WhatsApp without unloading the main web app tab, ensuring the siren audio continues playing.
  */
 export const openWhatsAppSosEmergency = ({ latitude, longitude, publicShareToken, emergencyContactPhone, userName } = {}) => {
   if (typeof window === 'undefined') return;
@@ -35,22 +35,30 @@ export const openWhatsAppSosEmergency = ({ latitude, longitude, publicShareToken
   const encodedMsg = encodeURIComponent(messageText);
 
   let whatsappUrl = `https://api.whatsapp.com/send?text=${encodedMsg}`;
+  let whatsappDeepLink = `whatsapp://send?text=${encodedMsg}`;
 
   if (phone) {
     const cleanPhone = String(phone).replace(/\D/g, '');
     if (cleanPhone.length >= 10) {
       const fullPhone = cleanPhone.length === 10 ? `91${cleanPhone}` : cleanPhone;
       whatsappUrl = `https://wa.me/${fullPhone}?text=${encodedMsg}`;
+      whatsappDeepLink = `whatsapp://send?phone=${fullPhone}&text=${encodedMsg}`;
     }
   }
 
-  // Open WhatsApp in new tab / app window so the current web app tab stays open playing siren audio
+  // 1. Try launching native WhatsApp app directly on mobile devices using deep link iframe
   try {
-    const newWindow = window.open(whatsappUrl, '_blank', 'noopener,noreferrer');
-    if (!newWindow || newWindow.closed || typeof newWindow.closed === 'undefined') {
-      window.location.href = whatsappUrl;
-    }
-  } catch (e) {
-    window.location.href = whatsappUrl;
-  }
+    const iframe = document.createElement('iframe');
+    iframe.style.display = 'none';
+    iframe.src = whatsappDeepLink;
+    document.body.appendChild(iframe);
+    setTimeout(() => {
+      try { document.body.removeChild(iframe); } catch (e) {}
+    }, 2000);
+  } catch (e) {}
+
+  // 2. Open WhatsApp Web / App link in a new window/tab so web app tab stays open playing siren
+  try {
+    window.open(whatsappUrl, '_blank', 'noopener,noreferrer');
+  } catch (e) {}
 };
