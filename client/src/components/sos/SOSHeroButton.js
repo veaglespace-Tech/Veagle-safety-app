@@ -4,6 +4,7 @@ import React, { useState, useRef, useEffect } from 'react';
 import { ShieldAlert, VolumeX, Volume2, Radio, Sparkles, AlertCircle } from 'lucide-react';
 import { useDispatch, useSelector } from 'react-redux';
 import { startEmergencySos } from '../../redux/slices/sosSlice.js';
+import { openWhatsAppSosEmergency } from '../../utils/whatsappHelper.js';
 import { useRouter } from 'next/navigation';
 
 export const SOSHeroButton = ({ onTriggerComplete }) => {
@@ -76,9 +77,12 @@ export const SOSHeroButton = ({ onTriggerComplete }) => {
         })
       ).unwrap();
 
-      if (typeof window !== 'undefined' && res?.whatsappShareUrl) {
-        window.open(res.whatsappShareUrl, '_blank');
-      }
+      // Instantly open WhatsApp with live location & tracking details
+      openWhatsAppSosEmergency({
+        latitude: latitude || 18.5204,
+        longitude: longitude || 73.8567,
+        publicShareToken: res?.publicShareToken,
+      });
 
       if (onTriggerComplete) onTriggerComplete();
       router.push('/active-sos');

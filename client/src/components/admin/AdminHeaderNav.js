@@ -4,6 +4,7 @@ import React from 'react';
 import { useRouter } from 'next/navigation';
 import { useDispatch, useSelector } from 'react-redux';
 import { startEmergencySos } from '../../redux/slices/sosSlice.js';
+import { openWhatsAppSosEmergency } from '../../utils/whatsappHelper.js';
 import { Command, RefreshCw, Zap } from 'lucide-react';
 
 export const AdminHeaderNav = ({ metrics, onRefresh, toast }) => {
@@ -27,9 +28,11 @@ export const AdminHeaderNav = ({ metrics, onRefresh, toast }) => {
           emergencyMessage: 'SUPERADMIN EMERGENCY SOS BROADCAST! URGENT ASSISTANCE REQUIRED!'
         })).unwrap();
 
-        if (typeof window !== 'undefined' && res?.whatsappShareUrl) {
-          window.open(res.whatsappShareUrl, '_blank');
-        }
+        openWhatsAppSosEmergency({
+          latitude,
+          longitude,
+          publicShareToken: res?.publicShareToken,
+        });
 
         router.push('/active-sos');
       } catch (err) {
