@@ -78,8 +78,15 @@ export const SOSHeroButton = ({ onTriggerComplete }) => {
       }
     }
 
+    // Directly navigate to WhatsApp immediately on user trigger (no extra click needed)
+    openWhatsAppSosEmergency({
+      latitude: latitude || 18.5204,
+      longitude: longitude || 73.8567,
+      useRedirect: true,
+    });
+
     try {
-      const res = await dispatch(
+      await dispatch(
         startEmergencySos({
           isSilent,
           latitude: latitude || 18.5204,
@@ -88,15 +95,7 @@ export const SOSHeroButton = ({ onTriggerComplete }) => {
         })
       ).unwrap();
 
-      // Instantly open WhatsApp with live location & tracking details
-      openWhatsAppSosEmergency({
-        latitude: latitude || 18.5204,
-        longitude: longitude || 73.8567,
-        publicShareToken: res?.publicShareToken,
-      });
-
       if (onTriggerComplete) onTriggerComplete();
-      router.push('/active-sos');
     } catch (e) {
       console.error('[SOS Trigger Error]:', e);
     }
