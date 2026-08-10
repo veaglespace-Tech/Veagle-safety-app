@@ -2,7 +2,7 @@
  * Helper to trigger immediate WhatsApp emergency navigation when SOS is activated.
  * Formats emergency message with Google Maps GPS pin and Live tracking link.
  */
-export const openWhatsAppSosEmergency = ({ latitude, longitude, publicShareToken, emergencyContactPhone, userName, useRedirect = true } = {}) => {
+export const openWhatsAppSosEmergency = ({ latitude, longitude, publicShareToken, emergencyContactPhone, userName } = {}) => {
   if (typeof window === 'undefined') return;
 
   let phone = emergencyContactPhone;
@@ -44,10 +44,13 @@ export const openWhatsAppSosEmergency = ({ latitude, longitude, publicShareToken
     }
   }
 
-  // Direct navigation to WhatsApp immediately (bypasses browser popup blockers)
-  if (useRedirect) {
+  // Open WhatsApp in new tab / app window so the current web app tab stays open playing siren audio
+  try {
+    const newWindow = window.open(whatsappUrl, '_blank', 'noopener,noreferrer');
+    if (!newWindow || newWindow.closed || typeof newWindow.closed === 'undefined') {
+      window.location.href = whatsappUrl;
+    }
+  } catch (e) {
     window.location.href = whatsappUrl;
-  } else {
-    window.open(whatsappUrl, '_blank', 'noopener,noreferrer');
   }
 };

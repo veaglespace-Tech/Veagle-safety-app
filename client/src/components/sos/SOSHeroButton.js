@@ -78,15 +78,14 @@ export const SOSHeroButton = ({ onTriggerComplete }) => {
       }
     }
 
-    // Directly navigate to WhatsApp immediately on user trigger (no extra click needed)
+    // Open WhatsApp immediately on user trigger (opens WhatsApp while web app tab continues playing siren)
     openWhatsAppSosEmergency({
       latitude: latitude || 18.5204,
       longitude: longitude || 73.8567,
-      useRedirect: true,
     });
 
     try {
-      await dispatch(
+      const res = await dispatch(
         startEmergencySos({
           isSilent,
           latitude: latitude || 18.5204,
@@ -96,6 +95,7 @@ export const SOSHeroButton = ({ onTriggerComplete }) => {
       ).unwrap();
 
       if (onTriggerComplete) onTriggerComplete();
+      router.push('/active-sos');
     } catch (e) {
       console.error('[SOS Trigger Error]:', e);
     }
