@@ -13,7 +13,7 @@ export const SOSHeroButton = ({ onTriggerComplete }) => {
   const router = useRouter();
   const [holding, setHolding] = useState(false);
   const [progress, setProgress] = useState(0);
-  const [countdown, setCountdown] = useState(1);
+  const [countdown, setCountdown] = useState(2);
   const [isSilent, setIsSilent] = useState(false);
   const progressIntervalRef = useRef(null);
   const startTimeRef = useRef(0);
@@ -21,7 +21,7 @@ export const SOSHeroButton = ({ onTriggerComplete }) => {
   const { activeSession } = useSelector((state) => state?.sos || {});
   const { latitude, longitude } = useSelector((state) => state?.location || {});
 
-  const HOLD_DURATION = 800;
+  const HOLD_DURATION = 2000;
 
   const startHold = () => {
     if (activeSession) {
@@ -31,7 +31,7 @@ export const SOSHeroButton = ({ onTriggerComplete }) => {
 
     setHolding(true);
     setProgress(0);
-    setCountdown(1);
+    setCountdown(2);
     startTimeRef.current = Date.now();
 
     if (typeof window !== 'undefined' && 'vibrate' in navigator) {
@@ -50,14 +50,14 @@ export const SOSHeroButton = ({ onTriggerComplete }) => {
         clearInterval(progressIntervalRef.current);
         handleTriggered();
       }
-    }, 20);
+    }, 30);
   };
 
   const endHold = () => {
     if (!holding) return;
     setHolding(false);
     setProgress(0);
-    setCountdown(1);
+    setCountdown(2);
     if (progressIntervalRef.current) {
       clearInterval(progressIntervalRef.current);
     }
@@ -205,7 +205,7 @@ export const SOSHeroButton = ({ onTriggerComplete }) => {
                 : 'bg-black/30 border-white/30 text-white/95'
             }`}>
               <span className={`w-1.5 h-1.5 rounded-full ${holding ? 'bg-gold animate-ping' : 'bg-emerald-400 animate-pulse'}`} />
-              <span>{holding ? 'DISPATCHING...' : activeSession ? 'VIEW STATUS' : 'INSTANT 1-SEC SOS'}</span>
+              <span>{holding ? 'DISPATCHING...' : activeSession ? 'VIEW STATUS' : 'HOLD 2 SECONDS'}</span>
             </span>
 
           </div>
@@ -217,7 +217,7 @@ export const SOSHeroButton = ({ onTriggerComplete }) => {
       <div className="mt-4 flex flex-col items-center space-y-3 z-30">
         <p className="text-xs font-extrabold text-[#684E67] text-center tracking-wide flex items-center space-x-1.5 bg-[#FFF0F3] px-4 py-2 rounded-2xl border border-[#FFCCE1] shadow-xs">
           <Radio className="w-4 h-4 text-[#FF2A6D] animate-pulse" />
-          <span>Rapid 1-second instant emergency SOS broadcast</span>
+          <span>Press & hold for 2 seconds to broadcast emergency GPS location</span>
         </p>
 
         <button
