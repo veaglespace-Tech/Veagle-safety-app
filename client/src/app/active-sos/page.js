@@ -3,6 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import { resolveEmergencySos, toggleAlarm } from '../../redux/slices/sosSlice.js';
+import { startEmergencySiren, stopEmergencySiren } from '../../utils/sirenAudio.js';
 import { LiveLocationMap } from '../../components/location/DynamicLiveLocationMap.js';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
@@ -34,6 +35,7 @@ export default function ActiveSOSLivePage() {
 
   useEffect(() => {
     if (!activeSession) {
+      stopEmergencySiren();
       if (user?.role === 'SUPER_ADMIN') {
         router.push('/admin');
       } else {
@@ -41,12 +43,22 @@ export default function ActiveSOSLivePage() {
       }
       return;
     }
+
+    // Auto-start siren audio on active emergency session
+    try {
+      startEmergencySiren();
+    } catch (e) {}
+
     const startTime = new Date(activeSession.startedAt).getTime();
     const interval = setInterval(() => {
       setElapsed(Math.floor((Date.now() - startTime) / 1000));
     }, 1000);
-    return () => clearInterval(interval);
-  }, [activeSession, router]);
+
+    return () => {
+      clearInterval(interval);
+      stopEmergencySiren();
+    };
+  }, [activeSession, router, user]);
 
   const formatElapsed = (secs) => {
     const m = Math.floor(secs / 60).toString().padStart(2, '0');
@@ -57,6 +69,7 @@ export default function ActiveSOSLivePage() {
   const handleMarkSafe = async () => {
     if (isResolving) return;
     setIsResolving(true);
+    stopEmergencySiren();
     try {
       console.log('[handleMarkSafe] Resolving SOS session:', activeSession?.id);
       await dispatch(resolveEmergencySos(activeSession?.id)).unwrap();
@@ -230,8 +243,15 @@ export default function ActiveSOSLivePage() {
 
         <div className="grid grid-cols-2 gap-3">
           <button
-            onClick={() => dispatch(toggleAlarm())}
-            className={`font-bold p-4 rounded-card flex flex-col items-center justify-center space-y-1.5 border transition-all active:scale-95 ${
+            onClick={() => {
+              if (isAlarmPlaying) {
+                stopEmergencySiren();
+              } else {
+                startEmergencySiren();
+              }
+              dispatch(toggleAlarm());
+            }}
+            className={`font-bold p-4 rounded-card flex flex-col items-center justify-center space-y-1.5 border transition-all active:scale-95 cursor-pointer ${
               isAlarmPlaying
                 ? 'bg-amber-500 text-white border-amber-600 shadow-lg animate-pulse'
                 : 'bg-white text-plum border-blush-border hover:bg-plum-50 hover:border-plum/30 shadow-card'
