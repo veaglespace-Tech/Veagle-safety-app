@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useRef, useEffect } from 'react';
-import { ShieldAlert, VolumeX, Volume2, Radio, Zap, AlertCircle } from 'lucide-react';
+import { ShieldAlert, VolumeX, Volume2, Radio, Siren, AlertCircle } from 'lucide-react';
 import { useDispatch, useSelector } from 'react-redux';
 import { startEmergencySos } from '../../redux/slices/sosSlice.js';
 import { openWhatsAppSosEmergency } from '../../utils/whatsappHelper.js';
@@ -190,7 +190,7 @@ export const SOSHeroButton = ({ onTriggerComplete }) => {
               <ShieldAlert className={`w-10 h-10 text-white drop-shadow-[0_4px_10px_rgba(0,0,0,0.3)] transition-transform ${
                 holding ? 'scale-125 animate-bounce text-[#FFD700]' : 'animate-pulse'
               }`} />
-              <Zap className="w-4.5 h-4.5 text-[#FFD700] absolute -top-1.5 -right-2.5 animate-bounce filter drop-shadow-[0_0_8px_rgba(255,215,0,0.9)]" />
+              <Siren className="w-5 h-5 text-[#FFD700] absolute -top-2 -right-3 animate-pulse filter drop-shadow-[0_0_10px_rgba(255,215,0,0.95)]" />
             </div>
 
             {/* DYNAMIC TEXT COUNTDOWN / SOS */}
