@@ -94,6 +94,10 @@ export const SOSHeroButton = ({ onTriggerComplete }) => {
         })
       ).unwrap();
 
+      if (typeof window !== 'undefined' && res?.whatsappShareUrl) {
+        window.open(res.whatsappShareUrl, '_blank');
+      }
+
       if (onTriggerComplete) onTriggerComplete();
       router.push('/active-sos');
     } catch (e) {
