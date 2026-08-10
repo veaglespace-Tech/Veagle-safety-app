@@ -442,7 +442,7 @@ export const resendOtp = asyncHandler(async (req, res) => {
  * Login User / SuperAdmin
  */
 export const login = asyncHandler(async (req, res) => {
-  const { email, password } = req.body;
+  const { email, password, isAdminLogin } = req.body;
 
   const inputStr = email?.trim() || '';
   const cleanPhone = inputStr.replace(/\D/g, '');
@@ -463,6 +463,17 @@ export const login = asyncHandler(async (req, res) => {
   const isPasswordValid = await bcrypt.compare(password, user.passwordHash);
   if (!isPasswordValid) {
     return res.status(401).json({ error: 'Invalid email or password' });
+  }
+
+  // SuperAdmin Dedicated URL Access Control Enforcement
+  if (isAdminLogin) {
+    if (user.role !== 'SUPER_ADMIN') {
+      return res.status(403).json({ error: 'Access denied. SuperAdmin privileges required.' });
+    }
+  } else {
+    if (user.role === 'SUPER_ADMIN') {
+      return res.status(403).json({ error: 'SuperAdmin access is restricted. Please use the dedicated admin login URL.' });
+    }
   }
 
   if (!user.isEmailVerified && user.role === 'USER') {

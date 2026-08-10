@@ -42,6 +42,12 @@ export const AppLayout = ({ children, fullScreen = false }) => {
       (typeof window !== 'undefined' &&
         (Boolean(localStorage.getItem('tichi_token')) || Boolean(localStorage.getItem('token'))));
 
+    // Unauthenticated user trying to access /admin routes -> redirect to /admin/login
+    if (pathname.startsWith('/admin') && pathname !== '/admin/login' && !hasAuthToken) {
+      router.push('/admin/login');
+      return;
+    }
+
     if (isProtected && !hasAuthToken) {
       router.push('/auth?mode=login');
       return;
@@ -57,9 +63,9 @@ export const AppLayout = ({ children, fullScreen = false }) => {
       } catch (e) { }
     }
 
-    // Non-admin trying to access /admin -> redirect to /dashboard
-    if (hasAuthToken && pathname.startsWith('/admin') && !isSuperAdmin) {
-      router.push('/dashboard');
+    // Non-admin trying to access /admin -> redirect to /admin/login
+    if (hasAuthToken && pathname.startsWith('/admin') && pathname !== '/admin/login' && !isSuperAdmin) {
+      router.push('/admin/login');
       return;
     }
 

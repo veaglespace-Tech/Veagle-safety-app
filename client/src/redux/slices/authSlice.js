@@ -33,9 +33,9 @@ export const fetchUser = createAsyncThunk('auth/fetchUser', async (_, { rejectWi
   }
 });
 
-export const loginUser = createAsyncThunk('auth/loginUser', async ({ email, password }, { rejectWithValue }) => {
+export const loginUser = createAsyncThunk('auth/loginUser', async (credentials, { rejectWithValue }) => {
   try {
-    const data = await authApi.login({ email, password });
+    const data = await authApi.login(credentials);
     if (data.token) {
       localStorage.setItem('tichi_token', data.token);
     }
@@ -47,7 +47,7 @@ export const loginUser = createAsyncThunk('auth/loginUser', async ({ email, pass
     return rejectWithValue({
       error: err.response?.data?.error || 'Login failed',
       requiresVerification: err.response?.data?.requiresVerification || false,
-      email: err.response?.data?.email || email,
+      email: err.response?.data?.email || credentials?.email,
     });
   }
 });

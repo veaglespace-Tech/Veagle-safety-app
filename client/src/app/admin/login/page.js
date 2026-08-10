@@ -33,7 +33,7 @@ export default function SuperAdminLoginPage() {
     }
 
     try {
-      const res = await dispatch(loginUser({ email: email.trim(), password })).unwrap();
+      const res = await dispatch(loginUser({ email: email.trim(), password, isAdminLogin: true })).unwrap();
       if (res.user?.role === 'SUPER_ADMIN') {
         router.push('/admin');
       } else {
