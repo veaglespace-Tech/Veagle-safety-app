@@ -7,6 +7,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useDispatch, useSelector } from 'react-redux';
 import { fetchUser, updateProfileSettings, logoutUser } from '../../redux/slices/authSlice';
+import Animated, { FadeInUp, FadeInDown } from 'react-native-reanimated';
 import { COLORS } from '../../theme/colors';
 import { BLOOD_GROUPS, EMERGENCY_RELATIONS } from '../../utils/constants';
 
@@ -92,7 +93,7 @@ export default function ProfileScreen({ navigation }) {
       <ScrollView contentContainerStyle={styles.scroll} showsVerticalScrollIndicator={false}>
 
         {/* PROFILE HEADER */}
-        <View style={styles.profileHeader}>
+        <Animated.View entering={FadeInDown.duration(500)} style={styles.profileHeader}>
           <View style={styles.avatarWrap}>
             <Text style={styles.avatarText}>{firstName[0]?.toUpperCase()}</Text>
           </View>
@@ -109,7 +110,7 @@ export default function ProfileScreen({ navigation }) {
           <TouchableOpacity onPress={() => setIsEditing(!isEditing)} style={styles.editBtn}>
             <Ionicons name={isEditing ? 'close' : 'create-outline'} size={18} color={COLORS.primary} />
           </TouchableOpacity>
-        </View>
+        </Animated.View>
 
         {saved && (
           <View style={styles.savedBanner}>
@@ -119,7 +120,7 @@ export default function ProfileScreen({ navigation }) {
         )}
 
         {/* PERSONAL INFO */}
-        <View style={styles.section}>
+        <Animated.View entering={FadeInUp.delay(100).duration(500)} style={styles.section}>
           <Text style={styles.sectionTitle}>Personal Information</Text>
           {isEditing ? (
             <View style={{ gap: 12 }}>
@@ -152,7 +153,7 @@ export default function ProfileScreen({ navigation }) {
               <InfoRow icon="location-outline" label="City" value={user?.city} />
             </View>
           )}
-        </View>
+        </Animated.View>
 
         {/* LOCATION INFO (editing only) */}
         {isEditing && (
@@ -182,7 +183,7 @@ export default function ProfileScreen({ navigation }) {
         )}
 
         {/* EMERGENCY CONTACT */}
-        <View style={styles.section}>
+        <Animated.View entering={FadeInUp.delay(200).duration(500)} style={styles.section}>
           <Text style={styles.sectionTitle}>Emergency Contact</Text>
           {isEditing ? (
             <View style={{ gap: 12 }}>
@@ -213,7 +214,7 @@ export default function ProfileScreen({ navigation }) {
               <InfoRow icon="people-outline" label="Relationship" value={user?.emergencyContactRelation} />
             </View>
           )}
-        </View>
+        </Animated.View>
 
         {/* SAVE BUTTON */}
         {isEditing && (
@@ -231,7 +232,7 @@ export default function ProfileScreen({ navigation }) {
         )}
 
         {/* QUICK LINKS */}
-        <View style={styles.section}>
+        <Animated.View entering={FadeInUp.delay(300).duration(500)} style={styles.section}>
           <Text style={styles.sectionTitle}>Account</Text>
           <TouchableOpacity style={styles.linkRow} onPress={() => navigation.navigate('Subscription')} activeOpacity={0.8}>
             <Ionicons name="card-outline" size={18} color={COLORS.primary} />
@@ -243,7 +244,7 @@ export default function ProfileScreen({ navigation }) {
             <Text style={[styles.linkText, { color: COLORS.primary }]}>Logout</Text>
             <Ionicons name="chevron-forward" size={16} color={COLORS.primary} />
           </TouchableOpacity>
-        </View>
+        </Animated.View>
 
       </ScrollView>
     </SafeAreaView>

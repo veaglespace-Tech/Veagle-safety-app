@@ -10,6 +10,26 @@ import { registerUser, clearAuthMessages } from '../../redux/slices/authSlice';
 import { COLORS } from '../../theme/colors';
 import { BLOOD_GROUPS, EMERGENCY_RELATIONS } from '../../utils/constants';
 
+const InputField = ({ label, icon, value, onChangeText, placeholder, keyboardType, secureTextEntry, right, flex }) => (
+  <View style={[styles.fieldWrap, flex && { flex: flex }]}>
+    <Text style={styles.label}>{label}</Text>
+    <View style={styles.inputRow}>
+      <Ionicons name={icon} size={17} color={COLORS.textMuted} style={styles.inputIcon} />
+      <TextInput
+        style={[styles.input, right && { paddingRight: 32 }]}
+        placeholder={placeholder}
+        placeholderTextColor={COLORS.primaryBorder}
+        value={value}
+        onChangeText={onChangeText}
+        keyboardType={keyboardType || 'default'}
+        secureTextEntry={secureTextEntry}
+        autoCapitalize={keyboardType === 'email-address' ? 'none' : 'words'}
+      />
+      {right}
+    </View>
+  </View>
+);
+
 export default function RegisterScreen({ navigation }) {
   const dispatch = useDispatch();
   const { isLoading, error } = useSelector((state) => state.auth);
@@ -46,26 +66,6 @@ export default function RegisterScreen({ navigation }) {
       navigation.navigate('OTP', { email, mode: 'register' });
     }
   };
-
-  const InputField = ({ label, icon, value, onChangeText, placeholder, keyboardType, secureTextEntry, right, flex }) => (
-    <View style={[styles.fieldWrap, flex && { flex: flex }]}>
-      <Text style={styles.label}>{label}</Text>
-      <View style={styles.inputRow}>
-        <Ionicons name={icon} size={17} color={COLORS.textMuted} style={styles.inputIcon} />
-        <TextInput
-          style={[styles.input, right && { paddingRight: 32 }]}
-          placeholder={placeholder}
-          placeholderTextColor={COLORS.primaryBorder}
-          value={value}
-          onChangeText={onChangeText}
-          keyboardType={keyboardType || 'default'}
-          secureTextEntry={secureTextEntry}
-          autoCapitalize={keyboardType === 'email-address' ? 'none' : 'words'}
-        />
-        {right}
-      </View>
-    </View>
-  );
 
   return (
     <SafeAreaView style={styles.safe}>

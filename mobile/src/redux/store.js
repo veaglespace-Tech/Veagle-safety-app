@@ -3,6 +3,7 @@ import authReducer from './slices/authSlice';
 import sosReducer from './slices/sosSlice';
 import contactsReducer from './slices/contactsSlice';
 import locationReducer from './slices/locationSlice';
+import emergencyEmailsReducer from './slices/emergencyEmailsSlice';
 
 export const store = configureStore({
   reducer: {
@@ -10,5 +11,6 @@ export const store = configureStore({
     sos: sosReducer,
     contacts: contactsReducer,
     location: locationReducer,
+    emergencyEmails: emergencyEmailsReducer,
   },
 });

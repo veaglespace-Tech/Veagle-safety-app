@@ -9,6 +9,7 @@ import { useDispatch, useSelector } from 'react-redux';
 import {
   fetchContacts, addContact, updateContact, deleteContact,
 } from '../../redux/slices/contactsSlice';
+import Animated, { FadeInUp, FadeInDown, Layout } from 'react-native-reanimated';
 import { COLORS } from '../../theme/colors';
 import { RELATIONSHIPS } from '../../utils/constants';
 
@@ -85,7 +86,7 @@ export default function ContactsScreen() {
       <ScrollView contentContainerStyle={styles.scroll} showsVerticalScrollIndicator={false}>
 
         {/* HEADER */}
-        <View style={styles.header}>
+        <Animated.View entering={FadeInDown.duration(500)} style={styles.header}>
           <View>
             <Text style={styles.title}>Trusted Contacts</Text>
             <Text style={styles.subtitle}>
@@ -100,7 +101,7 @@ export default function ContactsScreen() {
               <Text style={styles.addBtnText}>Add</Text>
             </TouchableOpacity>
           )}
-        </View>
+        </Animated.View>
 
         {/* CONTACTS LIST */}
         {isLoading ? (
@@ -120,8 +121,13 @@ export default function ContactsScreen() {
           </View>
         ) : (
           <View style={{ gap: 10 }}>
-            {contacts.map((contact) => (
-              <View key={contact.id} style={styles.contactCard}>
+            {contacts.map((contact, index) => (
+              <Animated.View 
+                entering={FadeInUp.delay(100 + (index * 100)).duration(400)} 
+                layout={Layout.springify()}
+                key={contact.id} 
+                style={styles.contactCard}
+              >
                 <View style={styles.contactAvatar}>
                   <Text style={styles.contactAvatarText}>{(contact.name || 'U')[0].toUpperCase()}</Text>
                 </View>
@@ -141,7 +147,7 @@ export default function ContactsScreen() {
                     <Ionicons name="trash-outline" size={17} color={COLORS.textMuted} />
                   </TouchableOpacity>
                 </View>
-              </View>
+              </Animated.View>
             ))}
             {contacts.length < MAX_CONTACTS && (
               <TouchableOpacity style={styles.addMoreBtn} onPress={openAddModal} activeOpacity={0.85}>

@@ -6,7 +6,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { TOKEN_KEY } from '../utils/constants';
 import { fetchUser, setToken } from '../redux/slices/authSlice';
 
-import MainTabNavigator from './MainTabNavigator';
+import RoleBasedNavigator from './RoleBasedNavigator';
 import AuthNavigator from './AuthNavigator';
 import ActiveSOSScreen from '../screens/sos/ActiveSOSScreen';
 import HelplinesScreen from '../screens/helplines/HelplinesScreen';
@@ -45,7 +45,7 @@ export default function AppNavigator() {
           <Stack.Screen name="Auth" component={AuthNavigator} />
         ) : (
           <>
-            <Stack.Screen name="Main" component={MainTabNavigator} />
+            <Stack.Screen name="Main" component={RoleBasedNavigator} />
             <Stack.Screen
               name="ActiveSOS"
               component={ActiveSOSScreen}
