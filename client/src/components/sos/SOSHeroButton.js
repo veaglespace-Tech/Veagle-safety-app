@@ -67,7 +67,7 @@ export const SOSHeroButton = ({ onTriggerComplete }) => {
       navigator.vibrate([300, 100, 300, 100, 400]);
     }
     try {
-      await dispatch(
+      const res = await dispatch(
         startEmergencySos({
           isSilent,
           latitude: latitude || 18.5204,
@@ -75,6 +75,10 @@ export const SOSHeroButton = ({ onTriggerComplete }) => {
           emergencyMessage: isSilent ? 'Discreet Emergency SOS Triggered' : 'EMERGENCY SOS! I NEED HELP IMMEDIATELY!',
         })
       ).unwrap();
+
+      if (typeof window !== 'undefined' && res?.whatsappShareUrl) {
+        window.open(res.whatsappShareUrl, '_blank');
+      }
 
       if (onTriggerComplete) onTriggerComplete();
       router.push('/active-sos');

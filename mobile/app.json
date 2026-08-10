@@ -1,0 +1,49 @@
+{
+  "expo": {
+    "name": "Veagle Safety",
+    "slug": "veagle-safety",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "icon": "./assets/icon.png",
+    "userInterfaceStyle": "light",
+    "scheme": "veaglesafety",
+    "backgroundColor": "#FFF0F3",
+    "splash": {
+      "image": "./assets/splash-icon.png",
+      "resizeMode": "contain",
+      "backgroundColor": "#FFF0F3"
+    },
+    "ios": {
+      "supportsTablet": false,
+      "bundleIdentifier": "com.veaglesafety.app",
+      "infoPlist": {
+        "NSLocationWhenInUseUsageDescription": "Veagle Safety needs your location to activate SOS emergency alerts and share your position with trusted contacts.",
+        "NSLocationAlwaysAndWhenInUseUsageDescription": "Veagle Safety tracks your location in the background during active SOS sessions to keep you safe."
+      }
+    },
+    "android": {
+      "adaptiveIcon": {
+        "foregroundImage": "./assets/android-icon-foreground.png",
+        "backgroundColor": "#FFF0F3"
+      },
+      "package": "com.veaglesafety.app",
+      "permissions": [
+        "ACCESS_FINE_LOCATION",
+        "ACCESS_COARSE_LOCATION",
+        "VIBRATE",
+        "RECEIVE_BOOT_COMPLETED"
+      ]
+    },
+    "web": {
+      "favicon": "./assets/favicon.png"
+    },
+    "plugins": [
+      [
+        "expo-location",
+        {
+          "locationAlwaysAndWhenInUsePermission": "Veagle Safety needs your location to keep you safe during emergencies."
+        }
+      ]
+    ]
+  }
+}

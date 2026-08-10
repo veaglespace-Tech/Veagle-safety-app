@@ -20,12 +20,17 @@ export const AdminHeaderNav = ({ metrics, onRefresh, toast }) => {
     }
     if (confirm('🚨 ACTIVATE SUPERADMIN EMERGENCY SOS BROADCAST?\nThis will alert your guardian network with real-time GPS location.')) {
       try {
-        await dispatch(startEmergencySos({
+        const res = await dispatch(startEmergencySos({
           isSilent: false,
           latitude,
           longitude,
           emergencyMessage: 'SUPERADMIN EMERGENCY SOS BROADCAST! URGENT ASSISTANCE REQUIRED!'
         })).unwrap();
+
+        if (typeof window !== 'undefined' && res?.whatsappShareUrl) {
+          window.open(res.whatsappShareUrl, '_blank');
+        }
+
         router.push('/active-sos');
       } catch (err) {
         alert(err || 'Failed to dispatch SuperAdmin SOS');
