@@ -26,6 +26,9 @@ export function useLocation() {
           return;
         }
 
+        // Request Background Permissions (Crucial for iOS safety apps when minimized)
+        await Location.requestBackgroundPermissionsAsync().catch(() => null);
+
         // Get initial position with Balanced accuracy (faster, less power, doesn't lock up indoors)
         const initial = await Location.getCurrentPositionAsync({
           accuracy: Location.Accuracy.Balanced,

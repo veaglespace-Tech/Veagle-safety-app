@@ -17,8 +17,12 @@
       "supportsTablet": false,
       "bundleIdentifier": "com.veaglesafety.app",
       "infoPlist": {
-        "NSLocationWhenInUseUsageDescription": "Veagle Safety needs your location to activate SOS emergency alerts and share your position with trusted contacts.",
-        "NSLocationAlwaysAndWhenInUseUsageDescription": "Veagle Safety tracks your location in the background during active SOS sessions to keep you safe."
+        "NSLocationWhenInUseUsageDescription": "Veagle Safety requires your location to determine your real-time position so it can be instantly shared with your trusted Guardians and Organization Administrators during an active SOS emergency.",
+        "NSLocationAlwaysAndWhenInUseUsageDescription": "Veagle Safety requires background location access to continuously broadcast your live position to emergency contacts even when your phone is locked or the app is minimized during an active SOS event. This continuous tracking is critical for your safety.",
+        "UIBackgroundModes": [
+          "location",
+          "fetch"
+        ]
       }
     },
     "android": {
@@ -41,7 +45,7 @@
       [
         "expo-location",
         {
-          "locationAlwaysAndWhenInUsePermission": "Veagle Safety needs your location to keep you safe during emergencies."
+          "locationAlwaysAndWhenInUsePermission": "Veagle Safety requires background location access to continuously broadcast your live position to emergency contacts even when your phone is locked or the app is minimized during an active SOS event. This continuous tracking is critical for your safety."
         }
       ]
     ]

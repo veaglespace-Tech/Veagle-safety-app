@@ -105,7 +105,7 @@ export default function RoleBasedNavigator() {
   // Default to 'member' if no role is explicitly defined
   const role = user?.role?.toLowerCase() || 'member';
 
-  if (role === 'admin' || role === 'org' || role === 'super_admin') {
+  if (role === 'admin' || role === 'org' || role === 'super_admin' || role === 'organization') {
     return <AdminTabNavigator />;
   } else if (role === 'team-leader' || role === 'teamleader') {
     return <TeamLeaderTabNavigator />;
