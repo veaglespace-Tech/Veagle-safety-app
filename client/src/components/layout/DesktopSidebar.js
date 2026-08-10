@@ -218,7 +218,7 @@ export const DesktopSidebar = () => {
           <div className="bg-[#FFF0F3]/80 border border-[#FFCCE1] p-3 rounded-2xl flex items-center justify-between shadow-xs">
             <Link href="/settings" className="flex items-center space-x-3 min-w-0 group cursor-pointer flex-1">
               <div className="w-9 h-9 rounded-xl bg-gradient-to-tr from-[#FF5C8A] to-[#FF2A6D] text-white flex items-center justify-center font-black text-xs shrink-0 shadow-xs overflow-hidden">
-                {currentUser?.profilePhoto ? (
+                {mounted && currentUser?.profilePhoto ? (
                   <img src={currentUser.profilePhoto} alt={displayName} className="w-full h-full object-cover" />
                 ) : (
                   initials
@@ -363,7 +363,7 @@ export const DesktopSidebar = () => {
                       className="flex items-center space-x-3 min-w-0 flex-1 group cursor-pointer"
                     >
                       <div className="w-9 h-9 rounded-xl bg-gradient-to-tr from-[#FF5C8A] to-[#FF2A6D] text-white flex items-center justify-center font-black text-xs shrink-0 shadow-xs overflow-hidden">
-                        {currentUser?.profilePhoto ? (
+                        {mounted && currentUser?.profilePhoto ? (
                           <img src={currentUser.profilePhoto} alt={displayName} className="w-full h-full object-cover" />
                         ) : (
                           initials
