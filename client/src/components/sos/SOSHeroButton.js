@@ -5,6 +5,7 @@ import { ShieldAlert, VolumeX, Volume2, Radio, Sparkles, AlertCircle } from 'luc
 import { useDispatch, useSelector } from 'react-redux';
 import { startEmergencySos } from '../../redux/slices/sosSlice.js';
 import { openWhatsAppSosEmergency } from '../../utils/whatsappHelper.js';
+import { startEmergencySiren } from '../../utils/sirenAudio.js';
 import { useRouter } from 'next/navigation';
 
 export const SOSHeroButton = ({ onTriggerComplete }) => {
@@ -67,6 +68,16 @@ export const SOSHeroButton = ({ onTriggerComplete }) => {
     if (typeof window !== 'undefined' && 'vibrate' in navigator) {
       navigator.vibrate([300, 100, 300, 100, 400]);
     }
+
+    // Play loud siren immediately on trigger unless silent mode is on
+    if (!isSilent) {
+      try {
+        startEmergencySiren();
+      } catch (err) {
+        console.warn('[Siren Audio Trigger Error]:', err);
+      }
+    }
+
     try {
       const res = await dispatch(
         startEmergencySos({
