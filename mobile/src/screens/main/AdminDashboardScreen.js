@@ -70,6 +70,22 @@ export default function AdminDashboardScreen({ navigation }) {
           </TouchableOpacity>
         </Animated.View>
 
+        {/* QUICK ACTIONS ROW */}
+        <Animated.View entering={FadeInUp.delay(100).duration(500)} style={styles.quickActionsContainer}>
+          <TouchableOpacity style={styles.actionBtn} onPress={() => navigation.navigate('AdminCoupons')}>
+            <Ionicons name="pricetag" size={20} color={COLORS.primary} />
+            <Text style={styles.actionText}>Coupons</Text>
+          </TouchableOpacity>
+          <TouchableOpacity style={styles.actionBtn} onPress={() => navigation.navigate('AdminReferrals')}>
+            <Ionicons name="git-network" size={20} color={COLORS.primary} />
+            <Text style={styles.actionText}>Referrals</Text>
+          </TouchableOpacity>
+          <TouchableOpacity style={styles.actionBtn} onPress={() => navigation.navigate('AdminSettings')}>
+            <Ionicons name="settings" size={20} color={COLORS.primary} />
+            <Text style={styles.actionText}>Settings</Text>
+          </TouchableOpacity>
+        </Animated.View>
+
         {/* 2-TAB NAVIGATION BAR */}
         <Animated.View entering={FadeInUp.delay(100).duration(500)} style={styles.tabContainer}>
           <TouchableOpacity 
@@ -248,6 +264,10 @@ const styles = StyleSheet.create({
   tabContainer: { flexDirection: 'row', backgroundColor: '#FFF', padding: 6, borderRadius: 16, borderWidth: 1, borderColor: COLORS.primaryBorder, gap: 4 },
   tabBtn: { flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', paddingVertical: 12, borderRadius: 12, gap: 6 },
   tabBtnActive: { backgroundColor: COLORS.primary, shadowColor: COLORS.primary, shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.2, shadowRadius: 8 },
+
+  quickActionsContainer: { flexDirection: 'row', justifyContent: 'space-between', gap: 8 },
+  actionBtn: { flex: 1, backgroundColor: '#FFF', paddingVertical: 12, borderRadius: 12, alignItems: 'center', borderWidth: 1, borderColor: COLORS.primaryBorder, shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.05, shadowRadius: 4, gap: 4 },
+  actionText: { fontSize: 11, fontWeight: '700', color: COLORS.textDark },
   tabText: { fontSize: 10, fontWeight: '800', color: COLORS.textMuted, letterSpacing: 0.5 },
   tabTextActive: { color: '#FFF' },
 
