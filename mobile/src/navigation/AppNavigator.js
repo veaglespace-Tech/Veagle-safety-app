@@ -18,6 +18,12 @@ import AdminCouponsScreen from '../screens/main/AdminCouponsScreen';
 import AdminReferralsScreen from '../screens/main/AdminReferralsScreen';
 import AdminSettingsScreen from '../screens/main/AdminSettingsScreen';
 
+// Informational screens
+import AboutScreen from '../screens/info/AboutScreen';
+import PrivacyScreen from '../screens/info/PrivacyScreen';
+import TermsScreen from '../screens/info/TermsScreen';
+import HelpScreen from '../screens/info/HelpScreen';
+
 const Stack = createNativeStackNavigator();
 
 export default function AppNavigator() {
@@ -58,7 +64,10 @@ export default function AppNavigator() {
             />
             <Stack.Screen name="Helplines" component={HelplinesScreen} />
             <Stack.Screen name="Subscription" component={SubscriptionScreen} />
-            
+            <Stack.Screen name="About" component={AboutScreen} />
+            <Stack.Screen name="Privacy" component={PrivacyScreen} />
+            <Stack.Screen name="Terms" component={TermsScreen} />
+            <Stack.Screen name="Help" component={HelpScreen} />
             <Stack.Screen name="AdminCoupons" component={AdminCouponsScreen} options={{ headerShown: true, title: 'Manage Coupons' }} />
             <Stack.Screen name="AdminReferrals" component={AdminReferralsScreen} options={{ headerShown: true, title: 'Manage Referrals' }} />
             <Stack.Screen name="AdminSettings" component={AdminSettingsScreen} options={{ headerShown: true, title: 'Global Settings' }} />

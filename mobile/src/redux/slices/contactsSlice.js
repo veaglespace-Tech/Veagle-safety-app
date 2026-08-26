@@ -1,5 +1,5 @@
 import { createSlice, createAsyncThunk } from '@reduxjs/toolkit';
-import { contactsApi } from '../../api/otherApis';
+import { contactsApi } from '../../api/contactsApi';
 
 export const fetchContacts = createAsyncThunk('contacts/fetchContacts', async (_, { rejectWithValue }) => {
   try {

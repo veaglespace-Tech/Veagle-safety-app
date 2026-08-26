@@ -6,7 +6,8 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useSelector } from 'react-redux';
-import { journeyApi, checkinApi } from '../../api/otherApis';
+import { journeyApi } from '../../api/journeyApi';
+import { checkinApi } from '../../api/checkinApi';
 import { COLORS } from '../../theme/colors';
 
 export default function JourneyScreen() {

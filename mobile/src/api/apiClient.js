@@ -18,3 +18,16 @@ apiClient.interceptors.request.use(async (config) => {
   } catch (e) {}
   return config;
 });
+
+// Interceptor to handle global 401 unauthorized
+apiClient.interceptors.response.use(
+  (response) => response,
+  async (error) => {
+    if (error.response && error.response.status === 401) {
+      try {
+        await AsyncStorage.removeItem(TOKEN_KEY);
+      } catch (e) {}
+    }
+    return Promise.reject(error);
+  }
+);

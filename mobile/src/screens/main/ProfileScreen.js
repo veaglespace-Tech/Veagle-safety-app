@@ -231,6 +231,31 @@ export default function ProfileScreen({ navigation }) {
           </TouchableOpacity>
         )}
 
+        {/* ABOUT & LEGAL */}
+        <Animated.View entering={FadeInUp.delay(250).duration(500)} style={styles.section}>
+          <Text style={styles.sectionTitle}>About & Legal</Text>
+          <TouchableOpacity style={styles.linkRow} onPress={() => navigation.navigate('About')} activeOpacity={0.8}>
+            <Ionicons name="information-circle-outline" size={18} color={COLORS.primary} />
+            <Text style={styles.linkText}>About Veagle</Text>
+            <Ionicons name="chevron-forward" size={16} color={COLORS.textMuted} />
+          </TouchableOpacity>
+          <TouchableOpacity style={styles.linkRow} onPress={() => navigation.navigate('Privacy')} activeOpacity={0.8}>
+            <Ionicons name="lock-closed-outline" size={18} color={COLORS.primary} />
+            <Text style={styles.linkText}>Privacy Policy</Text>
+            <Ionicons name="chevron-forward" size={16} color={COLORS.textMuted} />
+          </TouchableOpacity>
+          <TouchableOpacity style={styles.linkRow} onPress={() => navigation.navigate('Terms')} activeOpacity={0.8}>
+            <Ionicons name="document-text-outline" size={18} color={COLORS.primary} />
+            <Text style={styles.linkText}>Terms of Service</Text>
+            <Ionicons name="chevron-forward" size={16} color={COLORS.textMuted} />
+          </TouchableOpacity>
+          <TouchableOpacity style={styles.linkRow} onPress={() => navigation.navigate('Help')} activeOpacity={0.8}>
+            <Ionicons name="help-buoy-outline" size={18} color={COLORS.primary} />
+            <Text style={styles.linkText}>Help & Support</Text>
+            <Ionicons name="chevron-forward" size={16} color={COLORS.textMuted} />
+          </TouchableOpacity>
+        </Animated.View>
+
         {/* QUICK LINKS */}
         <Animated.View entering={FadeInUp.delay(300).duration(500)} style={styles.section}>
           <Text style={styles.sectionTitle}>Account</Text>

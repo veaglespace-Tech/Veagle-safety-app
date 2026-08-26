@@ -10,7 +10,7 @@ import * as Haptics from 'expo-haptics';
 import { fetchContacts } from '../../redux/slices/contactsSlice';
 import { checkActiveSos, startEmergencySos } from '../../redux/slices/sosSlice';
 import { fetchUser } from '../../redux/slices/authSlice';
-import { journeyApi } from '../../api/otherApis';
+import { journeyApi } from '../../api/journeyApi';
 import { COLORS } from '../../theme/colors';
 
 export default function DashboardScreen({ navigation }) {
