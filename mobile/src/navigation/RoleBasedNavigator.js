@@ -9,11 +9,13 @@ import { COLORS } from '../theme/colors';
 import AdminDashboardScreen from '../screens/main/AdminDashboardScreen';
 import TeamLeaderDashboardScreen from '../screens/main/TeamLeaderDashboardScreen';
 import MemberDashboardScreen from '../screens/main/MemberDashboardScreen';
+import ParentDashboardScreen from '../screens/main/ParentDashboardScreen';
 
 // Common Screens
 import ContactsScreen from '../screens/main/ContactsScreen';
 import JourneyScreen from '../screens/main/JourneyScreen';
 import ProfileScreen from '../screens/main/ProfileScreen';
+import AlarmScreen from '../screens/main/AlarmScreen';
 
 // Admin Placeholder Screens
 import AdminUsersScreen from '../screens/main/AdminUsersScreen';
@@ -67,6 +69,7 @@ function TeamLeaderTabNavigator() {
     Home: { focused: 'shield', unfocused: 'shield-outline' },
     Team: { focused: 'people', unfocused: 'people-outline' },
     Journey: { focused: 'map', unfocused: 'map-outline' },
+    Alarm: { focused: 'alert-circle', unfocused: 'alert-circle-outline' },
     Profile: { focused: 'person', unfocused: 'person-outline' },
   };
 
@@ -75,6 +78,7 @@ function TeamLeaderTabNavigator() {
       <Tab.Screen name="Home" component={TeamLeaderDashboardScreen} />
       <Tab.Screen name="Team" component={ContactsScreen} />
       <Tab.Screen name="Journey" component={JourneyScreen} />
+      <Tab.Screen name="Alarm" component={AlarmScreen} />
       <Tab.Screen name="Profile" component={ProfileScreen} />
     </Tab.Navigator>
   );
@@ -86,6 +90,7 @@ function MemberTabNavigator() {
     Home: { focused: 'shield', unfocused: 'shield-outline' },
     Guardians: { focused: 'people', unfocused: 'people-outline' },
     Journey: { focused: 'navigate', unfocused: 'navigate-outline' },
+    Alarm: { focused: 'alert-circle', unfocused: 'alert-circle-outline' },
     Profile: { focused: 'person', unfocused: 'person-outline' },
   };
 
@@ -94,6 +99,22 @@ function MemberTabNavigator() {
       <Tab.Screen name="Home" component={MemberDashboardScreen} />
       <Tab.Screen name="Guardians" component={ContactsScreen} />
       <Tab.Screen name="Journey" component={JourneyScreen} />
+      <Tab.Screen name="Alarm" component={AlarmScreen} />
+      <Tab.Screen name="Profile" component={ProfileScreen} />
+    </Tab.Navigator>
+  );
+}
+
+// -- PARENT NAVIGATOR --
+function ParentTabNavigator() {
+  const TAB_ICONS = {
+    Home: { focused: 'shield-half', unfocused: 'shield-half-outline' },
+    Profile: { focused: 'person', unfocused: 'person-outline' },
+  };
+
+  return (
+    <Tab.Navigator screenOptions={(props) => commonScreenOptions({ ...props, TAB_ICONS })}>
+      <Tab.Screen name="Home" component={ParentDashboardScreen} />
       <Tab.Screen name="Profile" component={ProfileScreen} />
     </Tab.Navigator>
   );
@@ -109,6 +130,8 @@ export default function RoleBasedNavigator() {
     return <AdminTabNavigator />;
   } else if (role === 'team-leader' || role === 'teamleader') {
     return <TeamLeaderTabNavigator />;
+  } else if (role === 'parent') {
+    return <ParentTabNavigator />;
   } else {
     // Default to Member view
     return <MemberTabNavigator />;
