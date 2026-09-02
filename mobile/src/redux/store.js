@@ -13,4 +13,8 @@ export const store = configureStore({
     location: locationReducer,
     emergencyEmails: emergencyEmailsReducer,
   },
+  middleware: (getDefaultMiddleware) => 
+    getDefaultMiddleware({
+      serializableCheck: false,
+    }),
 });

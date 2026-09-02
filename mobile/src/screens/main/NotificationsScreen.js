@@ -74,7 +74,7 @@ const getIconConfig = (type) => {
 };
 
 // Swipable Notification Item Component
-const NotificationItem = ({ item, onDelete, onMarkRead }) => {
+const NotificationItem = React.memo(({ item, onDelete, onMarkRead }) => {
   const iconConfig = getIconConfig(item.type);
   const translateX = useSharedValue(0);
   const itemHeight = useSharedValue(90); // Approximate height, adjusted dynamically if needed
@@ -164,7 +164,7 @@ const NotificationItem = ({ item, onDelete, onMarkRead }) => {
       </GestureDetector>
     </Animated.View>
   );
-};
+});
 
 export default function NotificationsScreen({ navigation }) {
   const [notifications, setNotifications] = useState(INITIAL_NOTIFICATIONS);
@@ -236,6 +236,9 @@ export default function NotificationsScreen({ navigation }) {
               onMarkRead={handleMarkRead}
             />
           )}
+          initialNumToRender={10}
+          maxToRenderPerBatch={10}
+          windowSize={5}
         />
       </SafeAreaView>
     </GestureHandlerRootView>

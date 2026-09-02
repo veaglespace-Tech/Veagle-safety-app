@@ -47,7 +47,8 @@
         {
           "locationAlwaysAndWhenInUsePermission": "Veagle Safety requires background location access to continuously broadcast your live position to emergency contacts even when your phone is locked or the app is minimized during an active SOS event. This continuous tracking is critical for your safety."
         }
-      ]
+      ],
+      "expo-image"
     ]
   }
 }

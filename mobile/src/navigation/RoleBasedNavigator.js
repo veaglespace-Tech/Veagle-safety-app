@@ -67,7 +67,7 @@ function AdminTabNavigator() {
 function TeamLeaderTabNavigator() {
   const TAB_ICONS = {
     Home: { focused: 'shield', unfocused: 'shield-outline' },
-    Team: { focused: 'people', unfocused: 'people-outline' },
+    Contacts: { focused: 'people', unfocused: 'people-outline' },
     Journey: { focused: 'map', unfocused: 'map-outline' },
     Alarm: { focused: 'alert-circle', unfocused: 'alert-circle-outline' },
     Profile: { focused: 'person', unfocused: 'person-outline' },
@@ -76,7 +76,7 @@ function TeamLeaderTabNavigator() {
   return (
     <Tab.Navigator screenOptions={(props) => commonScreenOptions({ ...props, TAB_ICONS })}>
       <Tab.Screen name="Home" component={TeamLeaderDashboardScreen} />
-      <Tab.Screen name="Team" component={ContactsScreen} />
+      <Tab.Screen name="Contacts" component={ContactsScreen} options={{ tabBarLabel: 'Team' }} />
       <Tab.Screen name="Journey" component={JourneyScreen} />
       <Tab.Screen name="Alarm" component={AlarmScreen} />
       <Tab.Screen name="Profile" component={ProfileScreen} />
@@ -88,7 +88,7 @@ function TeamLeaderTabNavigator() {
 function MemberTabNavigator() {
   const TAB_ICONS = {
     Home: { focused: 'shield', unfocused: 'shield-outline' },
-    Guardians: { focused: 'people', unfocused: 'people-outline' },
+    Contacts: { focused: 'people', unfocused: 'people-outline' },
     Journey: { focused: 'navigate', unfocused: 'navigate-outline' },
     Alarm: { focused: 'alert-circle', unfocused: 'alert-circle-outline' },
     Profile: { focused: 'person', unfocused: 'person-outline' },
@@ -97,7 +97,7 @@ function MemberTabNavigator() {
   return (
     <Tab.Navigator screenOptions={(props) => commonScreenOptions({ ...props, TAB_ICONS })}>
       <Tab.Screen name="Home" component={MemberDashboardScreen} />
-      <Tab.Screen name="Guardians" component={ContactsScreen} />
+      <Tab.Screen name="Contacts" component={ContactsScreen} options={{ tabBarLabel: 'Guardians' }} />
       <Tab.Screen name="Journey" component={JourneyScreen} />
       <Tab.Screen name="Alarm" component={AlarmScreen} />
       <Tab.Screen name="Profile" component={ProfileScreen} />

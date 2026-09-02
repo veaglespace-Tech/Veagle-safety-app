@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import {
   View, Text, StyleSheet, ScrollView, TouchableOpacity,
   Linking, Alert, ActivityIndicator, Share, Modal, Vibration,
@@ -19,6 +19,7 @@ export default function ActiveSOSScreen({ navigation }) {
   const [elapsed, setElapsed] = useState(0);
   const [showConfirmModal, setShowConfirmModal] = useState(false);
   const [copied, setCopied] = useState(false);
+  const hasOpenedWhatsApp = useRef(false);
 
   useEffect(() => {
     if (!activeSession) {
@@ -32,6 +33,13 @@ export default function ActiveSOSScreen({ navigation }) {
     const interval = setInterval(() => {
       setElapsed(Math.floor((Date.now() - startTime) / 1000));
     }, 1000);
+    
+    // Automatically open WhatsApp once on load
+    if (!hasOpenedWhatsApp.current) {
+      hasOpenedWhatsApp.current = true;
+      shareOnWhatsApp();
+    }
+
     return () => {
       clearInterval(interval);
       Vibration.cancel();

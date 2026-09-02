@@ -7,30 +7,13 @@ import Animated, { FadeInUp, FadeInDown, useSharedValue, useAnimatedStyle, withS
 import * as Haptics from 'expo-haptics';
 import { COLORS } from '../../theme/colors';
 import { startEmergencySos } from '../../redux/slices/sosSlice';
+import SOSHeroButton from '../../components/sos/SOSHeroButton';
 
 export default function MemberDashboardScreen({ navigation }) {
   const dispatch = useDispatch();
   const { user } = useSelector((state) => state.auth);
   const { latitude, longitude, accuracy } = useSelector((state) => state.location);
   const firstName = (user?.fullName || user?.name || 'Member').split(' ')[0];
-
-  const sosScale = useSharedValue(1);
-
-  const animatedSosStyle = useAnimatedStyle(() => {
-    return { transform: [{ scale: sosScale.value }] };
-  });
-
-  const handleSOSPress = () => {
-    Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
-    Vibration.vibrate([0, 500, 200, 500]);
-    sosScale.value = withSpring(0.9, {}, () => { sosScale.value = withSpring(1); });
-    
-    dispatch(startEmergencySos({
-      latitude: latitude || 18.5204,
-      longitude: longitude || 73.8567,
-      accuracy: accuracy || 10,
-    }));
-  };
 
   return (
     <SafeAreaView style={styles.safe}>
@@ -42,19 +25,14 @@ export default function MemberDashboardScreen({ navigation }) {
             <Text style={styles.greeting}>Organization Member</Text>
             <Text style={styles.name}>Welcome, {firstName}</Text>
           </View>
-          <View style={styles.avatar}>
+          <TouchableOpacity activeOpacity={0.8} style={styles.avatar} onPress={() => navigation.navigate('Profile')}>
             <Text style={styles.avatarText}>{firstName[0].toUpperCase()}</Text>
-          </View>
+          </TouchableOpacity>
         </Animated.View>
 
         {/* SOS Quick Action */}
         <Animated.View entering={FadeInUp.delay(200).duration(600)} style={styles.sosCard}>
-          <TouchableOpacity activeOpacity={0.9} onPress={handleSOSPress} style={{ width: '100%', alignItems: 'center' }}>
-            <Animated.View style={[styles.sosButton, animatedSosStyle]}>
-              <Ionicons name="warning" size={40} color="#fff" />
-              <Text style={styles.sosButtonText}>TAP FOR SOS</Text>
-            </Animated.View>
-          </TouchableOpacity>
+          <SOSHeroButton />
         </Animated.View>
 
         {/* Glassmorphism Summary Cards */}
@@ -112,8 +90,6 @@ const styles = StyleSheet.create({
   avatarText: { fontSize: 20, fontWeight: '900', color: COLORS.primary },
 
   sosCard: { backgroundColor: COLORS.surface, borderRadius: 28, padding: 24, alignItems: 'center', borderWidth: 2, borderColor: COLORS.primaryBorder, shadowColor: COLORS.primary, shadowOffset: { width: 0, height: 8 }, shadowOpacity: 0.15, shadowRadius: 20, elevation: 6 },
-  sosButton: { backgroundColor: COLORS.primary, width: 140, height: 140, borderRadius: 70, alignItems: 'center', justifyContent: 'center', shadowColor: COLORS.primary, shadowOffset: { width: 0, height: 6 }, shadowOpacity: 0.4, shadowRadius: 12, elevation: 10 },
-  sosButtonText: { color: '#fff', fontWeight: '900', fontSize: 12, marginTop: 8, letterSpacing: 1 },
 
   statsContainer: { flexDirection: 'row', gap: 12 },
   glassCard: { flex: 1, backgroundColor: 'rgba(255, 255, 255, 0.7)', borderRadius: 24, padding: 20, borderWidth: 1, borderColor: 'rgba(255, 255, 255, 0.5)', shadowColor: '#000', shadowOffset: { width: 0, height: 8 }, shadowOpacity: 0.05, shadowRadius: 16, elevation: 4, alignItems: 'flex-start' },

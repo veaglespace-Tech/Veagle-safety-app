@@ -12,6 +12,7 @@ import { checkActiveSos, startEmergencySos } from '../../redux/slices/sosSlice';
 import { fetchUser } from '../../redux/slices/authSlice';
 import { journeyApi } from '../../api/journeyApi';
 import { COLORS } from '../../theme/colors';
+import SOSHeroButton from '../../components/sos/SOSHeroButton';
 
 export default function DashboardScreen({ navigation }) {
   const dispatch = useDispatch();
@@ -20,13 +21,6 @@ export default function DashboardScreen({ navigation }) {
   const { contacts = [] } = useSelector((state) => state.contacts);
   const { status = 'LIVE', accuracy = 10, latitude, longitude } = useSelector((state) => state.location);
   const [activeJourney, setActiveJourney] = useState(null);
-
-  // SOS hold gesture
-  const holdProgress = useRef(new Animated.Value(0)).current;
-  const holdAnim = useRef(null);
-  const sosScale = useRef(new Animated.Value(1)).current;
-  const [sosHolding, setSosHolding] = useState(false);
-  const [holdComplete, setHoldComplete] = useState(false);
 
   useEffect(() => {
     dispatch(fetchUser());
@@ -68,51 +62,7 @@ export default function DashboardScreen({ navigation }) {
 
   const readinessScore = contacts.length >= 3 && status === 'LIVE' ? 100 : contacts.length > 0 ? 85 : 45;
 
-  // SOS Hold logic — hold 3 seconds to trigger
-  const onSOSPressIn = () => {
-    setHoldComplete(false);
-    setSosHolding(true);
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy);
-    Animated.spring(sosScale, { toValue: 0.92, useNativeDriver: true }).start();
-
-    holdAnim.current = Animated.timing(holdProgress, {
-      toValue: 1,
-      duration: 3000,
-      useNativeDriver: false,
-    });
-    holdAnim.current.start(({ finished }) => {
-      if (finished) {
-        setHoldComplete(true);
-        triggerSOS();
-      }
-    });
-  };
-
-  const onSOSPressOut = () => {
-    if (!holdComplete) {
-      holdAnim.current?.stop();
-      Animated.parallel([
-        Animated.timing(holdProgress, { toValue: 0, duration: 300, useNativeDriver: false }),
-        Animated.spring(sosScale, { toValue: 1, useNativeDriver: true }),
-      ]).start();
-    }
-    setSosHolding(false);
-  };
-
-  const triggerSOS = async () => {
-    Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
-    Vibration.vibrate([0, 500, 200, 500]);
-    Animated.spring(sosScale, { toValue: 1, useNativeDriver: true }).start();
-    holdProgress.setValue(0);
-
-    dispatch(startEmergencySos({
-      latitude: latitude || 18.5204,
-      longitude: longitude || 73.8567,
-      accuracy: accuracy || 10,
-    }));
-  };
-
-  const holdWidth = holdProgress.interpolate({ inputRange: [0, 1], outputRange: ['0%', '100%'] });
+  const readinessScore = contacts.length >= 3 && status === 'LIVE' ? 100 : contacts.length > 0 ? 85 : 45;
 
   const QUICK_ACTIONS = [
     { icon: 'navigate', label: 'Track Journey', sub: 'Share Live Route', onPress: () => navigation.navigate('Journey') },
@@ -177,29 +127,8 @@ export default function DashboardScreen({ navigation }) {
             <Text style={styles.gpsAccuracy}>±{accuracy || 10}m</Text>
           </View>
 
-          {/* SOS BUTTON */}
-          <View style={styles.sosBtnWrap}>
-            <Animated.View style={[styles.sosRing1, sosHolding && styles.sosRingActive]} />
-            <Animated.View style={[styles.sosRing2, sosHolding && styles.sosRing2Active]} />
-
-            <TouchableOpacity
-              onPressIn={onSOSPressIn}
-              onPressOut={onSOSPressOut}
-              activeOpacity={1}
-              style={styles.sosBtnTouch}
-              disabled={isTriggering}
-            >
-              <Animated.View style={[styles.sosBtn, { transform: [{ scale: sosScale }] }]}>
-                {/* Hold progress ring */}
-                <Animated.View style={[styles.holdProgressBar, { width: holdWidth }]} />
-                <Text style={styles.sosBtnIcon}>🆘</Text>
-                <Text style={styles.sosBtnLabel}>SOS</Text>
-                <Text style={styles.sosBtnSub}>{sosHolding ? 'Hold...' : 'Hold 3s'}</Text>
-              </Animated.View>
-            </TouchableOpacity>
-          </View>
-
-          <Text style={styles.sosInstruct}>HOLD FOR 3 SECONDS OR DOUBLE-TAP TO BROADCAST EMERGENCY ALERTS</Text>
+          {/* DYNAMIC SOS HERO BUTTON */}
+          <SOSHeroButton />
 
           {/* QUICK ACTIONS GRID */}
           <View style={styles.quickGrid}>
@@ -323,25 +252,6 @@ const styles = StyleSheet.create({
   gpsDot: { width: 8, height: 8, borderRadius: 4 },
   gpsLabel: { fontSize: 11, fontWeight: '800', color: COLORS.textDark },
   gpsAccuracy: { fontSize: 10, fontWeight: '700', color: COLORS.success, backgroundColor: '#F0FDF4', paddingHorizontal: 8, paddingVertical: 2, borderRadius: 999, borderWidth: 1, borderColor: '#86EFAC' },
-
-  // SOS Button
-  sosBtnWrap: { alignItems: 'center', justifyContent: 'center', marginVertical: 10 },
-  sosRing1: { position: 'absolute', width: 180, height: 180, borderRadius: 90, borderWidth: 2, borderColor: COLORS.primaryBorder, opacity: 0.4 },
-  sosRingActive: { borderColor: COLORS.primary, opacity: 0.7 },
-  sosRing2: { position: 'absolute', width: 155, height: 155, borderRadius: 78, borderWidth: 1.5, borderColor: COLORS.primaryBorder, opacity: 0.3 },
-  sosRing2Active: { borderColor: COLORS.primaryLight, opacity: 0.6 },
-  sosBtnTouch: {},
-  sosBtn: {
-    width: 130, height: 130, borderRadius: 65,
-    backgroundColor: COLORS.primary, alignItems: 'center', justifyContent: 'center',
-    shadowColor: COLORS.primary, shadowOffset: { width: 0, height: 0 }, shadowOpacity: 0.55, shadowRadius: 30, elevation: 20,
-    overflow: 'hidden',
-  },
-  holdProgressBar: { position: 'absolute', bottom: 0, left: 0, height: 5, backgroundColor: 'rgba(255,255,255,0.6)', borderRadius: 3 },
-  sosBtnIcon: { fontSize: 36 },
-  sosBtnLabel: { fontSize: 18, fontWeight: '900', color: '#fff', letterSpacing: 2 },
-  sosBtnSub: { fontSize: 9, fontWeight: '800', color: 'rgba(255,255,255,0.8)', textTransform: 'uppercase', letterSpacing: 1 },
-  sosInstruct: { fontSize: 9, fontWeight: '800', color: COLORS.textMuted, textTransform: 'uppercase', letterSpacing: 0.8, textAlign: 'center', marginTop: 10, marginBottom: 18 },
 
   // Quick Actions
   quickGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 10 },

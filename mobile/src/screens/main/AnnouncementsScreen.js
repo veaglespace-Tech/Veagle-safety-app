@@ -65,7 +65,7 @@ const DUMMY_POSTS = [
 ];
 
 // Interactive Post Component
-const PostCard = ({ post }) => {
+const PostCard = React.memo(({ post }) => {
   const [isLiked, setIsLiked] = useState(post.likedByMe);
   const [likeCount, setLikeCount] = useState(post.likes);
   
@@ -145,7 +145,7 @@ const PostCard = ({ post }) => {
       </View>
     </Animated.View>
   );
-};
+});
 
 export default function AnnouncementsScreen({ navigation }) {
   const { user } = useSelector((state) => state.auth);
@@ -169,6 +169,9 @@ export default function AnnouncementsScreen({ navigation }) {
         contentContainerStyle={styles.listContent}
         showsVerticalScrollIndicator={false}
         renderItem={({ item }) => <PostCard post={item} />}
+        initialNumToRender={5}
+        maxToRenderPerBatch={5}
+        windowSize={5}
       />
 
       {/* Floating Action Button (FAB) for Admins & Team Leaders */}

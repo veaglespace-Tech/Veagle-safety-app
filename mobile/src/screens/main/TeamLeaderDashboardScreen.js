@@ -20,9 +20,9 @@ export default function TeamLeaderDashboardScreen({ navigation }) {
             <Text style={styles.greeting}>Team Leader</Text>
             <Text style={styles.name}>Welcome, {firstName}</Text>
           </View>
-          <View style={styles.avatar}>
+          <TouchableOpacity activeOpacity={0.8} style={styles.avatar} onPress={() => navigation.navigate('Profile')}>
             <Text style={styles.avatarText}>{firstName[0].toUpperCase()}</Text>
-          </View>
+          </TouchableOpacity>
         </Animated.View>
 
         {/* Glassmorphism Summary Cards */}

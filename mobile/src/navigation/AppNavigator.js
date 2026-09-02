@@ -23,6 +23,15 @@ import AboutScreen from '../screens/info/AboutScreen';
 import PrivacyScreen from '../screens/info/PrivacyScreen';
 import TermsScreen from '../screens/info/TermsScreen';
 import HelpScreen from '../screens/info/HelpScreen';
+import HelpContactScreen from '../screens/info/HelpContactScreen';
+
+// New Feature Screens
+import CheckoutScreen from '../screens/subscription/CheckoutScreen';
+import PaymentSuccessScreen from '../screens/subscription/PaymentSuccessScreen';
+import OrganizationScreen from '../screens/main/OrganizationScreen';
+import GalleryScreen from '../screens/main/GalleryScreen';
+import AdminEnquiriesScreen from '../screens/main/AdminEnquiriesScreen';
+import UserSettingsScreen from '../screens/main/UserSettingsScreen';
 
 const Stack = createNativeStackNavigator();
 
@@ -71,6 +80,15 @@ export default function AppNavigator() {
             <Stack.Screen name="AdminCoupons" component={AdminCouponsScreen} options={{ headerShown: true, title: 'Manage Coupons' }} />
             <Stack.Screen name="AdminReferrals" component={AdminReferralsScreen} options={{ headerShown: true, title: 'Manage Referrals' }} />
             <Stack.Screen name="AdminSettings" component={AdminSettingsScreen} options={{ headerShown: true, title: 'Global Settings' }} />
+            
+            {/* Newly added UI Screens */}
+            <Stack.Screen name="Checkout" component={CheckoutScreen} />
+            <Stack.Screen name="PaymentSuccess" component={PaymentSuccessScreen} />
+            <Stack.Screen name="Organization" component={OrganizationScreen} />
+            <Stack.Screen name="Gallery" component={GalleryScreen} />
+            <Stack.Screen name="AdminEnquiries" component={AdminEnquiriesScreen} />
+            <Stack.Screen name="UserSettings" component={UserSettingsScreen} />
+            <Stack.Screen name="HelpContact" component={HelpContactScreen} />
           </>
         )}
       </Stack.Navigator>
