@@ -40,16 +40,15 @@ export const startSos = async (req, res) => {
     const latitude = initialLat || 18.5204;
     const longitude = initialLng || 73.8567;
 
-    if (initialLat && initialLng) {
-      await prisma.sosLocation.create({
-        data: {
-          sosSessionId: session.id,
-          latitude: initialLat,
-          longitude: initialLng,
-          accuracy: 10,
-        },
-      });
-    }
+    // Always save initial location so Admin/Parent maps have data to display
+    await prisma.sosLocation.create({
+      data: {
+        sosSessionId: session.id,
+        latitude,
+        longitude,
+        accuracy: initialLat && initialLng ? 10 : 1000,
+      },
+    });
 
     await prisma.user.update({
       where: { id: userId },
@@ -137,8 +136,10 @@ export const startSos = async (req, res) => {
     if (io) {
       const sosAlarmPayload = {
         sosId: session.id,
+        victimId: userId,
         victimName: currentUser?.fullName || 'Sakhi Suraksha User',
         victimPhone: currentUser?.phone || '',
+        victimEmail: currentUser?.email || '',
         victimPhoto: currentUser?.profilePhoto || null,
         shareToken: session.shareToken,
         trackingUrl,
@@ -245,25 +246,133 @@ export const updateSosLocation = async (req, res) => {
   try {
     const { sosSessionId, latitude, longitude, accuracy } = req.body;
 
+    // 1. Validate coordinates
+    if (
+      latitude === undefined || latitude === null || 
+      longitude === undefined || longitude === null ||
+      isNaN(latitude) || isNaN(longitude) ||
+      latitude < -90 || latitude > 90 ||
+      longitude < -180 || longitude > 180
+    ) {
+      return res.status(400).json({ error: 'Invalid GPS coordinates provided' });
+    }
+
+    // 2. Fetch session and ensure it belongs to the authenticated user AND is ACTIVE
+    const session = await prisma.sosSession.findFirst({
+      where: {
+        id: sosSessionId,
+        userId: req.user.id,
+        status: 'ACTIVE'
+      },
+      include: {
+        user: {
+          select: {
+            id: true,
+            email: true,
+            phone: true,
+            parentEmail: true,
+            emergencyContactPhone: true,
+            trustedContacts: { select: { email: true, phone: true } },
+          },
+        },
+      },
+    });
+
+    if (!session) {
+      return res.status(403).json({ error: 'Invalid or unauthorized SOS session' });
+    }
+
+    // 3. Save to database
     const location = await prisma.sosLocation.create({
       data: {
         sosSessionId,
-        latitude,
-        longitude,
-        accuracy: accuracy || 10,
+        latitude: parseFloat(latitude),
+        longitude: parseFloat(longitude),
+        accuracy: accuracy ? parseFloat(accuracy) : 10,
       },
     });
 
     // Emit live location update to connected sockets
     const io = getIO();
     if (io) {
-      io.emit('SOS_LOCATION_UPDATE', {
-        sosSessionId,
-        latitude,
-        longitude,
-        accuracy: accuracy || 10,
+      const parsedLat = parseFloat(latitude);
+      const parsedLng = parseFloat(longitude);
+      const parsedAcc = accuracy ? parseFloat(accuracy) : 10;
+
+      const payload = {
+        sosSessionId: parseInt(sosSessionId, 10),
+        latitude: parsedLat,
+        longitude: parsedLng,
+        accuracy: parsedAcc,
         recordedAt: location.recordedAt,
+        timestamp: location.recordedAt, // Required for live-track page
+      };
+
+      // 1. Emit to admin ops (super admin panel map)
+      io.to('admin-ops').emit('SOS_LOCATION_UPDATE', payload);
+
+      // 2. Emit to public link trackers via shareToken room
+      if (session?.shareToken) {
+        io.to(`track:${session.shareToken}`).emit('location-updated', payload);
+      }
+
+      // 3. Emit SOS_LOCATION_UPDATE to all parent & guardian rooms
+      const targetRooms = new Set();
+
+      // Add linked parent rooms
+      if (session?.user?.id) {
+        const parentLinks = await prisma.parentChildLink.findMany({
+          where: { childId: session.user.id, status: 'ACTIVE' },
+          include: { parent: { select: { email: true, phone: true } } },
+        }).catch(() => []);
+
+        parentLinks.forEach((link) => {
+          if (link.parent?.email) targetRooms.add(`user:${link.parent.email.trim().toLowerCase()}`);
+          if (link.parent?.phone) {
+            const cleanP = link.parent.phone.replace(/\D/g, '');
+            if (cleanP) {
+              targetRooms.add(`user:${cleanP}`);
+              if (cleanP.length >= 10) targetRooms.add(`user:${cleanP.slice(-10)}`);
+            }
+          }
+        });
+      }
+
+      // Add parentEmail room
+      if (session?.user?.parentEmail) {
+        targetRooms.add(`user:${session.user.parentEmail.trim().toLowerCase()}`);
+      }
+
+      // Add emergencyContactPhone room
+      if (session?.user?.emergencyContactPhone) {
+        const cleanEmPhone = session.user.emergencyContactPhone.replace(/\D/g, '');
+        if (cleanEmPhone) {
+          targetRooms.add(`user:${cleanEmPhone}`);
+          if (cleanEmPhone.length >= 10) targetRooms.add(`user:${cleanEmPhone.slice(-10)}`);
+        }
+      }
+
+      // Add trusted contact rooms
+      if (session?.user?.trustedContacts) {
+        session.user.trustedContacts.forEach((c) => {
+          if (c.email) targetRooms.add(`user:${c.email.trim().toLowerCase()}`);
+          if (c.phone) {
+            const cleanP = c.phone.replace(/\D/g, '');
+            if (cleanP) {
+              targetRooms.add(`user:${cleanP}`);
+              if (cleanP.length >= 10) targetRooms.add(`user:${cleanP.slice(-10)}`);
+            }
+          }
+        });
+      }
+
+      // Emit to each parent/guardian room
+      targetRooms.forEach((roomName) => {
+        io.to(roomName).emit('SOS_LOCATION_UPDATE', payload);
       });
+
+      // 4. Global fallback broadcast — ensures no admin or parent misses a location update
+      io.emit('SOS_LOCATION_UPDATE', payload);
     }
 
     return res.json({ message: 'Location updated', location });
@@ -289,6 +398,23 @@ export const resolveSos = async (req, res) => {
 
     if (!targetId || isNaN(targetId)) {
       return res.status(404).json({ error: 'No active SOS session found to resolve' });
+    }
+
+    // IDOR FIX: Check ownership and roles before allowing resolution
+    const existingSession = await prisma.sosSession.findUnique({
+      where: { id: targetId },
+      include: { user: true }
+    });
+
+    if (!existingSession) {
+      return res.status(404).json({ error: 'No active SOS session found to resolve' });
+    }
+
+    const isOwner = existingSession.userId === userId;
+    const isAdmin = req.user?.role === 'SUPER_ADMIN' || req.user?.role === 'ADMIN';
+
+    if (!isOwner && !isAdmin) {
+      return res.status(403).json({ error: 'Unauthorized to resolve this SOS session' });
     }
 
     const session = await prisma.sosSession.update({
@@ -419,6 +545,33 @@ export const getActiveSosSession = async (req, res) => {
   }
 };
 
+export const getSosLocation = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const session = await prisma.sosSession.findUnique({
+      where: { id: parseInt(id, 10) },
+      select: {
+        id: true,
+        locations: {
+          orderBy: { recordedAt: 'asc' }, // Ascending so we get timeline from start to finish
+          take: 200,
+        }
+      }
+    });
+
+    if (!session) {
+      return res.status(404).json({ error: 'Session not found' });
+    }
+
+    return res.json({ 
+      location: session.locations[session.locations.length - 1] || null,
+      history: session.locations 
+    });
+  } catch (error) {
+    return res.status(500).json({ error: 'Failed to fetch location' });
+  }
+};
+
 export const getPublicSosTracking = async (req, res) => {
   try {
     const { token } = req.params;
@@ -427,7 +580,7 @@ export const getPublicSosTracking = async (req, res) => {
       where: { shareToken: token },
       include: {
         user: { select: { fullName: true, phone: true, profilePhoto: true, bloodGroup: true } },
-        locations: { orderBy: { recordedAt: 'desc' }, take: 20 },
+        locations: { orderBy: { recordedAt: 'asc' }, take: 200 },
       },
     });
 
@@ -440,7 +593,7 @@ export const getPublicSosTracking = async (req, res) => {
       where: { shareToken: token },
       include: {
         user: { select: { fullName: true, phone: true, profilePhoto: true, bloodGroup: true } },
-        locations: { orderBy: { recordedAt: 'desc' }, take: 20 },
+        locations: { orderBy: { recordedAt: 'asc' }, take: 200 },
       },
     });
 
