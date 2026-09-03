@@ -3,6 +3,7 @@ import {
   View, Text, StyleSheet, ScrollView, TouchableOpacity,
   Linking, Alert, ActivityIndicator, Share, Modal, Vibration,
 } from 'react-native';
+import MapView, { Marker, Circle } from 'react-native-maps';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useDispatch, useSelector } from 'react-redux';
@@ -21,28 +22,23 @@ export default function ActiveSOSScreen({ navigation }) {
   const [copied, setCopied] = useState(false);
   const hasOpenedWhatsApp = useRef(false);
 
-  useEffect(() => {
+    useEffect(() => {
     if (!activeSession) {
-      navigation.goBack();
+      if (navigation.canGoBack()) {
+        navigation.goBack();
+      } else {
+        navigation.navigate('Main');
+      }
       return;
     }
-    // Vibrate in emergency pattern
-    Vibration.vibrate([0, 300, 150, 300], true);
 
     const startTime = new Date(activeSession.startedAt).getTime();
     const interval = setInterval(() => {
       setElapsed(Math.floor((Date.now() - startTime) / 1000));
     }, 1000);
     
-    // Automatically open WhatsApp once on load
-    if (!hasOpenedWhatsApp.current) {
-      hasOpenedWhatsApp.current = true;
-      shareOnWhatsApp();
-    }
-
     return () => {
       clearInterval(interval);
-      Vibration.cancel();
     };
   }, [activeSession]);
 
@@ -57,12 +53,10 @@ export default function ActiveSOSScreen({ navigation }) {
   const handleMarkSafe = async () => {
     try {
       await dispatch(resolveEmergencySos(activeSession.id)).unwrap();
-      Vibration.cancel();
       setShowConfirmModal(false);
-      navigation.goBack();
     } catch (e) {
+      Alert.alert("Error", e?.message || e || "Failed to resolve SOS");
       setShowConfirmModal(false);
-      navigation.goBack();
     }
   };
 
@@ -111,6 +105,36 @@ export default function ActiveSOSScreen({ navigation }) {
       </View>
 
       <ScrollView contentContainerStyle={styles.scroll} showsVerticalScrollIndicator={false}>
+
+        {/* LIVE TRACKING MAP */}
+        <View style={styles.mapContainer}>
+          <MapView
+            style={styles.map}
+            region={{
+              latitude: latitude || 18.5204,
+              longitude: longitude || 73.8567,
+              latitudeDelta: 0.015,
+              longitudeDelta: 0.015,
+            }}
+            pitchEnabled={false}
+          >
+            <Marker coordinate={{ latitude: latitude || 18.5204, longitude: longitude || 73.8567 }}>
+              <View style={styles.mapMarker}>
+                <Ionicons name="warning" size={16} color="#fff" />
+              </View>
+            </Marker>
+            <Circle
+              center={{ latitude: latitude || 18.5204, longitude: longitude || 73.8567 }}
+              radius={accuracy || 10}
+              fillColor="rgba(255, 42, 109, 0.2)"
+              strokeColor="rgba(255, 42, 109, 0.8)"
+            />
+          </MapView>
+          <View style={styles.mapOverlayPill}>
+            <View style={styles.liveDot} />
+            <Text style={styles.mapOverlayText}>LIVE TRACKING ENABLED</Text>
+          </View>
+        </View>
 
         {/* STATS GRID */}
         <View style={styles.statsGrid}>
@@ -267,6 +291,13 @@ const styles = StyleSheet.create({
   liveText: { fontSize: 9, fontWeight: '900', color: '#fff', letterSpacing: 1.5 },
 
   scroll: { paddingHorizontal: 16, paddingTop: 16, paddingBottom: 28, gap: 12 },
+
+  // MAP
+  mapContainer: { width: '100%', height: 220, borderRadius: 20, overflow: 'hidden', borderWidth: 1.5, borderColor: COLORS.primaryBorder, backgroundColor: '#fff', shadowColor: COLORS.primary, shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.08, shadowRadius: 10, elevation: 4 },
+  map: { flex: 1 },
+  mapMarker: { width: 32, height: 32, borderRadius: 16, backgroundColor: COLORS.primary, borderWidth: 2, borderColor: '#fff', alignItems: 'center', justifyContent: 'center', shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.25, shadowRadius: 3, elevation: 5 },
+  mapOverlayPill: { position: 'absolute', top: 12, left: 12, flexDirection: 'row', alignItems: 'center', gap: 6, backgroundColor: 'rgba(255,255,255,0.95)', paddingHorizontal: 10, paddingVertical: 6, borderRadius: 999, borderWidth: 1, borderColor: COLORS.primaryBorder, shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.1, shadowRadius: 4, elevation: 3 },
+  mapOverlayText: { fontSize: 10, fontWeight: '800', color: COLORS.textDark, letterSpacing: 0.5 },
 
   // STATS
   statsGrid: { flexDirection: 'row', gap: 10 },

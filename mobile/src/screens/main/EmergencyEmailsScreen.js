@@ -194,7 +194,7 @@ export default function EmergencyEmailsScreen({ navigation }) {
                   style={{ transform: [{ scale: 0.8 }] }}
                 />
                 <TouchableOpacity onPress={() => handleDelete(item.id)} style={styles.deleteBtn}>
-                  <Ionicons name="trash-outline" size={20} color={COLORS.danger || '#ef4444'} />
+                  <Ionicons name="trash-outline" size={20} color={COLORS.emergency} />
                 </TouchableOpacity>
               </View>
             </Animated.View>

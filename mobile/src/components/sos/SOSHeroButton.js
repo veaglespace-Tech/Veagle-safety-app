@@ -102,8 +102,8 @@ export default function SOSHeroButton() {
     const { latitude, longitude, accuracy } = store.getState().location;
     
     dispatch(startEmergencySos({
-      latitude: latitude || 18.5204,
-      longitude: longitude || 73.8567,
+      initialLat: latitude || 18.5204,
+      initialLng: longitude || 73.8567,
       accuracy: accuracy || 10,
       isSilent
     }));
@@ -150,18 +150,19 @@ export default function SOSHeroButton() {
               colors={
                 activeSession ? ['#FF2A6D', '#E01A4F', '#2A0826'] :
                 holding ? ['#E01A4F', '#FF2A6D', '#FFD700'] :
+                isTriggering ? ['#FF5C8A', '#E01A4F', '#FF5C8A'] :
                 ['#FF5C8A', '#FF2A6D', '#E01A4F']
               }
               start={{ x: 0, y: 0 }}
               end={{ x: 1, y: 1 }}
               style={styles.gradientBg}
             >
-              <Ionicons name="shield-checkmark" size={38} color={holding ? "#FFD700" : "#FFF"} style={{ marginBottom: 4 }} />
-              <Text style={styles.buttonText}>{holding ? `${countdown}s` : 'SOS'}</Text>
-              <View style={[styles.badge, holding && styles.badgeHolding]}>
-                <View style={[styles.badgeDot, holding && { backgroundColor: '#FFD700' }]} />
+              <Ionicons name={isTriggering ? "hourglass-outline" : "shield-checkmark"} size={38} color={holding ? "#FFD700" : "#FFF"} style={{ marginBottom: 4 }} />
+              <Text style={styles.buttonText}>{holding ? `${countdown}s` : isTriggering ? 'WAIT' : 'SOS'}</Text>
+              <View style={[styles.badge, (holding || isTriggering) && styles.badgeHolding]}>
+                <View style={[styles.badgeDot, (holding || isTriggering) && { backgroundColor: '#FFD700' }]} />
                 <Text style={styles.badgeText}>
-                  {holding ? 'DISPATCHING...' : activeSession ? 'VIEW STATUS' : 'HOLD 2 SECS'}
+                  {holding ? 'DISPATCHING...' : isTriggering ? 'CONNECTING...' : activeSession ? 'VIEW STATUS' : 'HOLD 2 SECS'}
                 </Text>
               </View>
             </LinearGradient>

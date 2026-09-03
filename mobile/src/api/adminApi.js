@@ -27,5 +27,23 @@ export const adminApi = {
   getPayments: async () => {
     const res = await apiClient.get('/admin/payments');
     return res.data;
+  },
+
+  // Super Admin Overviews
+  fetchOverview: async () => {
+    const res = await apiClient.get('/admin/overview');
+    return res.data;
+  },
+  fetchUsers: async () => {
+    const res = await apiClient.get('/admin/users');
+    return res.data;
+  },
+  updateUserRole: async (payload) => {
+    const res = await apiClient.put('/admin/user/role', payload);
+    return res.data;
+  },
+  adminResolveSos: async (payload) => {
+    const res = await apiClient.post('/admin/sos/resolve', payload);
+    return res.data;
   }
 };

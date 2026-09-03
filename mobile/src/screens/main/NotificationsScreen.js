@@ -66,7 +66,7 @@ const INITIAL_NOTIFICATIONS = [
 // Helper to get icon config based on type
 const getIconConfig = (type) => {
   switch (type) {
-    case 'SOS': return { name: 'warning', color: COLORS.danger || '#ef4444', bg: 'rgba(239, 68, 68, 0.1)' };
+    case 'SOS': return { name: 'warning', color: COLORS.emergency, bg: 'rgba(239, 68, 68, 0.1)' };
     case 'TEAM': return { name: 'chatbubbles', color: COLORS.success, bg: 'rgba(34, 197, 94, 0.1)' };
     case 'SYSTEM': return { name: 'information-circle', color: COLORS.primary, bg: 'rgba(59, 130, 246, 0.1)' };
     default: return { name: 'notifications', color: COLORS.textMuted, bg: COLORS.primaryBorder };
@@ -277,7 +277,7 @@ const styles = StyleSheet.create({
   },
   headerTitle: { fontSize: 20, fontWeight: '900', color: COLORS.textDark, letterSpacing: -0.5 },
   badge: {
-    backgroundColor: COLORS.danger || '#ef4444',
+    backgroundColor: COLORS.emergency,
     paddingHorizontal: 6,
     paddingVertical: 2,
     borderRadius: 10,
@@ -304,7 +304,7 @@ const styles = StyleSheet.create({
   // Swipe Container & Background
   swipeContainer: {
     width: '100%',
-    backgroundColor: COLORS.danger || '#ef4444', // Red background for delete
+    backgroundColor: COLORS.emergency, // Red background for delete
     justifyContent: 'center',
   },
   deleteBackground: {

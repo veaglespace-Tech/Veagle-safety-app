@@ -4,6 +4,8 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { COLORS } from '../../theme/colors';
 import { apiClient } from '../../api/apiClient';
+import { paymentApi } from '../../api/paymentApi';
+import { couponApi } from '../../api/couponApi';
 
 export default function CheckoutScreen({ navigation }) {
   const [loading, setLoading] = useState(false);
@@ -13,6 +15,12 @@ export default function CheckoutScreen({ navigation }) {
   const [couponCode, setCouponCode] = useState('');
   const [appliedCoupon, setAppliedCoupon] = useState(null);
   const [applyingCoupon, setApplyingCoupon] = useState(false);
+
+  // Card input states
+  const [cardName, setCardName] = useState('');
+  const [cardNumber, setCardNumber] = useState('');
+  const [cardExpiry, setCardExpiry] = useState('');
+  const [cardCvv, setCardCvv] = useState('');
 
   useEffect(() => {
     const fetchPlans = async () => {
@@ -33,26 +41,33 @@ export default function CheckoutScreen({ navigation }) {
     if (!couponCode) return;
     setApplyingCoupon(true);
     try {
-      const res = await apiClient.post('/coupons/validate', {
-        code: couponCode,
-        planId: selectedPlan?.id
-      });
-      if (res.data?.success) {
-        setAppliedCoupon(res.data.coupon);
+      const res = await couponApi.validateCoupon(couponCode, selectedPlan?.id);
+      if (res?.success) {
+        setAppliedCoupon(res.coupon);
         Alert.alert("Success", "Coupon applied!");
       }
     } catch (err) {
       Alert.alert("Error", err.response?.data?.error || "Invalid coupon");
       setAppliedCoupon(null);
+      setCouponCode('');
     } finally {
       setApplyingCoupon(false);
     }
   };
 
+  const handleRemoveCoupon = () => {
+    setAppliedCoupon(null);
+    setCouponCode('');
+  };
+
   const handleCheckout = async () => {
+    if (!cardName || !cardNumber || !cardExpiry || !cardCvv) {
+      Alert.alert("Required", "Please fill in all card details to proceed.");
+      return;
+    }
     setLoading(true);
     try {
-      const res = await apiClient.post('/payment/payu-initiate', {
+      const res = await paymentApi.initiatePayU({
         planId: selectedPlan?.id,
         amount: totalPrice,
         couponCode: appliedCoupon?.code
@@ -128,42 +143,84 @@ export default function CheckoutScreen({ navigation }) {
 
           <View style={styles.couponWrap}>
             <TextInput 
-              style={styles.couponInput} 
+              style={[styles.couponInput, appliedCoupon && styles.couponInputApplied]} 
               placeholder="Have a coupon code?" 
               placeholderTextColor={COLORS.textMuted}
               value={couponCode}
               onChangeText={setCouponCode}
               autoCapitalize="characters"
+              editable={!appliedCoupon}
             />
-            <TouchableOpacity 
-              style={[styles.applyBtn, applyingCoupon && styles.btnDisabled]} 
-              onPress={handleApplyCoupon}
-              disabled={applyingCoupon || !couponCode}
-            >
-              {applyingCoupon ? <ActivityIndicator color="#fff" size="small" /> : <Text style={styles.applyBtnText}>Apply</Text>}
-            </TouchableOpacity>
+            {!appliedCoupon ? (
+              <TouchableOpacity 
+                style={[styles.applyBtn, (applyingCoupon || !couponCode) && styles.btnDisabled]} 
+                onPress={handleApplyCoupon}
+                disabled={applyingCoupon || !couponCode}
+              >
+                {applyingCoupon ? <ActivityIndicator color="#fff" size="small" /> : <Text style={styles.applyBtnText}>Apply</Text>}
+              </TouchableOpacity>
+            ) : (
+              <TouchableOpacity 
+                style={[styles.applyBtn, styles.removeBtn]} 
+                onPress={handleRemoveCoupon}
+              >
+                <Text style={styles.applyBtnText}>Remove</Text>
+              </TouchableOpacity>
+            )}
           </View>
           {appliedCoupon && (
-            <Text style={styles.successText}>Coupon '{appliedCoupon.code}' applied!</Text>
+            <Text style={styles.successText}>
+              <Ionicons name="checkmark-circle" size={14} color={COLORS.success} /> Coupon '{appliedCoupon.code}' applied successfully!
+            </Text>
           )}
         </View>
 
         <View style={styles.paymentCard}>
           <Text style={styles.sectionTitle}>Payment Details</Text>
           <Text style={styles.inputLabel}>Cardholder Name</Text>
-          <TextInput style={styles.input} placeholder="Jane Doe" placeholderTextColor={COLORS.textMuted} />
+          <TextInput 
+            style={styles.input} 
+            placeholder="Jane Doe" 
+            placeholderTextColor={COLORS.textMuted}
+            value={cardName}
+            onChangeText={setCardName}
+          />
           
           <Text style={styles.inputLabel}>Card Number</Text>
-          <TextInput style={styles.input} placeholder="**** **** **** 1234" keyboardType="number-pad" placeholderTextColor={COLORS.textMuted} />
+          <TextInput 
+            style={styles.input} 
+            placeholder="**** **** **** 1234" 
+            keyboardType="number-pad" 
+            placeholderTextColor={COLORS.textMuted}
+            value={cardNumber}
+            onChangeText={setCardNumber}
+            maxLength={16}
+          />
           
           <View style={styles.row}>
             <View style={styles.half}>
               <Text style={styles.inputLabel}>Expiry</Text>
-              <TextInput style={styles.input} placeholder="MM/YY" placeholderTextColor={COLORS.textMuted} />
+              <TextInput 
+                style={styles.input} 
+                placeholder="MM/YY" 
+                placeholderTextColor={COLORS.textMuted}
+                value={cardExpiry}
+                onChangeText={setCardExpiry}
+                maxLength={5}
+              />
             </View>
             <View style={styles.half}>
               <Text style={styles.inputLabel}>CVV</Text>
-              <TextInput style={styles.input} placeholder="***" secureTextEntry keyboardType="number-pad" placeholderTextColor={COLORS.textMuted} />
+              <TextInput 
+                style={styles.input} 
+                placeholder="***" 
+                secureTextEntry 
+                keyboardType="number-pad" 
+                placeholderTextColor={COLORS.textMuted}
+                value={cardCvv}
+                onChangeText={setCardCvv}
+                maxLength={3}
+              />
             </View>
           </View>
         </View>
@@ -208,7 +265,9 @@ const styles = StyleSheet.create({
 
   couponWrap: { flexDirection: 'row', gap: 8, marginTop: 4 },
   couponInput: { flex: 1, backgroundColor: COLORS.primaryBg, borderRadius: 12, paddingHorizontal: 16, paddingVertical: 12, fontSize: 13, fontWeight: '700', color: COLORS.textDark, borderWidth: 1, borderColor: COLORS.primaryBorder },
+  couponInputApplied: { backgroundColor: '#f0fdf4', borderColor: COLORS.success, color: COLORS.success },
   applyBtn: { backgroundColor: COLORS.textDark, borderRadius: 12, paddingHorizontal: 20, justifyContent: 'center', alignItems: 'center' },
+  removeBtn: { backgroundColor: COLORS.emergency },
   applyBtnText: { color: '#FFF', fontSize: 13, fontWeight: '900' },
   btnDisabled: { opacity: 0.7 },
   successText: { color: COLORS.success, fontSize: 12, fontWeight: '800', marginTop: 8 },

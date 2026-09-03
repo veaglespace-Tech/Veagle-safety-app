@@ -37,4 +37,12 @@ export const authApi = {
     const res = await apiClient.post('/auth/reset-password', payload);
     return res.data;
   },
+  sendEmailChangeOtp: async (payload) => {
+    const res = await apiClient.post('/auth/send-email-change-otp', payload);
+    return res.data;
+  },
+  verifyNewEmail: async (payload) => {
+    const res = await apiClient.post('/auth/verify-new-email', payload);
+    return res.data;
+  },
 };

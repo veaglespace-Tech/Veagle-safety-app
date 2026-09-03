@@ -76,7 +76,17 @@ export default function ContactsScreen() {
       'They will no longer receive emergency alerts.',
       [
         { text: 'Cancel', style: 'cancel' },
-        { text: 'Remove', style: 'destructive', onPress: () => dispatch(deleteContact(id)) },
+        { 
+          text: 'Remove', 
+          style: 'destructive', 
+          onPress: async () => {
+            try {
+              await dispatch(deleteContact(id)).unwrap();
+            } catch (err) {
+              Alert.alert('Error', err || 'Failed to remove contact. Please try again.');
+            }
+          } 
+        },
       ]
     );
   };

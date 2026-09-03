@@ -126,14 +126,14 @@ const PostCard = React.memo(({ post }) => {
           onPress={handleLike}
           activeOpacity={0.8}
         >
-          <Animated.View style={heartAnimatedStyle}>
-            <Ionicons 
-              name={isLiked ? "heart" : "heart-outline"} 
-              size={22} 
-              color={isLiked ? COLORS.danger || '#ef4444' : COLORS.textMuted} 
-            />
-          </Animated.View>
-          <Text style={[styles.actionText, isLiked && { color: COLORS.danger || '#ef4444' }]}>
+            <Animated.View style={heartAnimatedStyle}>
+              <Ionicons 
+                name={isLiked ? "heart" : "heart-outline"} 
+                size={22} 
+                color={isLiked ? COLORS.emergency : COLORS.textMuted} 
+              />
+            </Animated.View>
+            <Text style={[styles.actionText, isLiked && { color: COLORS.emergency }]}>
             {likeCount}
           </Text>
         </TouchableOpacity>
