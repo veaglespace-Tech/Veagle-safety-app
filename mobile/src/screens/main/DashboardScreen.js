@@ -39,7 +39,7 @@ export default function DashboardScreen({ navigation }) {
     try {
       const res = await journeyApi.getActiveJourney();
       setActiveJourney(res.journey);
-    } catch (e) {}
+    } catch (e) { }
   };
 
   const getGreeting = () => {
