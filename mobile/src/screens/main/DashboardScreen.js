@@ -30,9 +30,8 @@ export default function DashboardScreen({ navigation }) {
   }, [dispatch]);
 
   useEffect(() => {
-    if (activeSession) {
-      navigation.navigate('ActiveSOS');
-    }
+    // Intentionally removed auto-navigation so the user can interact with the STOP button
+    // on the dashboard. They can still tap the banner to go to ActiveSOS.
   }, [activeSession]);
 
   const loadActiveJourney = async () => {

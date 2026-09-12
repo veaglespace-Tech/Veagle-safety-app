@@ -5,7 +5,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 import Svg, { Circle, Defs, LinearGradient as SvgLinearGradient, Stop } from 'react-native-svg';
 import * as Haptics from 'expo-haptics';
 import { useDispatch, useSelector } from 'react-redux';
-import { startEmergencySos } from '../../redux/slices/sosSlice';
+import { startEmergencySos, resolveEmergencySos } from '../../redux/slices/sosSlice';
 import { store } from '../../redux/store';
 
 import { useNavigation } from '@react-navigation/native';
@@ -15,7 +15,7 @@ const AnimatedCircle = Animated.createAnimatedComponent(Circle);
 export default function SOSHeroButton() {
   const navigation = useNavigation();
   const dispatch = useDispatch();
-  const { activeSession, isTriggering } = useSelector((state) => state.sos);
+  const { activeSession, isTriggering, isResolving } = useSelector((state) => state.sos);
   
   const [holding, setHolding] = useState(false);
   const [countdown, setCountdown] = useState(2);
@@ -58,7 +58,8 @@ export default function SOSHeroButton() {
 
   const handlePressIn = () => {
     if (activeSession) {
-      navigation.navigate('ActiveSOS');
+      if (isResolving) return;
+      dispatch(resolveEmergencySos(activeSession.id));
       return;
     }
     if (isTriggering) return;
@@ -142,13 +143,13 @@ export default function SOSHeroButton() {
           activeOpacity={1} 
           onPressIn={handlePressIn} 
           onPressOut={handlePressOut}
-          disabled={isTriggering}
+          disabled={isTriggering || isResolving}
           style={{ zIndex: 10 }}
         >
           <Animated.View style={[styles.mainButton, { transform: [{ scale: scaleAnim }] }]}>
             <LinearGradient
               colors={
-                activeSession ? ['#FF2A6D', '#E01A4F', '#2A0826'] :
+                activeSession ? ['#FF3333', '#CC0000', '#990000'] :
                 holding ? ['#E01A4F', '#FF2A6D', '#FFD700'] :
                 isTriggering ? ['#FF5C8A', '#E01A4F', '#FF5C8A'] :
                 ['#FF5C8A', '#FF2A6D', '#E01A4F']
@@ -158,11 +159,13 @@ export default function SOSHeroButton() {
               style={styles.gradientBg}
             >
               <Ionicons name={isTriggering ? "hourglass-outline" : "shield-checkmark"} size={38} color={holding ? "#FFD700" : "#FFF"} style={{ marginBottom: 4 }} />
-              <Text style={styles.buttonText}>{holding ? `${countdown}s` : isTriggering ? 'WAIT' : 'SOS'}</Text>
-              <View style={[styles.badge, (holding || isTriggering) && styles.badgeHolding]}>
-                <View style={[styles.badgeDot, (holding || isTriggering) && { backgroundColor: '#FFD700' }]} />
+              <Text style={styles.buttonText}>
+                {isResolving ? 'WAIT' : activeSession ? 'STOP' : holding ? `${countdown}s` : isTriggering ? 'WAIT' : 'SOS'}
+              </Text>
+              <View style={[styles.badge, (holding || isTriggering || isResolving) && styles.badgeHolding]}>
+                <View style={[styles.badgeDot, (holding || isTriggering || isResolving) && { backgroundColor: '#FFD700' }]} />
                 <Text style={styles.badgeText}>
-                  {holding ? 'DISPATCHING...' : isTriggering ? 'CONNECTING...' : activeSession ? 'VIEW STATUS' : 'HOLD 2 SECS'}
+                  {isResolving ? 'STOPPING...' : holding ? 'DISPATCHING...' : isTriggering ? 'CONNECTING...' : activeSession ? 'TAP TO RESOLVE' : 'HOLD 2 SECS'}
                 </Text>
               </View>
             </LinearGradient>
