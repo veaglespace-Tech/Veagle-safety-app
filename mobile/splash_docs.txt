@@ -1,0 +1,207 @@
+﻿Title: Live Content
+
+Description: Fetched live
+
+Source: https://docs.expo.dev/versions/v57.0.0/sdk/splash-screen/
+
+---
+
+SplashScreen - Expo documentation{"@context":"https://schema.org","@type":"WebSite","name":"Expo documentation","description":"Expo is an open-source platform for making universal native apps for Android, iOS, and the web with JavaScript and React.","url":"https://docs.expo.dev","publisher":{"@type":"Organization","name":"Expo","legalName":"650 Industries, Inc.","description":"Expo is an open-source platform for making universal native apps for Android, iOS, and the web with JavaScript and React.","url":"https://expo.dev","contactPoint":{"@type":"ContactPoint","contactType":"customer support","email":"support@expo.dev"},"address":{"@type":"PostalAddress","streetAddress":"624 University Ave, FL1","addressLocality":"Palo Alto","addressRegion":"CA","postalCode":"94301","addressCountry":"US"},"logo":{"@type":"ImageObject","url":"https://docs.expo.dev/static/images/expo-logo.svg"},"sameAs":["https://github.com/expo","https://www.npmjs.com/org/expo","https://x.com/expo","https://bsky.app/profile/expo.dev","https://www.linkedin.com/company/expo-dev/","https://www.youtube.com/@expodevelopers"]}}{"@context":"https://schema.org","@type":"BreadcrumbList","itemListElement":[{"@type":"ListItem","position":1,"name":"Expo SDK","item":"https://docs.expo.dev"},{"@type":"ListItem","position":2,"name":"SplashScreen"}]}{"@context":"https://schema.org","@type":"TechArticle","headline":"SplashScreen","description":"A library that provides access to controlling the visibility behavior of native splash screen.","dateModified":"July 29, 2026","publisher":{"@type":"Organization","name":"Expo","legalName":"650 Industries, Inc.","description":"Expo is an open-source platform for making universal native apps for Android, iOS, and the web with JavaScript and React.","url":"https://expo.dev","contactPoint":{"@type":"ContactPoint","contactType":"customer support","email":"support@expo.dev"},"address":{"@type":"PostalAddress","streetAddress":"624 University Ave, FL1","addressLocality":"Palo Alto","addressRegion":"CA","postalCode":"94301","addressCountry":"US"},"logo":{"@type":"ImageObject","url":"https://docs.expo.dev/static/images/expo-logo.svg"},"sameAs":["https://github.com/expo","https://www.npmjs.com/org/expo","https://x.com/expo","https://bsky.app/profile/expo.dev","https://www.linkedin.com/company/expo-dev/","https://www.youtube.com/@expodevelopers"]},"url":"https://docs.expo.dev/versions/latest/sdk/splash-screen/"}
+(function() {
+  function getCookieTheme() {
+    var match = document.cookie.match(/(?:^|;\s*)expo-theme=([^;]*)/);
+    var val = match && match[1];
+    return val === 'dark' || val === 'light' ? val : null;
+  }
+  var theme = getCookieTheme();
+  var isDark = theme === 'dark' || (!theme && window.matchMedia('(prefers-color-scheme: dark)').matches);
+  document.documentElement.classList.toggle('dark-theme', isDark);
+  document.documentElement.classList.toggle('light-theme', !isDark);
+})();
+
+(function() {
+  var managers = ["npm","yarn","pnpm","bun"];
+  var stored = null;
+  try {
+    stored = window.localStorage.getItem('expo-docs-terminal-package-manager');
+  } catch (error) {}
+  var active = managers.indexOf(stored) === -1 ? 'npm' : stored;
+  document.documentElement.classList.add('pm-' + active);
+})();
+html,body,kbd,button,input,select,tspan,text{font-family:'Inter', 'Inter Fallback',sans-serif}code,pre,table.diff{font-family:'JetBrains Mono', 'JetBrains Mono Fallback',monospace}DocsBlogChangelogStar us on GitHubHide navigationSearch or Ask AIΓîÿ KHomeGuidesEASReferenceLearnReference versionConfiguration filesapp.json / app.config.jsbabel.config.jsmetro.config.jspackage.jsonExpo RouterOverviewColorExperimental StackALPHALinkNative tabsSplit ViewALPHAStackUIExpo UIOverviewJetpack ComposeSwiftUIDrop-in replacementsUniversalExpo SDKExpoAccelerometerAgeRangeAppIntegrityALPHAAppleAuthenticationApplicationAssetAudio (expo-audio)AuthSessionBackgroundFetchDeprecatedBackgroundTaskBarometerBatteryBlobBlurViewBrightnessBrownfieldBuildPropertiesCalendarCalendar (legacy)CameraCellularCheckboxClipboardConstantsContactsContacts (legacy)CryptoDevClientDeviceDeviceMotionDevMenuDocumentPickerFileSystemFileSystem (legacy)FingerprintFontGlassEffectGLViewGyroscopeHapticsImageImageManipulatorImagePickerIntentLauncherKeepAwakeLightSensorLinearGradientLinkingLivePhotoLocalAuthenticationLocalizationLocationMagnetometerMailComposerManifestsMapsALPHAMediaLibraryMediaLibrary (legacy)MeshGradientNavigationBarNetworkNotificationsObservePedometerPrintScreenCaptureScreenOrientationSecureStoreSensorsServerSharingSMSSpeechSplashScreenSQLiteStatusBarStoreReviewSymbolsBETASystemUITaskManagerTrackingTransparencyUpdatesVideo (expo-video)VideoThumbnailsDeprecatedWebBrowserWidgetsThird-party librariesOverview@react-native-async-storage/async-storage@react-native-community/datetimepicker@react-native-community/netinfo@react-native-community/slider@react-native-masked-view/masked-view@react-native-picker/picker@react-native-segmented-control/segmented-control@shopify/flash-list@shopify/react-native-skia@stripe/stripe-react-nativereact-native-gesture-handlerreact-native-keyboard-controllerreact-native-mapsreact-native-pager-viewreact-native-reanimatedreact-native-safe-area-contextreact-native-screensreact-native-svgreact-native-view-shotreact-native-webviewTechnical specsExpo Updates v1Expo Structured Field ValuesMoreExpo CLIcreate-expo-appcreate-expo-moduleqr.expo.devRelease statusesGlossary of termsReact NativeVisit documentationArchiveExpo SnackDiscord and forumsNewsletterThis documentation is available as Markdown for AI agents and LLMs. See the full Markdown index or append .md to any documentation URL.Expo SplashScreenA library that provides access to controlling the visibility behavior of native splash screen.AndroidiOStvOSGitHubnpmChangelogRecommended version:~57.0.9Copy pageThe SplashScreen module from the expo-splash-screen library provides control over the native splash screen behavior. By default, the splash screen will automatically hide when your app is ready, but you can also manually control its visibility for advanced use cases.
+
+From SDK 52, due to changes supporting the latest Android splash screen API, Expo Go and development builds cannot fully replicate the splash screen experience your users will see in your standalone app. Expo Go will show your app icon instead of the splash screen, and the splash screen on development builds will not reflect all properties set in the config plugin. It is highly recommended that you test your splash screen on a release build to ensure it looks as expected.
+
+Also, see the guide on creating a splash screen image, or quickly generate an icon and splash screen using your browser.
+Installation
+Install libraryStart with an exampleTerminalnpmyarnpnpmbunCopy-┬ánpx expo install expo-splash-screen-┬áyarn expo install expo-splash-screen-┬ápnpm expo install expo-splash-screen-┬ábun expo install expo-splash-screenIf you are installing this in an existing React Native app, make sure to install expo in your project.The with-splash-screen example comes with expo-splash-screen already installed and configured:TerminalnpmyarnpnpmbunCopy-┬ánpx create-expo-app --example with-splash-screen-┬áyarn create expo-app --example with-splash-screen-┬ápnpm create expo-app --example with-splash-screen-┬ábun create expo --example with-splash-screen
+Usage
+For most apps, you don&#x27;t need to do anything special with the splash screen. It will automatically hide when your app is ready. You can optionally configure animation options:
+With Expo RouterWithout Expo Routerapp/_layout.tsxCopyimport { Stack } from 'expo-router';
+import * as SplashScreen from 'expo-splash-screen';
+
+// Set the animation options. This is optional.
+SplashScreen.setOptions({
+  duration: 1000,
+  fade: true,
+});
+
+export default function RootLayout() {
+  return &lt;Stack />;
+}
+App.tsxCopyimport { Text, View } from 'react-native';
+import Entypo from '@expo/vector-icons/Entypo';
+import * as SplashScreen from 'expo-splash-screen';
+
+// Set the animation options. This is optional.
+SplashScreen.setOptions({
+  duration: 1000,
+  fade: true,
+});
+
+export default function App() {
+  return (
+    &lt;View style={{ flex: 1, alignItems: 'center', justifyContent: 'center' }}>
+      &lt;Text>SplashScreen Demo! ≡ƒæï&lt;/Text>
+      &lt;Entypo name="rocket" size={30} />
+    &lt;/View>
+  );
+}
+
+Delay hiding the splash screen
+In some cases, it may be necessary to delay hiding the splash screen until certain resources are loaded. For example, if you need to load API data before displaying the app content, you can use preventAutoHideAsync() to manually control when the splash screen hides. The goal should be to hide the splash screen as soon as possible.
+With Expo RouterWithout Expo Routerapp/_layout.tsxCopyimport { Stack } from 'expo-router';
+import * as SplashScreen from 'expo-splash-screen';
+import { useEffect, useState } from 'react';
+
+// Keep the splash screen visible while we fetch resources
+SplashScreen.preventAutoHideAsync();
+
+export default function RootLayout() {
+  const [isReady, setIsReady] = useState(false);
+
+  useEffect(() => {
+    async function doAsyncStuff() {
+      try {
+        // do something async here
+      } catch (e) {
+        console.warn(e);
+      } finally {
+        setIsReady(true);
+      }
+    }
+
+    doAsyncStuff();
+  }, []);
+
+  useEffect(() => {
+    if (isReady) {
+      SplashScreen.hide();
+    }
+  }, [isReady]);
+
+  if (!isReady) {
+    return null;
+  }
+
+  return &lt;Stack />;
+}
+App.tsxCopyimport { useCallback, useEffect, useState } from 'react';
+import { Text, View } from 'react-native';
+import Entypo from '@expo/vector-icons/Entypo';
+import * as SplashScreen from 'expo-splash-screen';
+
+// Keep the splash screen visible while we fetch resources
+SplashScreen.preventAutoHideAsync();
+
+export default function App() {
+  const [isReady, setIsReady] = useState(false);
+
+  useEffect(() => {
+    async function doAsyncStuff() {
+      try {
+        // do something async here
+      } catch (e) {
+        console.warn(e);
+      } finally {
+        setIsReady(true);
+      }
+    }
+
+    doAsyncStuff();
+  }, []);
+
+  useEffect(() => {
+    if (isReady) {
+      SplashScreen.hideAsync();
+    }
+  }, [isReady]);
+
+  if (!isReady) {
+    return null;
+  }
+
+  return (
+    &lt;View style={{ flex: 1, alignItems: 'center', justifyContent: 'center' }}>
+      &lt;Text>SplashScreen Demo! ≡ƒæï&lt;/Text>
+      &lt;Entypo name="rocket" size={30} />
+    &lt;/View>
+  );
+}
+
+Configuration
+You can configure expo-splash-screen using its built-in config plugin if you use config plugins in your project (Continuous Native Generation (CNG)). The plugin allows you to configure various properties that cannot be set at runtime and require building a new app binary to take effect. If your app does not use CNG, then you&#x27;ll need to manually configure the library.
+Using the config plugin, as shown below, is the recommended method for configuring the splash screen. The other methods are now considered legacy and will be removed in the future.
+Example app.json with config pluginapp.jsonCopy{
+  "expo": {
+    "plugins": [
+      [
+        "expo-splash-screen",
+        {
+          "backgroundColor": "#232323",
+          "image": "./assets/splash-icon.png",
+          "dark": {
+            "image": "./assets/splash-icon-dark.png",
+            "backgroundColor": "#000000"
+          },
+          "imageWidth": 200
+        }
+      ]
+    ],
+  }
+}
+
+Configurable propertiesNameDefaultDescriptionbackgroundColor#ffffffA hex color string representing the background color of the splash screen.imageundefinedThe path to the image file that will be displayed on the splash screen. This should be your app icon or logo.enableFullScreenImage_legacyfalseOnly for:ΓÇéiOSEnabling this property allows using a full screen image as the splashscreen. This is to help with the transition from the legacy splash screen configuration and will be removed in the future.darkundefinedAn object containing properties for configuring the splash screen when the device is in dark mode.imageWidth100The width to make the image.androidundefinedAn object containing properties for configuring the splash screen on Android.iosundefinedAn object containing properties for configuring the splash screen on iOS.resizeModeundefinedDetermines how the image is scaled to fit the container defined by imageWidth. Possible values: contain, cover, or native.
+Are you using this library in an existing React Native app?See how to configure the native projects in the installation instructions in the expo-splash-screen repository.
+Animating the splash screen
+SplashScreen provides an out-of-the-box fade animation. It can be configured using the setOptions method.
+SplashScreen.setOptions({
+  duration: 1000,
+  fade: true,
+});
+
+If you prefer to use custom animation, see the with-splash-screen example on how to apply any arbitrary animations to your splash screen. You can initialize a new project from this example by running npx create-expo-app --example with-splash-screen.
+API
+import * as SplashScreen from 'expo-splash-screen';
+
+PropsandroidAndroidOptionalΓÇâΓÇóΓÇâType: Partial&lt;AndroidSplashConfig&gt;Properties for configuring the splash screen on Android.backgroundColorAndroidiOStvOSOptionalΓÇâΓÇóΓÇâType: stringΓÇâΓÇóΓÇâDefault: &quot;#ffffff&quot;Hex color for the splash screen background.darkAndroidiOStvOSOptionalΓÇâΓÇóΓÇâType: {
+  backgroundColor: string, 
+  image: string
+}Properties for configuring the splash screen in dark mode.enableFullScreenImage_legacyAndroidiOStvOSOptionalΓÇâΓÇóΓÇâType: booleanΓÇâΓÇóΓÇâDefault: falseWhether to use a full screen image as the splash screen. Legacy transition helper, will be removed.imageAndroidiOStvOSOptionalΓÇâΓÇóΓÇâType: stringPath to the image displayed on the splash screen.imageWidthAndroidiOStvOSOptionalΓÇâΓÇóΓÇâType: numberΓÇâΓÇóΓÇâDefault: 100The width to make the image.iosiOSOptionalΓÇâΓÇóΓÇâType: Partial&lt;IOSSplashConfig&gt;Properties for configuring the splash screen on iOS.resizeModeAndroidiOStvOSOptionalΓÇâΓÇóΓÇâLiteral type: stringΓÇâΓÇóΓÇâDefault: &quot;contain&quot;How the image is scaled. Accepts contain, cover, native.Acceptable values are: &#x27;contain&#x27; | &#x27;cover&#x27; | &#x27;native&#x27;MethodsSplashScreen.hide()AndroidiOStvOSHides the native splash screen immediately. Be careful to ensure that your app has content ready
+to display when you hide the splash screen, or you may see a blank screen briefly. See the
+&quot;Usage&quot; section for an example.Returns:voidSplashScreen.hideAsync()AndroidiOStvOSHides the native splash screen immediately. This method is provided for backwards compatability. See the
+&quot;Usage&quot; section for an example.Returns:Promise&lt;void&gt;SplashScreen.preventAutoHideAsync()AndroidiOStvOSMakes the native splash screen (configured in app.json) remain visible until hideAsync is called.
+
+Important note: It is recommended to call this in global scope without awaiting, rather than
+inside React components or hooks, because otherwise this might be called too late,
+when the splash screen is already hidden.
+Returns:Promise&lt;boolean&gt;Exampleimport * as SplashScreen from 'expo-splash-screen';
+
+SplashScreen.preventAutoHideAsync();
+
+export default function App() {
+ // ...
+}
+SplashScreen.setOptions(options)AndroidiOStvOSParameterTypeoptionsSplashScreenOptionsConfigures the splashscreens default animation behavior.Returns:voidTypesSplashScreenOptionsAndroidiOStvOSPropertyTypeDescriptionduration(optional)numberThe duration of the fade out animation in milliseconds.Default:400fade(optional)booleanOnly for:ΓÇéiOSWhether to hide the splash screen with a fade out animation.Default:falsePrevious (Expo SDK)SpeechNext (Expo SDK)SQLiteWas this doc helpful?Share your feedbackAsk a question on the forums about SplashScreenView open bug reports for SplashScreenEdit this pageView llms.txtSign up for the Expo NewsletterSign upUnsubscribe at any time. Read our privacy policy.Your Privacy Choices On this pageInstallationUsageDelay hiding the splash screenConfigurationExample app.json with config pluginConfigurable propertiesAnimating the splash screenAPIPropsandroidbackgroundColordarkenableFullScreenImage_legacyimageimageWidthiosresizeModeMethodshide()hideAsync()preventAutoHideAsync()setOptions()TypesSplashScreenOptions{"props":{"pageProps":{"meta":{"modificationDate":"July 29, 2026","title":"SplashScreen","description":"A library that provides access to controlling the visibility behavior of native splash screen.","sourceCodeUrl":"https://github.com/expo/expo/tree/sdk-57/packages/expo-splash-screen","packageName":"expo-splash-screen","exampleName":"with-splash-screen","iconUrl":"/static/images/packages/expo-splash-screen.png","platforms":["android","ios","tvos"]},"headings":[{"depth":2,"type":"text","title":"Installation","_processed":true},{"depth":2,"type":"text","title":"Usage","_processed":true},{"depth":3,"type":"text","title":"Delay hiding the splash screen","_processed":true},{"depth":2,"type":"text","title":"Configuration","_processed":true},{"depth":3,"type":"text","title":"Animating the splash screen","_processed":true},{"depth":2,"type":"text","title":"API","_processed":true}],"apiSectionData":{"v57.0.0/expo-splash-screen":[{"name":"SplashScreenOptions","variant":"declaration","kind":2097152,"children":[{"name":"duration","variant":"declaration","kind":1024,"flags":{"isOptional":true},"comment":{"summary":[{"kind":"text","text":"The duration of the fade out animation in milliseconds."}],"blockTags":[{"tag":"@default","content":[{"kind":"text","text":"400"}]}]},"type":{"type":"intrinsic","name":"number"}},{"name":"fade","variant":"declaration","kind":1024,"flags":{"isOptional":true},"comment":{"summary":[{"kind":"text","text":"Whether to hide the splash screen with a fade out animation."}],"blockTags":[{"tag":"@platform","content":[{"kind":"text","text":"ios"}]},{"tag":"@default","content":[{"kind":"text","text":"false"}]}]},"type":{"type":"intrinsic","name":"boolean"}}]},{"name":"hide","variant":"declaration","kind":64,"signatures":[{"name":"hide","variant":"signature","kind":4096,"comment":{"summary":[{"kind":"text","text":"Hides the native splash screen immediately. Be careful to ensure that your app has content ready\nto display when you hide the splash screen, or you may see a blank screen briefly. See the\n[\"Usage\"](#usage) section for an example."}]},"type":{"type":"intrinsic","name":"void"}}]},{"name":"hideAsync","variant":"declaration","kind":64,"signatures":[{"name":"hideAsync","variant":"signature","kind":4096,"comment":{"summary":[{"kind":"text","text":"Hides the native splash screen immediately. This method is provided for backwards compatability. See the\n[\"Usage\"](#usage) section for an example."}]},"type":{"type":"reference","target":{"packageName":"typescript","packagePath":"lib/lib.es5.d.ts","qualifiedName":"Promise"},"typeArguments":[{"type":"intrinsic","name":"void"}],"name":"Promise","package":"typescript"}}]},{"name":"preventAutoHideAsync","variant":"declaration","kind":64,"signatures":[{"name":"preventAutoHideAsync","variant":"signature","kind":4096,"comment":{"summary":[{"kind":"text","text":"Makes the native splash screen (configured in "},{"kind":"code","text":"`app.json`"},{"kind":"text","text":") remain visible until "},{"kind":"code","text":"`hideAsync`"},{"kind":"text","text":" is called.\n\n\u003e **Important note**: It is recommended to call this in global scope without awaiting, rather than\n\u003e inside React components or hooks, because otherwise this might be called too late,\n\u003e when the splash screen is already hidden."}],"blockTags":[{"tag":"@example","content":[{"kind":"code","text":"```ts\nimport * as SplashScreen from 'expo-splash-screen';\n\nSplashScreen.preventAutoHideAsync();\n\nexport default function App() {\n // ...\n}\n```"}]}]},"type":{"type":"reference","target":{"packageName":"typescript","packagePath":"lib/lib.es5.d.ts","qualifiedName":"Promise"},"typeArguments":[{"type":"intrinsic","name":"boolean"}],"name":"Promise","package":"typescript"}}]},{"name":"setOptions","variant":"declaration","kind":64,"signatures":[{"name":"setOptions","variant":"signature","kind":4096,"comment":{"summary":[{"kind":"text","text":"Configures the splashscreens default animation behavior."}]},"parameters":[{"name":"options","variant":"param","kind":32768,"type":{"type":"reference","name":"SplashScreenOptions","package":"expo-splash-screen"}}],"type":{"type":"intrinsic","name":"void"}}]},{"name":"Props","variant":"declaration","kind":2097152,"children":[{"name":"android","variant":"declaration","kind":1024,"flags":{"isOptional":true},"comment":{"summary":[{"kind":"text","text":"Properties for configuring the splash screen on Android."}],"blockTags":[{"tag":"@platform","content":[{"kind":"text","text":"android"}]}]},"type":{"type":"reference","target":{"packageName":"typescript","packagePath":"lib/lib.es5.d.ts","qualifiedName":"Partial"},"typeArguments":[{"type":"reference","target":{"packageName":"expo-splash-screen","packagePath":"plugin/src/types.ts","qualifiedName":"AndroidSplashConfig"},"name":"AndroidSplashConfig","package":"expo-splash-screen"}],"name":"Partial","package":"typescript"}},{"name":"backgroundColor","variant":"declaration","kind":1024,"flags":{"isOptional":true},"comment":{"summary":[{"kind":"text","text":"Hex color for the splash screen background."}],"blockTags":[{"tag":"@default","content":[{"kind":"text","text":"\"#ffffff\""}]}]},"type":{"type":"intrinsic","name":"string"}},{"name":"dark","variant":"declaration","kind":1024,"flags":{"isOptional":true},"comment":{"summary":[{"kind":"text","text":"Properties for configuring the splash screen in dark mode."}]},"type":{"type":"reflection","declaration":{"name":"__type","variant":"declaration","kind":65536,"children":[{"name":"backgroundColor","variant":"declaration","kind":1024,"flags":{"isOptional":true},"type":{"type":"intrinsic","name":"string"}},{"name":"image","variant":"declaration","kind":1024,"flags":{"isOptional":true},"type":{"type":"intrinsic","name":"string"}}]}}},{"name":"enableFullScreenImage_legacy","variant":"declaration","kind":1024,"flags":{"isOptional":true},"comment":{"summary":[{"kind":"text","text":"Whether to use a full screen image as the splash screen. Legacy transition helper, will be removed."}],"blockTags":[{"tag":"@default","content":[{"kind":"text","text":"false"}]}]},"type":{"type":"intrinsic","name":"boolean"}},{"name":"image","variant":"declaration","kind":1024,"flags":{"isOptional":true},"comment":{"summary":[{"kind":"text","text":"Path to the image displayed on the splash screen."}]},"type":{"type":"intrinsic","name":"string"}},{"name":"imageWidth","variant":"declaration","kind":1024,"flags":{"isOptional":true},"comment":{"summary":[{"kind":"text","text":"The width to make the image."}],"blockTags":[{"tag":"@default","content":[{"kind":"text","text":"100"}]}]},"type":{"type":"intrinsic","name":"number"}},{"name":"ios","variant":"declaration","kind":1024,"flags":{"isOptional":true},"comment":{"summary":[{"kind":"text","text":"Properties for configuring the splash screen on iOS."}],"blockTags":[{"tag":"@platform","content":[{"kind":"text","text":"ios"}]}]},"type":{"type":"reference","target":{"packageName":"typescript","packagePath":"lib/lib.es5.d.ts","qualifiedName":"Partial"},"typeArguments":[{"type":"reference","target":{"packageName":"expo-splash-screen","packagePath":"plugin/src/types.ts","qualifiedName":"IOSSplashConfig"},"name":"IOSSplashConfig","package":"expo-splash-screen"}],"name":"Partial","package":"typescript"}},{"name":"resizeMode","variant":"declaration","kind":1024,"flags":{"isOptional":true},"comment":{"summary":[{"kind":"text","text":"How the image is scaled. Accepts "},{"kind":"code","text":"`contain`"},{"kind":"text","text":", "},{"kind":"code","text":"`cover`"},{"kind":"text","text":", "},{"kind":"code","text":"`native`"},{"kind":"text","text":"."}],"blockTags":[{"tag":"@default","content":[{"kind":"text","text":"\"contain\""}]}]},"type":{"type":"union","types":[{"type":"literal","value":"contain"},{"type":"literal","value":"cover"},{"type":"literal","value":"native"}]}}],"_source":"plugin"}]}},"__N_SSG":true},"page":"/versions/v57.0.0/sdk/splash-screen","query":{},"buildId":"usZBBpwzMXDv4JnKbONtu","isFallback":false,"gsp":true,"scriptLoader":[]}
+
+
