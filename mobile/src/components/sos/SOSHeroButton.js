@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, Animated, Easing, Vibration } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, Animated, Easing, Vibration, Platform } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import Svg, { Circle, Defs, LinearGradient as SvgLinearGradient, Stop } from 'react-native-svg';
@@ -32,6 +32,9 @@ export default function SOSHeroButton() {
   // Progress stroke
   const radius = 100;
   const circumference = 2 * Math.PI * radius;
+  
+  const [webStrokeOffset, setWebStrokeOffset] = useState(circumference);
+
   const strokeDashoffset = holdProgress.interpolate({
     inputRange: [0, HOLD_DURATION],
     outputRange: [circumference, 0],
@@ -52,9 +55,14 @@ export default function SOSHeroButton() {
     const listenerId = holdProgress.addListener(({ value }) => {
       const remainingSecs = Math.max(Math.ceil((HOLD_DURATION - value) / 1000), 1);
       setCountdown(remainingSecs);
+      
+      if (Platform.OS === 'web') {
+        const offset = circumference - (value / HOLD_DURATION) * circumference;
+        setWebStrokeOffset(offset);
+      }
     });
     return () => holdProgress.removeListener(listenerId);
-  }, []);
+  }, [circumference]);
 
   const handlePressIn = () => {
     if (activeSession) {
@@ -129,13 +137,23 @@ export default function SOSHeroButton() {
               </SvgLinearGradient>
             </Defs>
             <Circle cx="130" cy="130" r={radius} stroke="rgba(255, 204, 225, 0.4)" strokeWidth="6" fill="transparent" />
-            <AnimatedCircle 
-              cx="130" cy="130" r={radius} 
-              stroke="url(#grad)" strokeWidth="10" 
-              fill="transparent" strokeLinecap="round"
-              strokeDasharray={circumference}
-              strokeDashoffset={strokeDashoffset}
-            />
+            {Platform.OS === 'web' ? (
+              <Circle 
+                cx="130" cy="130" r={radius} 
+                stroke="url(#grad)" strokeWidth="10" 
+                fill="transparent" strokeLinecap="round"
+                strokeDasharray={circumference}
+                strokeDashoffset={webStrokeOffset}
+              />
+            ) : (
+              <AnimatedCircle 
+                cx="130" cy="130" r={radius} 
+                stroke="url(#grad)" strokeWidth="10" 
+                fill="transparent" strokeLinecap="round"
+                strokeDasharray={circumference}
+                strokeDashoffset={strokeDashoffset}
+              />
+            )}
           </Svg>
         </View>
 
