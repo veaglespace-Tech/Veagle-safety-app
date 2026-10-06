@@ -22,7 +22,7 @@ export default function TermsScreen({ navigation }) {
           
           <Text style={styles.heading}>1. Acceptance of Terms</Text>
           <Text style={styles.paragraph}>
-            By accessing or using the Veagle app, you agree to be bound by these Terms of Service. If you disagree with any part of the terms, you may not access the service.
+            By accessing or using the SakhiSuraksha app, you agree to be bound by these Terms of Service. If you disagree with any part of the terms, you may not access the service.
           </Text>
 
           <Text style={styles.heading}>2. Use of Service</Text>
@@ -37,7 +37,7 @@ export default function TermsScreen({ navigation }) {
 
           <Text style={styles.heading}>4. Limitation of Liability</Text>
           <Text style={styles.paragraph}>
-            While we strive for 100% uptime, Veagle is not a replacement for local emergency services (like 911). We shall not be held liable for network failures or delays in emergency response.
+            While we strive for 100% uptime, SakhiSuraksha is not a replacement for local emergency services (like 911). We shall not be held liable for network failures or delays in emergency response.
           </Text>
         </View>
       </ScrollView>

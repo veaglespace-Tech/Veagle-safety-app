@@ -28,10 +28,10 @@ export default function AboutScreen({ navigation }) {
           <View style={styles.logoWrap}>
             <Ionicons name="shield" size={48} color={COLORS.primary} />
           </View>
-          <Text style={styles.title}>Veagle Safety</Text>
+          <Text style={styles.title}>SakhiSuraksha</Text>
           <Text style={styles.version}>Version 1.0.0</Text>
           <Text style={styles.description}>
-            Veagle is your ultimate safety companion. Our mission is to provide peace of mind through rapid emergency response and real-time tracking technology.
+            SakhiSuraksha is your ultimate safety companion. Our mission is to provide peace of mind through rapid emergency response and real-time tracking technology.
           </Text>
         </Animated.View>
 
@@ -51,7 +51,7 @@ export default function AboutScreen({ navigation }) {
         </View>
 
         <Animated.View entering={FadeInUp.delay(600).duration(500)} style={styles.footer}>
-          <Text style={styles.footerText}>© 2026 Veagle. All rights reserved.</Text>
+          <Text style={styles.footerText}>© 2026 SakhiSuraksha. All rights reserved.</Text>
         </Animated.View>
       </ScrollView>
     </SafeAreaView>

@@ -36,7 +36,7 @@ export default function SplashScreen() {
             resizeMode="cover"
           />
         </View>
-        <Text style={styles.brandName}>Veagle Safety</Text>
+        <Text style={styles.brandName}>SakhiSuraksha</Text>
         <Text style={styles.tagline}>Your 24/7 Safety Guardian</Text>
       </Animated.View>
     </LinearGradient>

@@ -86,7 +86,7 @@ export default function OrganizationScreen({ navigation }) {
           <View style={styles.orgAvatar}>
             <Text style={styles.orgAvatarText}>VG</Text>
           </View>
-          <Text style={styles.orgName}>Veagle Global Inc.</Text>
+          <Text style={styles.orgName}>SakhiSuraksha Inc.</Text>
           <Text style={styles.orgRole}>Admin Dashboard</Text>
         </View>
 

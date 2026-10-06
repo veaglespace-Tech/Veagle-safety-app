@@ -236,7 +236,7 @@ export default function ProfileScreen({ navigation }) {
           <Text style={styles.sectionTitle}>About & Legal</Text>
           <TouchableOpacity style={styles.linkRow} onPress={() => navigation.navigate('About')} activeOpacity={0.8}>
             <Ionicons name="information-circle-outline" size={18} color={COLORS.primary} />
-            <Text style={styles.linkText}>About Veagle</Text>
+            <Text style={styles.linkText}>About SakhiSuraksha</Text>
             <Ionicons name="chevron-forward" size={16} color={COLORS.textMuted} />
           </TouchableOpacity>
           <TouchableOpacity style={styles.linkRow} onPress={() => navigation.navigate('Privacy')} activeOpacity={0.8}>

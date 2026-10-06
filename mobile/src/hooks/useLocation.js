@@ -1,4 +1,5 @@
 import { useEffect, useRef } from 'react';
+import { Alert } from 'react-native';
 import * as Location from 'expo-location';
 import { useDispatch, useSelector } from 'react-redux';
 import { setLocation, setLocationStatus } from '../redux/slices/locationSlice';
@@ -26,8 +27,26 @@ export function useLocation() {
           return;
         }
 
-        // Request Background Permissions (Crucial for iOS safety apps when minimized)
-        await Location.requestBackgroundPermissionsAsync().catch(() => null);
+        // Google Play Policy: Prominent Disclosure for Background Location
+        const bgStatus = await Location.getBackgroundPermissionsAsync().catch(() => ({ status: 'undetermined' }));
+        if (bgStatus.status !== 'granted') {
+          await new Promise((resolve) => {
+            Alert.alert(
+              "Background Location Access",
+              "SakhiSuraksha collects location data to enable continuous real-time SOS tracking and to broadcast your live position to your emergency contacts even when the app is closed or not in use. This continuous tracking is critical for your safety during an active SOS.",
+              [
+                { text: "Cancel", style: "cancel", onPress: () => resolve(false) },
+                {
+                  text: "I Understand",
+                  onPress: async () => {
+                    await Location.requestBackgroundPermissionsAsync().catch(() => null);
+                    resolve(true);
+                  }
+                }
+              ]
+            );
+          });
+        }
 
         // Get initial position with Balanced accuracy (faster, less power, doesn't lock up indoors)
         const initial = await Location.getCurrentPositionAsync({

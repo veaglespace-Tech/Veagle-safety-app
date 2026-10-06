@@ -22,7 +22,7 @@ export default function PrivacyScreen({ navigation }) {
           
           <Text style={styles.heading}>1. Information We Collect</Text>
           <Text style={styles.paragraph}>
-            At Veagle, your privacy is our priority. We collect information you provide directly to us, such as when you create an account, update your profile, or use our emergency SOS features. This includes your location data (which is strictly used for safety tracking) and your designated emergency contacts.
+            At SakhiSuraksha, your privacy is our priority. We collect information you provide directly to us, such as when you create an account, update your profile, or use our emergency SOS features. This includes your location data (which is strictly used for safety tracking) and your designated emergency contacts.
           </Text>
 
           <Text style={styles.heading}>2. How We Use Information</Text>

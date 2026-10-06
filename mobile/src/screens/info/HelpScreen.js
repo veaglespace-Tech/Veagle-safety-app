@@ -6,7 +6,7 @@ import { COLORS } from '../../theme/colors';
 
 export default function HelpScreen({ navigation }) {
   const handleEmailSupport = () => {
-    Linking.openURL('mailto:support@veagle.com').catch(() => {
+    Linking.openURL('mailto:support@sakhisuraksha.com').catch(() => {
       Alert.alert('Error', 'Could not open email client.');
     });
   };
@@ -44,7 +44,7 @@ export default function HelpScreen({ navigation }) {
             </View>
             <View style={styles.contactTextWrap}>
               <Text style={styles.contactTitle}>Email Us</Text>
-              <Text style={styles.contactDesc}>support@veagle.com</Text>
+              <Text style={styles.contactDesc}>support@sakhisuraksha.com</Text>
             </View>
             <Ionicons name="chevron-forward" size={20} color={COLORS.textMuted} />
           </TouchableOpacity>

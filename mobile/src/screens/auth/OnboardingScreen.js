@@ -15,7 +15,7 @@ const SLIDES = [
     useLogo: true,
     emoji: '🛡️',
     title: 'Your Safety Guardian',
-    subtitle: 'Veagle Safety keeps you protected 24/7 with real-time GPS tracking and instant emergency alerts.',
+    subtitle: 'SakhiSuraksha keeps you protected 24/7 with real-time GPS tracking and instant emergency alerts.',
     bg: '#FFF0F3',
   },
   {

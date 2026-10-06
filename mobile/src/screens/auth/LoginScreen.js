@@ -46,7 +46,7 @@ export default function LoginScreen({ navigation }) {
               />
             </View>
             <Text style={styles.title}>Welcome Back</Text>
-            <Text style={styles.subtitle}>Sign in to your Veagle Safety account</Text>
+            <Text style={styles.subtitle}>Sign in to your SakhiSuraksha account</Text>
           </View>
 
           {/* ERROR */}
