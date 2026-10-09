@@ -3,7 +3,13 @@ import { Providers } from './providers.js';
 
 export const metadata = {
   title: 'Sakhi Suraksha SOS | Personal & Women Safety Platform',
-  description: 'Instant 3-Second Emergency SOS Broadcasting, Real-Time GPS Tracking, and 24/7 Command Dispatch Platform for Women & Girls.',
+  description:
+    'Instant 3-Second Emergency SOS Broadcasting, Real-Time GPS Tracking, and 24/7 Command Dispatch Platform for Women & Girls.',
+  manifest: '/manifest.json',
+};
+
+export const viewport = {
+  themeColor: '#FFF0F3',
 };
 
 export default function RootLayout({ children }) {

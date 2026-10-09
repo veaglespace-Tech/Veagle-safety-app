@@ -1,4 +1,6 @@
 import { prisma } from '../config/prisma.js';
+import jwt from 'jsonwebtoken';
+import { config } from '../config/index.js';
 
 export const createCoupon = async (req, res) => {
   try {
@@ -140,7 +142,8 @@ export const getMyCoupons = async (req, res) => {
 
 export const validateCoupon = async (req, res) => {
   try {
-    const { code, planId } = req.body;
+    const { code, planId, registrationToken } = req.body;
+    console.log('validateCoupon called with:', { code, planId, registrationToken, user: req.user });
     
     if (!code) {
       return res.status(400).json({ success: false, message: 'Coupon code is required.' });
@@ -171,16 +174,46 @@ export const validateCoupon = async (req, res) => {
     }
 
     // FIRST-TIME PAID UPGRADE RULE
-    // Check if the user has any prior SUCCESS payments
-    const priorPayments = await prisma.paymentHistory.findFirst({
-      where: {
-        userId: req.user.id,
-        status: 'SUCCESS'
-      }
-    });
+    let userIdToCheck = req.user?.id;
+    let userEmailToCheck = req.user?.email;
 
-    if (priorPayments) {
-      return res.status(400).json({ success: false, message: 'Coupons can only be applied for first-time upgrades.' });
+    if (!userIdToCheck && registrationToken) {
+      try {
+        const decodedRegistration = jwt.verify(registrationToken, config.jwt.secret);
+        userEmailToCheck = decodedRegistration.email;
+      } catch (e) {
+        console.warn('Registration token verify notice in validateCoupon:', e.message);
+      }
+    }
+
+    // Bypass prior payment check for SUPER_ADMIN so they can test coupons easily
+    const isSuperAdmin = req.user && req.user.role === 'SUPER_ADMIN';
+
+    if (!isSuperAdmin && (userIdToCheck || userEmailToCheck)) {
+      let priorPayments = null;
+      
+      if (userIdToCheck) {
+        priorPayments = await prisma.paymentHistory.findFirst({
+          where: {
+            userId: userIdToCheck,
+            status: 'SUCCESS'
+          }
+        });
+      } else if (userEmailToCheck) {
+        const dbUser = await prisma.user.findUnique({ where: { email: userEmailToCheck } });
+        if (dbUser) {
+          priorPayments = await prisma.paymentHistory.findFirst({
+            where: {
+              userId: dbUser.id,
+              status: 'SUCCESS'
+            }
+          });
+        }
+      }
+
+      if (priorPayments) {
+        return res.status(400).json({ success: false, message: 'Coupons can only be applied for first-time upgrades.' });
+      }
     }
 
     res.status(200).json({ 

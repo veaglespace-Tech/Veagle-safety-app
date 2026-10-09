@@ -33,6 +33,8 @@ export default function AdminSettingsPage() {
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
 
   const [supportEmail, setSupportEmail] = useState('');
+  const [fakeBaseCount, setFakeBaseCount] = useState(3472);
+  const [targetMissionCount, setTargetMissionCount] = useState('1 Cr+');
   const [galleryItems, setGalleryItems] = useState([]);
   const [galleryMeta, setGalleryMeta] = useState({
     title: 'Visual Gallery & Feature Showcase',
@@ -44,7 +46,7 @@ export default function AdminSettingsPage() {
   const [collapsedItems, setCollapsedItems] = useState({});
 
   // Track original states for unsaved changes detection
-  const [originalState, setOriginalState] = useState({ email: '', items: [], meta: null });
+  const [originalState, setOriginalState] = useState({ email: '', fakeBaseCount: 3472, targetMissionCount: '1 Cr+', items: [], meta: null });
 
   useEffect(() => {
     if (!token || user?.role !== 'SUPER_ADMIN') {
@@ -63,11 +65,15 @@ export default function AdminSettingsPage() {
     try {
       const res = await settingApi.fetchSettings([
         'SUPPORT_EMAIL',
+        'FAKE_BASE_COUNT',
+        'TARGET_MISSION_COUNT',
         'GALLERY_ITEMS',
         'GALLERY_META',
       ]);
       if (res.success) {
         const fetchedEmail = res.data.SUPPORT_EMAIL || 'support@veagle-safety.com';
+        const fetchedFakeBase = parseInt(res.data.FAKE_BASE_COUNT, 10) || 3472;
+        const fetchedTargetCount = res.data.TARGET_MISSION_COUNT || '1 Cr+';
         const fetchedItems = res.data.GALLERY_ITEMS || [];
         const fetchedMeta = res.data.GALLERY_META || {
           title: 'Visual Gallery & Feature Showcase',
@@ -77,11 +83,15 @@ export default function AdminSettingsPage() {
         };
 
         setSupportEmail(fetchedEmail);
+        setFakeBaseCount(fetchedFakeBase);
+        setTargetMissionCount(fetchedTargetCount);
         setGalleryItems(fetchedItems);
         setGalleryMeta(fetchedMeta);
 
         setOriginalState({
           email: fetchedEmail,
+          fakeBaseCount: fetchedFakeBase,
+          targetMissionCount: fetchedTargetCount,
           items: JSON.parse(JSON.stringify(fetchedItems)),
           meta: JSON.parse(JSON.stringify(fetchedMeta)),
         });
@@ -112,6 +122,8 @@ export default function AdminSettingsPage() {
     try {
       await settingApi.updateSettings({
         SUPPORT_EMAIL: supportEmail,
+        FAKE_BASE_COUNT: String(fakeBaseCount),
+        TARGET_MISSION_COUNT: targetMissionCount,
         GALLERY_ITEMS: galleryItems,
         GALLERY_META: galleryMeta,
       });
@@ -119,6 +131,8 @@ export default function AdminSettingsPage() {
 
       setOriginalState({
         email: supportEmail,
+        fakeBaseCount: fakeBaseCount,
+        targetMissionCount: targetMissionCount,
         items: JSON.parse(JSON.stringify(galleryItems)),
         meta: JSON.parse(JSON.stringify(galleryMeta)),
       });
@@ -130,22 +144,35 @@ export default function AdminSettingsPage() {
     }
   };
 
-  const checkUnsavedChanges = (newEmail, newItems, newMeta) => {
+  const checkUnsavedChanges = (newEmail, newFakeBase, newTargetCount, newItems, newMeta) => {
     const emailChanged = newEmail !== originalState.email;
+    const fakeBaseChanged = newFakeBase !== originalState.fakeBaseCount;
+    const targetCountChanged = newTargetCount !== originalState.targetMissionCount;
     const itemsChanged = JSON.stringify(newItems) !== JSON.stringify(originalState.items);
     const metaChanged = JSON.stringify(newMeta) !== JSON.stringify(originalState.meta);
-    setHasUnsavedChanges(emailChanged || itemsChanged || metaChanged);
+    setHasUnsavedChanges(emailChanged || fakeBaseChanged || targetCountChanged || itemsChanged || metaChanged);
   };
 
   const handleEmailChange = (val) => {
     setSupportEmail(val);
-    checkUnsavedChanges(val, galleryItems, galleryMeta);
+    checkUnsavedChanges(val, fakeBaseCount, targetMissionCount, galleryItems, galleryMeta);
+  };
+
+  const handleFakeBaseChange = (val) => {
+    const parsed = parseInt(val, 10) || 0;
+    setFakeBaseCount(parsed);
+    checkUnsavedChanges(supportEmail, parsed, targetMissionCount, galleryItems, galleryMeta);
+  };
+
+  const handleTargetCountChange = (val) => {
+    setTargetMissionCount(val);
+    checkUnsavedChanges(supportEmail, fakeBaseCount, val, galleryItems, galleryMeta);
   };
 
   const handleMetaChange = (field, val) => {
     const newMeta = { ...galleryMeta, [field]: val };
     setGalleryMeta(newMeta);
-    checkUnsavedChanges(supportEmail, galleryItems, newMeta);
+    checkUnsavedChanges(supportEmail, fakeBaseCount, targetMissionCount, galleryItems, newMeta);
   };
 
   const addGalleryItem = () => {
@@ -173,14 +200,14 @@ export default function AdminSettingsPage() {
       },
     ];
     setGalleryItems(newItems);
-    checkUnsavedChanges(supportEmail, newItems, galleryMeta);
+    checkUnsavedChanges(supportEmail, fakeBaseCount, targetMissionCount, newItems, galleryMeta);
   };
 
   const updateGalleryItem = (index, field, value) => {
     const newItems = [...galleryItems];
     newItems[index][field] = value;
     setGalleryItems(newItems);
-    checkUnsavedChanges(supportEmail, newItems, galleryMeta);
+    checkUnsavedChanges(supportEmail, fakeBaseCount, targetMissionCount, newItems, galleryMeta);
   };
 
   const handleFileUpload = async (index, e) => {
@@ -195,7 +222,7 @@ export default function AdminSettingsPage() {
         newItems[index].mediaUrl = result.url;
         newItems[index].mediaType = result.mediaType;
         setGalleryItems(newItems);
-        checkUnsavedChanges(supportEmail, newItems, galleryMeta);
+        checkUnsavedChanges(supportEmail, fakeBaseCount, targetMissionCount, newItems, galleryMeta);
         showToast('success', 'File uploaded successfully!');
       } else {
         showToast('error', result.message || 'Upload failed');
@@ -210,7 +237,7 @@ export default function AdminSettingsPage() {
     if (!confirm('Are you sure you want to remove this gallery item?')) return;
     const newItems = galleryItems.filter((_, i) => i !== index);
     setGalleryItems(newItems);
-    checkUnsavedChanges(supportEmail, newItems, galleryMeta);
+    checkUnsavedChanges(supportEmail, fakeBaseCount, targetMissionCount, newItems, galleryMeta);
   };
 
   const toggleCollapse = (index) => {
@@ -240,7 +267,7 @@ export default function AdminSettingsPage() {
       return;
     }
     setGalleryItems(newItems);
-    checkUnsavedChanges(supportEmail, newItems, galleryMeta);
+    checkUnsavedChanges(supportEmail, fakeBaseCount, targetMissionCount, newItems, galleryMeta);
   };
 
   // Prevent leaving page with unsaved changes
@@ -379,6 +406,40 @@ export default function AdminSettingsPage() {
                     />
                     <p className="text-xs font-bold text-gray-400">
                       This email is publicly displayed on the Contact Us page.
+                    </p>
+                  </div>
+
+                  <div className="space-y-2 pt-4">
+                    <label className="flex items-center space-x-2 text-xs font-black text-[#684E67] uppercase tracking-wider">
+                      <ShieldCheck className="w-4 h-4 text-[#FF5C8A]" />
+                      <span>Fake Base Count (Women Safe)</span>
+                    </label>
+                    <input
+                      type="number"
+                      value={fakeBaseCount}
+                      onChange={(e) => handleFakeBaseChange(e.target.value)}
+                      className="w-full bg-[#FAFAFA] border border-gray-200 rounded-2xl px-5 py-4 text-sm font-bold text-[#2A0826] outline-none focus:border-[#FF5C8A] focus:bg-white transition-all shadow-inner"
+                      placeholder="3472"
+                    />
+                    <p className="text-xs font-bold text-gray-400">
+                      This number is added to the real DB user count on the public hero banner.
+                    </p>
+                  </div>
+
+                  <div className="space-y-2 pt-4">
+                    <label className="flex items-center space-x-2 text-xs font-black text-[#684E67] uppercase tracking-wider">
+                      <Layout className="w-4 h-4 text-[#FF5C8A]" />
+                      <span>Target Mission Count</span>
+                    </label>
+                    <input
+                      type="text"
+                      value={targetMissionCount}
+                      onChange={(e) => handleTargetCountChange(e.target.value)}
+                      className="w-full bg-[#FAFAFA] border border-gray-200 rounded-2xl px-5 py-4 text-sm font-bold text-[#2A0826] outline-none focus:border-[#FF5C8A] focus:bg-white transition-all shadow-inner"
+                      placeholder="1 Cr+"
+                    />
+                    <p className="text-xs font-bold text-gray-400">
+                      The target mission display text on the right-side card (e.g. "1 Cr+").
                     </p>
                   </div>
                 </div>

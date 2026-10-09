@@ -7,8 +7,8 @@ import { COLORS } from '../theme/colors';
 
 // Dashboards
 import AdminDashboardScreen from '../screens/main/AdminDashboardScreen';
-import TeamLeaderDashboardScreen from '../screens/main/TeamLeaderDashboardScreen';
-import MemberDashboardScreen from '../screens/main/MemberDashboardScreen';
+import DashboardScreen from '../screens/main/DashboardScreen';
+import OrganizationDashboardScreen from '../screens/main/OrganizationDashboardScreen';
 import ParentDashboardScreen from '../screens/main/ParentDashboardScreen';
 
 // Common Screens
@@ -63,29 +63,8 @@ function AdminTabNavigator() {
   );
 }
 
-// -- TEAM LEADER NAVIGATOR --
-function TeamLeaderTabNavigator() {
-  const TAB_ICONS = {
-    Home: { focused: 'shield', unfocused: 'shield-outline' },
-    Contacts: { focused: 'people', unfocused: 'people-outline' },
-    Journey: { focused: 'map', unfocused: 'map-outline' },
-    Alarm: { focused: 'alert-circle', unfocused: 'alert-circle-outline' },
-    Profile: { focused: 'person', unfocused: 'person-outline' },
-  };
-
-  return (
-    <Tab.Navigator screenOptions={(props) => commonScreenOptions({ ...props, TAB_ICONS })}>
-      <Tab.Screen name="Home" component={TeamLeaderDashboardScreen} />
-      <Tab.Screen name="Contacts" component={ContactsScreen} options={{ tabBarLabel: 'Team' }} />
-      <Tab.Screen name="Journey" component={JourneyScreen} />
-      <Tab.Screen name="Alarm" component={AlarmScreen} />
-      <Tab.Screen name="Profile" component={ProfileScreen} />
-    </Tab.Navigator>
-  );
-}
-
-// -- MEMBER NAVIGATOR --
-function MemberTabNavigator() {
+// -- USER NAVIGATOR --
+function UserTabNavigator() {
   const TAB_ICONS = {
     Home: { focused: 'shield', unfocused: 'shield-outline' },
     Contacts: { focused: 'people', unfocused: 'people-outline' },
@@ -96,7 +75,7 @@ function MemberTabNavigator() {
 
   return (
     <Tab.Navigator screenOptions={(props) => commonScreenOptions({ ...props, TAB_ICONS })}>
-      <Tab.Screen name="Home" component={MemberDashboardScreen} />
+      <Tab.Screen name="Home" component={DashboardScreen} />
       <Tab.Screen name="Contacts" component={ContactsScreen} options={{ tabBarLabel: 'Guardians' }} />
       <Tab.Screen name="Journey" component={JourneyScreen} />
       <Tab.Screen name="Alarm" component={AlarmScreen} />
@@ -105,16 +84,31 @@ function MemberTabNavigator() {
   );
 }
 
-// -- PARENT NAVIGATOR --
-function ParentTabNavigator() {
+// -- ORGANIZATION NAVIGATOR --
+function OrganizationTabNavigator() {
   const TAB_ICONS = {
-    Home: { focused: 'shield-half', unfocused: 'shield-half-outline' },
+    Home: { focused: 'business', unfocused: 'business-outline' },
     Profile: { focused: 'person', unfocused: 'person-outline' },
   };
 
   return (
     <Tab.Navigator screenOptions={(props) => commonScreenOptions({ ...props, TAB_ICONS })}>
-      <Tab.Screen name="Home" component={ParentDashboardScreen} />
+      <Tab.Screen name="Home" component={OrganizationDashboardScreen} options={{ tabBarLabel: 'Org Portal' }} />
+      <Tab.Screen name="Profile" component={ProfileScreen} />
+    </Tab.Navigator>
+  );
+}
+
+// -- PARENT NAVIGATOR --
+function ParentTabNavigator() {
+  const TAB_ICONS = {
+    Home: { focused: 'heart', unfocused: 'heart-outline' },
+    Profile: { focused: 'person', unfocused: 'person-outline' },
+  };
+
+  return (
+    <Tab.Navigator screenOptions={(props) => commonScreenOptions({ ...props, TAB_ICONS })}>
+      <Tab.Screen name="Home" component={ParentDashboardScreen} options={{ tabBarLabel: 'Parent Portal' }} />
       <Tab.Screen name="Profile" component={ProfileScreen} />
     </Tab.Navigator>
   );
@@ -123,18 +117,17 @@ function ParentTabNavigator() {
 export default function RoleBasedNavigator() {
   const { user } = useSelector((state) => state.auth);
   
-  // Default to 'member' if no role is explicitly defined
-  const role = user?.role?.toLowerCase() || 'member';
+  const role = user?.role?.toUpperCase() || 'USER';
 
-  if (role === 'admin' || role === 'org' || role === 'super_admin' || role === 'organization') {
+  if (role === 'SUPER_ADMIN') {
     return <AdminTabNavigator />;
-  } else if (role === 'team-leader' || role === 'teamleader') {
-    return <TeamLeaderTabNavigator />;
-  } else if (role === 'parent') {
+  } else if (role === 'ORGANIZATION') {
+    return <OrganizationTabNavigator />;
+  } else if (role === 'PARENT') {
     return <ParentTabNavigator />;
   } else {
-    // Default to Member view
-    return <MemberTabNavigator />;
+    // Default to User view
+    return <UserTabNavigator />;
   }
 }
 

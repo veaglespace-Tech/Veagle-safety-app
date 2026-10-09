@@ -85,7 +85,15 @@ export default function AdminPlansPage() {
         ...planForm,
         durationDays: parseInt(planForm.durationDays, 10) || 0,
         basePrice: parseFloat(planForm.basePrice) || 0,
-        features: (planForm.features || []).filter((f) => f && typeof f === 'string' && f.trim().length > 0),
+        gstPercentage:
+          planForm.gstPercentage !== undefined &&
+          planForm.gstPercentage !== null &&
+          planForm.gstPercentage !== ''
+            ? parseFloat(planForm.gstPercentage)
+            : parseFloat(gstPercentage !== undefined ? gstPercentage : 18),
+        features: (planForm.features || []).filter(
+          (f) => f && typeof f === 'string' && f.trim().length > 0
+        ),
       };
       const res = await api.post('/admin/plans', payload);
       showToast('success', res.data.message);
@@ -99,13 +107,12 @@ export default function AdminPlansPage() {
   if (!mounted) return null;
 
   const metrics = {
-    activePlansCount: plans.filter(p => p.isActive).length,
+    activePlansCount: plans.filter((p) => p.isActive).length,
   };
 
   return (
     <AppLayout>
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-8 space-y-8">
-        
         {/* HEADER NAVIGATION */}
         <AdminHeaderNav
           metrics={metrics}
@@ -116,7 +123,6 @@ export default function AdminPlansPage() {
 
         {/* PLANS CONTENT */}
         <div className="space-y-8 animate-fade-up">
-          
           {/* GLOBAL GST CONTROLLER CARD */}
           <div className="bg-white p-6 sm:p-8 rounded-[36px] border-2 border-[#FFCCE1] shadow-md space-y-4">
             <div className="flex items-center space-x-3 border-b border-[#FFCCE1] pb-4">
@@ -124,14 +130,24 @@ export default function AdminPlansPage() {
                 <Sliders className="w-5 h-5" />
               </div>
               <div>
-                <h3 className="font-black text-lg text-[#2A0826]">Global Dynamic GST Rate Control</h3>
-                <p className="text-xs text-[#684E67] font-bold">Modifying GST percentage instantly recalculates total pricing for all subscription plans</p>
+                <h3 className="font-black text-lg text-[#2A0826]">
+                  Global Dynamic GST Rate Control
+                </h3>
+                <p className="text-xs text-[#684E67] font-bold">
+                  Modifying GST percentage instantly recalculates total pricing for all subscription
+                  plans
+                </p>
               </div>
             </div>
 
-            <form onSubmit={handleUpdateGlobalGst} className="flex flex-col sm:flex-row items-center gap-4 pt-2">
+            <form
+              onSubmit={handleUpdateGlobalGst}
+              className="flex flex-col sm:flex-row items-center gap-4 pt-2"
+            >
               <div className="flex items-center space-x-3 flex-1 w-full">
-                <label className="text-xs font-black text-[#2A0826] shrink-0">Global GST Percentage (%):</label>
+                <label className="text-xs font-black text-[#2A0826] shrink-0">
+                  Global GST Percentage (%):
+                </label>
                 <input
                   type="number"
                   step="0.1"
@@ -155,8 +171,12 @@ export default function AdminPlansPage() {
           <div className="bg-white p-6 sm:p-8 rounded-[36px] border-2 border-[#FFCCE1] shadow-md space-y-6">
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b-2 border-[#FFCCE1] pb-4">
               <div className="min-w-0">
-                <h3 className="font-black text-base sm:text-lg text-[#2A0826] tracking-tight">Subscription Plans in Database</h3>
-                <p className="text-xs text-[#684E67] font-bold mt-0.5">Dynamic subscription offerings for Sakhi Suraksha members</p>
+                <h3 className="font-black text-base sm:text-lg text-[#2A0826] tracking-tight">
+                  Subscription Plans in Database
+                </h3>
+                <p className="text-xs text-[#684E67] font-bold mt-0.5">
+                  Dynamic subscription offerings for Sakhi Suraksha members
+                </p>
               </div>
 
               <button
@@ -175,7 +195,7 @@ export default function AdminPlansPage() {
                       'Encrypted Real-Time Live GPS Map Sharing',
                       'High-Decibel Siren Alarm & Siren Control',
                       'Direct 112 & 1091 Helpline Access',
-                      '24/7 Active Safety Command Support'
+                      '24/7 Active Safety Command Support',
                     ],
                     isActive: true,
                   });
@@ -191,19 +211,39 @@ export default function AdminPlansPage() {
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               {plans.map((p) => {
                 const base = parseFloat(p.basePrice || 0);
-                const gst = base === 0 ? 0 : parseFloat(p.gstPercentage || gstPercentage);
+                const gst =
+                  base === 0
+                    ? 0
+                    : p.gstPercentage !== undefined &&
+                      p.gstPercentage !== null &&
+                      !isNaN(parseFloat(p.gstPercentage))
+                    ? parseFloat(p.gstPercentage)
+                    : gstPercentage !== undefined &&
+                      gstPercentage !== null &&
+                      !isNaN(parseFloat(gstPercentage))
+                    ? parseFloat(gstPercentage)
+                    : 18;
                 const total = base === 0 ? 0 : parseFloat((base + (base * gst) / 100).toFixed(2));
                 const planFeats = Array.isArray(p.features) ? p.features : [];
 
                 return (
-                  <div key={p.id} className={`p-6 rounded-3xl border-2 space-y-4 transition-all relative ${
-                    p.isActive ? 'bg-white border-[#FF2A6D] shadow-md' : 'bg-gray-50 border-gray-300 opacity-70'
-                  }`}>
+                  <div
+                    key={p.id}
+                    className={`p-6 rounded-3xl border-2 space-y-4 transition-all relative ${
+                      p.isActive
+                        ? 'bg-white border-[#FF2A6D] shadow-md'
+                        : 'bg-gray-50 border-gray-300 opacity-70'
+                    }`}
+                  >
                     <div className="flex items-start justify-between">
                       <div>
-                        <span className={`text-[10px] font-black px-3 py-1 rounded-full uppercase ${
-                          p.isActive ? 'bg-emerald-50 text-emerald-600 border border-emerald-300' : 'bg-gray-200 text-gray-700'
-                        }`}>
+                        <span
+                          className={`text-[10px] font-black px-3 py-1 rounded-full uppercase ${
+                            p.isActive
+                              ? 'bg-emerald-50 text-emerald-600 border border-emerald-300'
+                              : 'bg-gray-200 text-gray-700'
+                          }`}
+                        >
                           {p.isActive ? 'ENABLED' : 'DISABLED'}
                         </span>
                         <h4 className="font-black text-lg text-[#2A0826] mt-2">{p.name}</h4>
@@ -212,16 +252,24 @@ export default function AdminPlansPage() {
                       <div className="text-right">
                         <p className="font-black text-2xl text-[#FF2A6D]">₹{total}</p>
                         <p className="text-[10px] font-bold text-[#684E67]">
-                          {base === 0 ? '100% FREE TRIAL' : `₹${base} + ${gst}% GST`}
+                          {base === 0
+                            ? '100% FREE TRIAL'
+                            : gst === 0
+                            ? `₹${base} (0% GST)`
+                            : `₹${base} + ${gst}% GST`}
                         </p>
                       </div>
                     </div>
 
-                    <p className="text-xs text-[#684E67] font-bold whitespace-pre-line leading-relaxed">{p.description}</p>
+                    <p className="text-xs text-[#684E67] font-bold whitespace-pre-line leading-relaxed">
+                      {p.description}
+                    </p>
 
                     {planFeats.length > 0 && (
                       <div className="pt-2 border-t border-[#FFCCE1]/60 space-y-1">
-                        <span className="text-[10px] font-black text-[#FF2A6D] uppercase">Key Features ({planFeats.length}):</span>
+                        <span className="text-[10px] font-black text-[#FF2A6D] uppercase">
+                          Key Features ({planFeats.length}):
+                        </span>
                         <ul className="text-xs font-bold text-[#2A0826] space-y-1 pl-2">
                           {planFeats.slice(0, 4).map((f, i) => (
                             <li key={i} className="flex items-center space-x-1.5">
@@ -230,7 +278,9 @@ export default function AdminPlansPage() {
                             </li>
                           ))}
                           {planFeats.length > 4 && (
-                            <li className="text-[10px] font-black text-[#FF2A6D]">+ {planFeats.length - 4} more features</li>
+                            <li className="text-[10px] font-black text-[#FF2A6D]">
+                              + {planFeats.length - 4} more features
+                            </li>
                           )}
                         </ul>
                       </div>
@@ -248,7 +298,10 @@ export default function AdminPlansPage() {
                             let parsedFeats = [];
                             if (p.features) {
                               try {
-                                parsedFeats = typeof p.features === 'string' ? JSON.parse(p.features) : p.features;
+                                parsedFeats =
+                                  typeof p.features === 'string'
+                                    ? JSON.parse(p.features)
+                                    : p.features;
                               } catch (e) {
                                 parsedFeats = p.features.split('\n').filter(Boolean);
                               }
@@ -260,7 +313,7 @@ export default function AdminPlansPage() {
                                 'Encrypted Real-Time Live GPS Map Sharing',
                                 'High-Decibel Siren Alarm & Siren Control',
                                 'Direct 112 & 1091 Helpline Access',
-                                '24/7 Active Safety Command Support'
+                                '24/7 Active Safety Command Support',
                               ];
                             }
 
@@ -269,7 +322,10 @@ export default function AdminPlansPage() {
                               name: p.name,
                               description: p.description,
                               basePrice: p.basePrice,
-                              gstPercentage: p.gstPercentage || gstPercentage,
+                              gstPercentage:
+                                p.gstPercentage !== undefined && p.gstPercentage !== null
+                                  ? p.gstPercentage
+                                  : gstPercentage,
                               durationDays: p.durationDays,
                               features: parsedFeats,
                               isActive: p.isActive,
@@ -299,14 +355,12 @@ export default function AdminPlansPage() {
               })}
             </div>
           </div>
-
         </div>
 
         {/* MODAL 3: CREATE / EDIT PLAN FORM */}
         {isPlanModalOpen && (
           <div className="fixed inset-0 z-[200] bg-black/60 backdrop-blur-sm flex items-center justify-center p-4">
             <div className="bg-white rounded-[36px] max-w-lg w-full p-6 sm:p-8 space-y-6 shadow-2xl border-2 border-[#FF2A6D] relative animate-scale-up max-h-[90vh] overflow-y-auto">
-              
               <div className="flex items-center justify-between border-b-2 border-[#FFCCE1] pb-4">
                 <h3 className="font-black text-lg text-[#2A0826]">
                   {planForm.id ? 'Edit Subscription Plan' : 'Create New Subscription Plan'}
@@ -322,7 +376,9 @@ export default function AdminPlansPage() {
 
               <form onSubmit={handleSavePlan} className="space-y-4">
                 <div>
-                  <label className="block text-xs font-black text-[#684E67] mb-1">Plan Title / Name *</label>
+                  <label className="block text-xs font-black text-[#684E67] mb-1">
+                    Plan Title / Name *
+                  </label>
                   <input
                     type="text"
                     required
@@ -334,7 +390,9 @@ export default function AdminPlansPage() {
                 </div>
 
                 <div>
-                  <label className="block text-xs font-black text-[#684E67] mb-1">Plan Description *</label>
+                  <label className="block text-xs font-black text-[#684E67] mb-1">
+                    Plan Description *
+                  </label>
                   <textarea
                     rows={3}
                     required
@@ -347,7 +405,9 @@ export default function AdminPlansPage() {
 
                 <div className="grid grid-cols-2 gap-3">
                   <div>
-                    <label className="block text-xs font-black text-[#684E67] mb-1">Base Price (INR ₹) *</label>
+                    <label className="block text-xs font-black text-[#684E67] mb-1">
+                      Base Price (INR ₹) *
+                    </label>
                     <input
                       type="number"
                       step="0.01"
@@ -360,13 +420,27 @@ export default function AdminPlansPage() {
                   </div>
 
                   <div>
-                    <label className="block text-xs font-black text-[#684E67] mb-1">Duration (Days) *</label>
+                    <label className="block text-xs font-black text-[#684E67] mb-1">
+                      Duration (Days) *
+                    </label>
                     <input
                       type="number"
                       required
                       placeholder="e.g. 365"
-                      value={Number.isNaN(planForm.durationDays) || planForm.durationDays === null || planForm.durationDays === undefined ? '' : planForm.durationDays}
-                      onChange={(e) => setPlanForm({ ...planForm, durationDays: e.target.value === '' ? '' : (parseInt(e.target.value, 10) || '') })}
+                      value={
+                        Number.isNaN(planForm.durationDays) ||
+                        planForm.durationDays === null ||
+                        planForm.durationDays === undefined
+                          ? ''
+                          : planForm.durationDays
+                      }
+                      onChange={(e) =>
+                        setPlanForm({
+                          ...planForm,
+                          durationDays:
+                            e.target.value === '' ? '' : parseInt(e.target.value, 10) || '',
+                        })
+                      }
                       className="w-full px-4 py-3 bg-[#FFF0F3] border-1.5 border-[#FFCCE1] rounded-xl text-xs font-bold text-[#2A0826] outline-none"
                     />
                   </div>
@@ -375,7 +449,9 @@ export default function AdminPlansPage() {
                 {/* DYNAMIC PLAN FEATURES MANAGEMENT */}
                 <div>
                   <div className="flex items-center justify-between mb-1.5">
-                    <label className="block text-xs font-black text-[#684E67]">Plan Features & Highlights</label>
+                    <label className="block text-xs font-black text-[#684E67]">
+                      Plan Features & Highlights
+                    </label>
                     <button
                       type="button"
                       onClick={() => {
@@ -442,11 +518,9 @@ export default function AdminPlansPage() {
                   </button>
                 </div>
               </form>
-
             </div>
           </div>
         )}
-
       </div>
     </AppLayout>
   );

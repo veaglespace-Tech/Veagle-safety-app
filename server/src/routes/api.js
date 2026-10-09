@@ -12,6 +12,7 @@ import * as pushController from '../controllers/pushController.js';
 import * as settingController from '../controllers/settingController.js';
 import * as referralController from '../controllers/referralController.js';
 import * as couponController from '../controllers/couponController.js';
+import * as donationController from '../controllers/donationController.js';
 import { authenticateToken, optionalAuthToken, requireSuperAdmin } from '../middleware/auth.js';
 import { upload } from '../middleware/upload.js';
 import { validate } from '../middleware/validate.js';
@@ -38,6 +39,9 @@ router.post('/auth/reset-password', authController.resetPassword);
 // Public Contact Form Submission
 router.post('/contact', adminController.submitContactEnquiry);
 
+// Public Stats
+router.get('/stats/public', authController.getPublicStats);
+
 // Public Plans & Pricing
 router.get('/plans', adminController.getPlans);
 
@@ -48,6 +52,13 @@ router.get('/payment/payu-success', paymentController.handlePayUSuccess);
 router.post('/payment/payu-failure', paymentController.handlePayUFailure);
 router.get('/payment/payu-failure', paymentController.handlePayUFailure);
 router.get('/payment/history', authenticateToken, paymentController.getUserPaymentHistory);
+
+// Donations
+router.post('/donations/initiate', donationController.initiateDonation);
+router.post('/donations/payu-success', donationController.handleDonationSuccess);
+router.get('/donations/payu-success', donationController.handleDonationSuccess);
+router.post('/donations/payu-failure', donationController.handleDonationFailure);
+router.get('/donations/payu-failure', donationController.handleDonationFailure);
 
 // Contacts
 router.get('/contacts', authenticateToken, contactController.getContacts);
@@ -60,6 +71,7 @@ router.post('/sos/start', authenticateToken, sosController.startSos);
 router.post('/sos/location', authenticateToken, sosController.updateSosLocation);
 router.post('/sos/resolve', authenticateToken, sosController.resolveSos);
 router.get('/sos/active', authenticateToken, sosController.getActiveSosSession);
+router.get('/sos/active/:id/location', authenticateToken, sosController.getSosLocation);
 router.get('/sos/public-track/:token', sosController.getPublicSosTracking);
 
 // Journey
@@ -95,11 +107,12 @@ router.put('/admin/gst', authenticateToken, requireSuperAdmin, adminController.u
 router.get('/admin/payments', authenticateToken, requireSuperAdmin, adminController.getPaymentHistory);
 router.get('/admin/enquiries', authenticateToken, requireSuperAdmin, adminController.getContactEnquiries);
 router.post('/admin/enquiries/:id/resolve', authenticateToken, requireSuperAdmin, adminController.resolveContactEnquiry);
+router.get('/admin/donations', authenticateToken, requireSuperAdmin, donationController.getAllDonations);
 
 // Organization Portal Routes
 router.get('/organization/overview', authenticateToken, organizationController.getOrganizationOverview);
-router.post('/organization/members', authenticateToken, organizationController.addMember);
-router.delete('/organization/members/:membershipId', authenticateToken, organizationController.removeMember);
+router.get('/organization/settings', authenticateToken, organizationController.getOrganizationSettings);
+router.delete('/organization/members/:userId', authenticateToken, organizationController.removeMember);
 
 // Parent Portal Routes
 router.get('/parent/overview', authenticateToken, parentController.getParentOverview);
@@ -160,6 +173,6 @@ router.put('/coupons/:id', authenticateToken, requireSuperAdmin, couponControlle
 router.delete('/coupons/:id', authenticateToken, requireSuperAdmin, couponController.deleteCoupon);
 router.get('/coupons/assignable-users', authenticateToken, requireSuperAdmin, couponController.getAssignableUsers);
 router.get('/coupons/my-coupons', authenticateToken, couponController.getMyCoupons);
-router.post('/coupons/validate', authenticateToken, couponController.validateCoupon);
+router.post('/coupons/validate', optionalAuthToken, couponController.validateCoupon);
 
 export default router;

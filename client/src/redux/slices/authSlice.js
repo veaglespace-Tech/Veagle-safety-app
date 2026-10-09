@@ -2,15 +2,22 @@ import { createSlice, createAsyncThunk } from '@reduxjs/toolkit';
 import { authApi } from '../api/authApi.js';
 
 const initialToken = typeof window !== 'undefined' ? localStorage.getItem('tichi_token') : null;
-const initialRegToken = typeof window !== 'undefined' ? localStorage.getItem('tichi_reg_token') : null;
-const initialPendingToken = typeof window !== 'undefined' ? localStorage.getItem('tichi_pending_token') : null;
+const initialRegToken =
+  typeof window !== 'undefined' ? localStorage.getItem('tichi_reg_token') : null;
+const initialPendingToken =
+  typeof window !== 'undefined' ? localStorage.getItem('tichi_pending_token') : null;
 
-const initialUser = typeof window !== 'undefined' ? (() => {
-  try {
-    const item = localStorage.getItem('tichi_user');
-    return item ? JSON.parse(item) : null;
-  } catch (e) { return null; }
-})() : null;
+const initialUser =
+  typeof window !== 'undefined'
+    ? (() => {
+        try {
+          const item = localStorage.getItem('tichi_user');
+          return item ? JSON.parse(item) : null;
+        } catch (e) {
+          return null;
+        }
+      })()
+    : null;
 
 export const fetchUser = createAsyncThunk('auth/fetchUser', async (_, { rejectWithValue }) => {
   if (typeof window !== 'undefined' && !localStorage.getItem('tichi_token')) {
@@ -33,76 +40,95 @@ export const fetchUser = createAsyncThunk('auth/fetchUser', async (_, { rejectWi
   }
 });
 
-export const loginUser = createAsyncThunk('auth/loginUser', async (credentials, { rejectWithValue }) => {
-  try {
-    const data = await authApi.login(credentials);
-    if (data.token) {
-      localStorage.setItem('tichi_token', data.token);
+export const loginUser = createAsyncThunk(
+  'auth/loginUser',
+  async (credentials, { rejectWithValue }) => {
+    try {
+      const data = await authApi.login(credentials);
+      if (data.token) {
+        localStorage.setItem('tichi_token', data.token);
+      }
+      if (data.user) {
+        localStorage.setItem('tichi_user', JSON.stringify(data.user));
+      }
+      return data;
+    } catch (err) {
+      return rejectWithValue({
+        error: err.response?.data?.error || 'Login failed',
+        requiresVerification: err.response?.data?.requiresVerification || false,
+        email: err.response?.data?.email || credentials?.email,
+      });
     }
-    if (data.user) {
-      localStorage.setItem('tichi_user', JSON.stringify(data.user));
-    }
-    return data;
-  } catch (err) {
-    return rejectWithValue({
-      error: err.response?.data?.error || 'Login failed',
-      requiresVerification: err.response?.data?.requiresVerification || false,
-      email: err.response?.data?.email || credentials?.email,
-    });
   }
-});
+);
 
-export const registerUser = createAsyncThunk('auth/registerUser', async (formData, { rejectWithValue }) => {
-  try {
-    const data = await authApi.register(formData);
-    if (data.token && typeof window !== 'undefined') {
-      localStorage.setItem('tichi_token', data.token);
+export const registerUser = createAsyncThunk(
+  'auth/registerUser',
+  async (formData, { rejectWithValue }) => {
+    try {
+      const data = await authApi.register(formData);
+      if (data.token && typeof window !== 'undefined') {
+        localStorage.setItem('tichi_token', data.token);
+      }
+      if (data.user && typeof window !== 'undefined') {
+        localStorage.setItem('tichi_user', JSON.stringify(data.user));
+      }
+      if (data.pendingToken && typeof window !== 'undefined') {
+        localStorage.setItem('tichi_pending_token', data.pendingToken);
+      }
+      return data;
+    } catch (err) {
+      const errorMsg =
+        err.response?.data?.error ||
+        err.response?.data?.message ||
+        err.message ||
+        'Registration failed';
+      return rejectWithValue(errorMsg);
     }
-    if (data.user && typeof window !== 'undefined') {
-      localStorage.setItem('tichi_user', JSON.stringify(data.user));
-    }
-    if (data.pendingToken && typeof window !== 'undefined') {
-      localStorage.setItem('tichi_pending_token', data.pendingToken);
-    }
-    return data;
-  } catch (err) {
-    const errorMsg = err.response?.data?.error || err.response?.data?.message || err.message || 'Registration failed';
-    return rejectWithValue(errorMsg);
   }
-});
+);
 
-export const verifyEmailOtp = createAsyncThunk('auth/verifyEmailOtp', async ({ email, otp, pendingToken }, { rejectWithValue }) => {
-  try {
-    const data = await authApi.verifyEmail({ email, otp, pendingToken });
-    if (data.token && typeof window !== 'undefined') {
-      localStorage.setItem('tichi_token', data.token);
+export const verifyEmailOtp = createAsyncThunk(
+  'auth/verifyEmailOtp',
+  async ({ email, otp, pendingToken }, { rejectWithValue }) => {
+    try {
+      const data = await authApi.verifyEmail({ email, otp, pendingToken });
+      if (data.token && typeof window !== 'undefined') {
+        localStorage.setItem('tichi_token', data.token);
+      }
+      if (data.registrationToken && typeof window !== 'undefined') {
+        localStorage.setItem('tichi_reg_token', data.registrationToken);
+      }
+      return data;
+    } catch (err) {
+      return rejectWithValue(err.response?.data?.error || 'Verification failed');
     }
-    if (data.registrationToken && typeof window !== 'undefined') {
-      localStorage.setItem('tichi_reg_token', data.registrationToken);
+  }
+);
+
+export const resendOtpCode = createAsyncThunk(
+  'auth/resendOtpCode',
+  async (payload, { rejectWithValue }) => {
+    try {
+      const data = await authApi.resendOtp(payload);
+      return data;
+    } catch (err) {
+      return rejectWithValue(err.response?.data?.error || 'Failed to resend OTP');
     }
-    return data;
-  } catch (err) {
-    return rejectWithValue(err.response?.data?.error || 'Verification failed');
   }
-});
+);
 
-export const resendOtpCode = createAsyncThunk('auth/resendOtpCode', async (payload, { rejectWithValue }) => {
-  try {
-    const data = await authApi.resendOtp(payload);
-    return data;
-  } catch (err) {
-    return rejectWithValue(err.response?.data?.error || 'Failed to resend OTP');
+export const updateProfileSettings = createAsyncThunk(
+  'auth/updateProfileSettings',
+  async (formData, { rejectWithValue }) => {
+    try {
+      const data = await authApi.updateSettings(formData);
+      return data.user;
+    } catch (err) {
+      return rejectWithValue(err.response?.data?.error || 'Update failed');
+    }
   }
-});
-
-export const updateProfileSettings = createAsyncThunk('auth/updateProfileSettings', async (formData, { rejectWithValue }) => {
-  try {
-    const data = await authApi.updateSettings(formData);
-    return data.user;
-  } catch (err) {
-    return rejectWithValue(err.response?.data?.error || 'Update failed');
-  }
-});
+);
 
 const authSlice = createSlice({
   name: 'auth',
@@ -175,9 +201,14 @@ const authSlice = createSlice({
       })
       .addCase(loginUser.fulfilled, (state, action) => {
         state.isLoading = false;
+        state.error = null;
+        if (action.payload.requiresVerification) {
+          state.pendingVerificationEmail = action.payload.email;
+          state.showOtpModal = true;
+          return;
+        }
         state.token = action.payload.token;
         state.user = action.payload.user;
-        state.error = null;
         if (typeof window !== 'undefined' && action.payload.user) {
           localStorage.setItem('tichi_user', JSON.stringify(action.payload.user));
         }
@@ -221,7 +252,8 @@ const authSlice = createSlice({
       .addCase(verifyEmailOtp.fulfilled, (state, action) => {
         state.isLoading = false;
         if (action.payload.token) state.token = action.payload.token;
-        if (action.payload.registrationToken) state.registrationToken = action.payload.registrationToken;
+        if (action.payload.registrationToken)
+          state.registrationToken = action.payload.registrationToken;
         state.user = action.payload.user;
         state.showOtpModal = false;
         state.pendingVerificationEmail = null;

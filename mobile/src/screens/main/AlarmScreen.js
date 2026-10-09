@@ -11,6 +11,7 @@ import Animated, {
   FadeIn,
   FadeOut
 } from 'react-native-reanimated';
+import { LinearGradient } from 'expo-linear-gradient';
 import { COLORS } from '../../theme/colors';
 
 const { height, width } = Dimensions.get('window');
@@ -88,13 +89,19 @@ export default function AlarmScreen() {
             )}
             
             <TouchableOpacity 
-              style={[styles.sirenBtn, isSirenActive ? styles.sirenBtnActive : styles.sirenBtnInactive]}
               onPress={isSirenActive ? stopSiren : startSiren}
               activeOpacity={0.8}
             >
-              <Ionicons name={isSirenActive ? "volume-mute" : "volume-high"} size={48} color="#FFF" />
-              <Text style={styles.sirenBtnText}>{isSirenActive ? 'STOP' : 'ACTIVATE'}</Text>
-              <Text style={styles.sirenBtnSub}>{isSirenActive ? 'TAP TO MUTE' : 'LOUD ALARM'}</Text>
+              <LinearGradient 
+                colors={isSirenActive ? ['#FF2A6D', '#D91B55'] : ['#2A0826', '#3D0C38']} 
+                start={{ x: 0, y: 0 }} 
+                end={{ x: 1, y: 1 }} 
+                style={styles.sirenBtn}
+              >
+                <Ionicons name={isSirenActive ? "volume-mute" : "volume-high"} size={48} color="#FFF" />
+                <Text style={styles.sirenBtnText}>{isSirenActive ? 'STOP' : 'ACTIVATE'}</Text>
+                <Text style={styles.sirenBtnSub}>{isSirenActive ? 'TAP TO MUTE' : 'LOUD ALARM'}</Text>
+              </LinearGradient>
             </TouchableOpacity>
           </View>
 
@@ -117,14 +124,16 @@ export default function AlarmScreen() {
           </View>
           
           <TouchableOpacity 
-            style={styles.fakeCallBtn}
             onPress={() => {
               // Vibrate briefly to simulate phone ringing, then show fake call overlay
               Vibration.vibrate([0, 1000, 2000, 1000], true);
               setShowFakeCall(true);
             }}
+            activeOpacity={0.85}
           >
-            <Text style={styles.fakeCallBtnText}>TRIGGER FAKE CALL NOW</Text>
+            <LinearGradient colors={['#34D399', '#10B981']} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={styles.fakeCallBtn}>
+              <Text style={styles.fakeCallBtnText}>TRIGGER FAKE CALL NOW</Text>
+            </LinearGradient>
           </TouchableOpacity>
         </View>
         

@@ -5,7 +5,16 @@ import Link from 'next/link';
 import { useSearchParams, useRouter } from 'next/navigation';
 import { AppLayout } from '../../../components/layout/AppLayout.js';
 import { api } from '../../../utils/api.js';
-import { ShieldCheck, Lock, Eye, EyeOff, Zap, CheckCircle2, AlertCircle, ArrowRight } from 'lucide-react';
+import {
+  ShieldCheck,
+  Lock,
+  Eye,
+  EyeOff,
+  Zap,
+  CheckCircle2,
+  AlertCircle,
+  ArrowRight,
+} from 'lucide-react';
 
 function ResetPasswordContent() {
   const searchParams = useSearchParams();
@@ -67,7 +76,6 @@ function ResetPasswordContent() {
     <AppLayout fullScreen>
       <div className="min-h-screen bg-[#FFF0F3] flex items-center justify-center p-4 sm:p-6 font-sans py-12">
         <div className="w-full max-w-md bg-white rounded-3xl p-6 sm:p-8 shadow-[0_12px_40px_rgba(255,42,109,0.18)] border-2 border-[#FFCCE1] space-y-6 relative">
-
           {/* TOP BADGE */}
           <div className="flex items-center justify-center">
             <div className="bg-[#FFF0F3] border border-[#FFCCE1] px-4 py-1.5 rounded-full flex items-center space-x-2">
@@ -80,9 +88,12 @@ function ResetPasswordContent() {
 
           {/* TITLE */}
           <div className="text-center space-y-1">
-            <h1 className="text-2xl font-black text-[#2A0826] tracking-tight">Reset Your Password</h1>
+            <h1 className="text-2xl font-black text-[#2A0826] tracking-tight">
+              Reset Your Password
+            </h1>
             <p className="text-xs font-extrabold text-[#684E67]">
-              Enter a strong new password for your account <span className="text-[#FF2A6D]">{email}</span>.
+              Enter a strong new password for your account{' '}
+              <span className="text-[#FF2A6D]">{email}</span>.
             </p>
           </div>
 
@@ -126,7 +137,9 @@ function ResetPasswordContent() {
             </div>
 
             <div>
-              <label className="block text-[#684E67] font-extrabold mb-1">Confirm New Password *</label>
+              <label className="block text-[#684E67] font-extrabold mb-1">
+                Confirm New Password *
+              </label>
               <div className="relative">
                 <Lock className="w-4 h-4 text-[#684E67] absolute left-3.5 top-1/2 -translate-y-1/2" />
                 <input
@@ -159,11 +172,13 @@ function ResetPasswordContent() {
           </form>
 
           <div className="text-center pt-2">
-            <Link href="/auth?mode=login" className="text-xs font-black text-[#FF2A6D] hover:underline">
+            <Link
+              href="/auth?mode=login"
+              className="text-xs font-black text-[#FF2A6D] hover:underline"
+            >
               ← Return to Login
             </Link>
           </div>
-
         </div>
       </div>
     </AppLayout>

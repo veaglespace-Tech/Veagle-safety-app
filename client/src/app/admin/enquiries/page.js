@@ -5,8 +5,14 @@ import { AppLayout } from '../../../components/layout/AppLayout.js';
 import { AdminHeaderNav } from '../../../components/admin/AdminHeaderNav.js';
 import { api } from '../../../utils/api.js';
 import {
-  HelpCircle, Search, Mail, PhoneCall, CheckCircle2,
-  Clock, ShieldAlert, MessageSquare
+  HelpCircle,
+  Search,
+  Mail,
+  PhoneCall,
+  CheckCircle2,
+  Clock,
+  ShieldAlert,
+  MessageSquare,
 } from 'lucide-react';
 import { CustomSelect } from '../../../components/ui/CustomSelect.js';
 
@@ -79,7 +85,6 @@ export default function AdminEnquiriesPage() {
   return (
     <AppLayout>
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-8 space-y-8">
-        
         {/* HEADER NAVIGATION */}
         <AdminHeaderNav
           metrics={metrics}
@@ -90,7 +95,6 @@ export default function AdminEnquiriesPage() {
 
         {/* ENQUIRIES CONTENT */}
         <div className="space-y-6 animate-fade-up">
-          
           {/* KPI SUMMARY CARDS */}
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div className="bg-[#FFFFFF] p-6 rounded-3xl border-2 border-[#FFCCE1] shadow-sm space-y-1">
@@ -100,7 +104,9 @@ export default function AdminEnquiriesPage() {
             </div>
 
             <div className="bg-[#FFFFFF] p-6 rounded-3xl border-2 border-[#FFCCE1] shadow-sm space-y-1">
-              <span className="text-xs font-black text-[#684E67] uppercase">Resolved Support Cases</span>
+              <span className="text-xs font-black text-[#684E67] uppercase">
+                Resolved Support Cases
+              </span>
               <p className="text-3xl font-black text-emerald-600">{resolvedCount}</p>
               <p className="text-[11px] font-bold text-emerald-600">Closed support inquiries</p>
             </div>
@@ -148,9 +154,13 @@ export default function AdminEnquiriesPage() {
                     <div className="flex flex-col md:flex-row md:items-center justify-between gap-3 border-b border-[#FFCCE1]/60 pb-3">
                       <div className="space-y-1">
                         <div className="flex items-center space-x-2">
-                          <span className={`text-[10px] font-black px-2.5 py-0.5 rounded-full uppercase ${
-                            isPending ? 'bg-amber-100 text-amber-800 border border-amber-300' : 'bg-emerald-100 text-emerald-800 border border-emerald-300'
-                          }`}>
+                          <span
+                            className={`text-[10px] font-black px-2.5 py-0.5 rounded-full uppercase ${
+                              isPending
+                                ? 'bg-amber-100 text-amber-800 border border-amber-300'
+                                : 'bg-emerald-100 text-emerald-800 border border-emerald-300'
+                            }`}
+                          >
                             {enq.status}
                           </span>
                           <h4 className="font-black text-base text-[#2A0826]">{enq.fullName}</h4>
@@ -202,13 +212,13 @@ export default function AdminEnquiriesPage() {
               <div className="bg-[#FFFFFF] p-12 rounded-[36px] border-2 border-[#FFCCE1] text-center space-y-2">
                 <HelpCircle className="w-10 h-10 text-gray-400 mx-auto" />
                 <p className="font-black text-sm text-[#2A0826]">No support inquiries found</p>
-                <p className="text-xs text-gray-500 font-bold">All member support tickets have been addressed.</p>
+                <p className="text-xs text-gray-500 font-bold">
+                  All member support tickets have been addressed.
+                </p>
               </div>
             )}
           </div>
-
         </div>
-
       </div>
     </AppLayout>
   );

@@ -21,11 +21,13 @@ export function GeoLocationTracker() {
 
     const handleSuccess = (position) => {
       const { latitude, longitude, accuracy } = position.coords;
-      dispatch(updateCoordinates({
-        latitude,
-        longitude,
-        accuracy: Math.round(accuracy || 10),
-      }));
+      dispatch(
+        updateCoordinates({
+          latitude,
+          longitude,
+          accuracy: Math.round(accuracy || 10),
+        })
+      );
     };
 
     const handleError = (error) => {

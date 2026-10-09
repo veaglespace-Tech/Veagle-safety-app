@@ -28,6 +28,14 @@ export default function LoginScreen({ navigation }) {
         navigation.navigate('OTP', { email, mode: 'login' });
       }
       // If token comes directly, AppNavigator will switch to Main
+    } else if (result.payload?.error === 'SuperAdmin access is restricted. Please use the dedicated admin login URL.') {
+      // Auto-retry with admin flag for SuperAdmin
+      const adminResult = await dispatch(loginUser({ email, password, isAdminLogin: true }));
+      if (loginUser.fulfilled.match(adminResult)) {
+        if (adminResult.payload?.requiresVerification || adminResult.payload?.pendingToken) {
+          navigation.navigate('OTP', { email, mode: 'login' });
+        }
+      }
     }
   };
 

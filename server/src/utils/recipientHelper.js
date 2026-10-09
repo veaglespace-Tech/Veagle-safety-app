@@ -6,7 +6,9 @@ export const collectEmergencyRecipients = (user, contacts = []) => {
   const adminEmail = process.env.ADMIN_EMAIL || 'abhijeetambhore4@gmail.com';
   const recipientEmails = new Set();
 
-  // We intentionally DO NOT add the user's own email here so the victim doesn't get spammed with their own SOS alerts.
+  if (user?.email && typeof user.email === 'string') {
+    recipientEmails.add(user.email.trim().toLowerCase());
+  }
 
   if (adminEmail && typeof adminEmail === 'string') {
     recipientEmails.add(adminEmail.trim().toLowerCase());

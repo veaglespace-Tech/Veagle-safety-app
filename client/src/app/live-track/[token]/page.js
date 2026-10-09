@@ -14,6 +14,7 @@ import {
   VolumeX,
   AlertTriangle,
   User,
+  Navigation,
 } from 'lucide-react';
 import { io } from 'socket.io-client';
 import { startEmergencySiren, stopEmergencySiren } from '../../../utils/sirenAudio.js';
@@ -32,14 +33,21 @@ export default function LivePublicTrackingPage() {
 
   useEffect(() => {
     loadPublicSos();
-    // Fallback polling every 5 seconds for robust location updates
-    const pollingInterval = setInterval(() => {
-      if (token) loadPublicSos(true); // silent load
-    }, 5000);
+    
+    let socket = null;
+    let isMounted = true;
 
-    const socket = io(SERVER_URL, {
-      transports: ['websocket', 'polling'],
-    });
+    const connectSocket = async () => {
+      try {
+        const { io } = await import('socket.io-client');
+        const { SERVER_URL } = await import('../../../utils/api.js');
+        
+        socket = io(SERVER_URL, {
+          path: '/api/socket.io',
+          transports: ['websocket', 'polling'],
+          reconnectionAttempts: 10,
+          timeout: 20000,
+        });
 
     socket.on('connect', () => {
       setIsConnected(true);
@@ -89,27 +97,35 @@ export default function LivePublicTrackingPage() {
       });
     });
 
+      } catch (err) {
+        console.error('Socket connect error:', err);
+      }
+    };
+
+    connectSocket();
+
     return () => {
-      clearInterval(pollingInterval);
-      if (token) socket.emit('leave-track', { token });
-      socket.disconnect();
+      isMounted = false;
+      if (socket) {
+        if (token) socket.emit('leave-track', { token });
+        socket.disconnect();
+      }
       stopEmergencySiren();
     };
   }, [token]);
 
-  const loadPublicSos = async (isSilent = false) => {
+  const loadPublicSos = async () => {
     try {
       const res = await api.get(`/sos/public-track/${token}`);
       const sosData = res.data.sosSession || res.data.session;
       setSession(sosData);
       if (sosData?.locations?.length > 0) {
-        // Pick the latest location (last element since we now fetch in ascending order)
-        setLocation(sosData.locations[sosData.locations.length - 1]);
+        setLocation(sosData.locations[0]);
       }
     } catch (err) {
-      if (!isSilent) setError('Emergency link invalid, expired, or has ended.');
+      setError('Emergency link invalid, expired, or has ended.');
     } finally {
-      if (!isSilent) setLoading(false);
+      setLoading(false);
     }
   };
 
@@ -202,7 +218,7 @@ export default function LivePublicTrackingPage() {
               accuracy={location?.accuracy || 15}
               userName={`${victimName} (EMERGENCY)`}
               isEmergency={isEmergency}
-              locationHistory={session.locations || []}
+              locationHistory={session?.locations ? [...session.locations].reverse() : []}
             />
             {isEmergency && (
               <div className="absolute top-4 left-4 right-4 z-[999] pointer-events-none flex justify-center">

@@ -21,19 +21,6 @@ const OrganizationHeader = ({ firstName, loading, onRefresh }) => {
           <Text style={styles.hqName}>{firstName}</Text>
         </View>
       </View>
-      
-      <TouchableOpacity 
-        style={styles.refreshBtn} 
-        onPress={onRefresh}
-        disabled={loading}
-      >
-        {loading ? (
-          <ActivityIndicator size="small" color={COLORS.primary} />
-        ) : (
-          <Ionicons name="refresh" size={16} color={COLORS.primary} />
-        )}
-        <Text style={styles.refreshText}>REFRESH STATUS</Text>
-      </TouchableOpacity>
     </Animated.View>
   );
 };

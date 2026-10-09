@@ -38,7 +38,8 @@ export const SuperAdminQuickJump = () => {
     isSuperAdmin = reduxRole === 'SUPER_ADMIN' || localRole === 'SUPER_ADMIN';
   }
 
-  const isLoginPage = pathname === '/admin/login' || pathname === '/auth' || pathname?.includes('login');
+  const isLoginPage =
+    pathname === '/admin/login' || pathname === '/auth' || pathname?.includes('login');
   if (isLoginPage) return null;
 
   const isAdminPage = pathname === '/admin';
@@ -49,8 +50,10 @@ export const SuperAdminQuickJump = () => {
   }
 
   const targetHref = isAdminPage ? '/' : '/admin';
-  const targetTitle = isAdminPage ? 'Switch to Main Website' : 'Super Admin HQ';
-  const targetDesc = isAdminPage ? 'Explore Public Landing Page & Safety Features' : 'Access Operations & Dispatch Control Center';
+  const targetTitle = isAdminPage ? 'Switch to Main Website' : 'Super Admin';
+  const targetDesc = isAdminPage
+    ? 'Explore Public Landing Page & Safety Features'
+    : 'Access Operations & Dispatch Control Center';
 
   return (
     <div className="w-full flex flex-col items-center justify-center my-8 text-center px-4 font-sans relative z-20">
@@ -76,11 +79,11 @@ export const SuperAdminQuickJump = () => {
               Quick Navigation
             </span>
           </div>
-          
+
           <h4 className="text-xs sm:text-sm font-black text-[#2A0826] group-hover:text-[#FF2A6D] tracking-tight truncate transition-colors">
             {targetTitle}
           </h4>
-          
+
           <p className="text-[10px] sm:text-[11px] font-extrabold text-[#684E67] truncate">
             {targetDesc}
           </p>

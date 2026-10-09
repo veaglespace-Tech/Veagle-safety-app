@@ -8,89 +8,98 @@ generator client {
 }
 
 model User {
-  id                    Int               @id @default(autoincrement())
-  fullName              String
-  email                 String            @unique
-  phone                 String
-  passwordHash          String
-  role                  String            @default("USER") // USER, SUPER_ADMIN
-  profilePhoto          String?           @db.LongText
-  bloodGroup            String?
-  address               String?
-  city                  String?
-  state                 String?
-  country               String?
-  pincode               String?
-  emergencyContactName  String?
-  emergencyContactPhone String?
-  parentEmail           String?
-  medicalNotes          String?
-  isEmailVerified       Boolean           @default(false)
-  emailOtp              String?
-  emailOtpExpiresAt     DateTime?
-  resetPasswordToken    String?
+  id                     Int       @id @default(autoincrement())
+  fullName               String
+  email                  String    @unique
+  phone                  String
+  passwordHash           String
+  role                   String    @default("USER") // USER, SUPER_ADMIN, ORGANIZATION
+  profilePhoto           String?   @db.LongText
+  bloodGroup             String?
+  address                String?
+  city                   String?
+  state                  String?
+  country                String?
+  pincode                String?
+  emergencyContactName   String?
+  emergencyContactPhone  String?
+  parentEmail            String?
+  medicalNotes           String?
+  isEmailVerified        Boolean   @default(false)
+  emailOtp               String?
+  emailOtpExpiresAt      DateTime?
+  resetPasswordToken     String?
   resetPasswordExpiresAt DateTime?
-  subscriptionStatus    String            @default("INACTIVE") // INACTIVE, ACTIVE, EXPIRED
-  subscriptionExpiresAt DateTime?
-  currentPlanId         Int?
-  safetyStatus          String            @default("SAFE") // SAFE, SOS_ACTIVE, JOURNEY_ACTIVE
-  quickSosMode          String            @default("STANDARD") // STANDARD, SILENT
-  onboardingStep        Int               @default(1)
-  createdAt             DateTime          @default(now())
-  updatedAt             DateTime          @updatedAt
+  subscriptionStatus     String    @default("INACTIVE") // INACTIVE, ACTIVE, EXPIRED
+  subscriptionExpiresAt  DateTime?
+  currentPlanId          Int?
+  safetyStatus           String    @default("SAFE") // SAFE, SOS_ACTIVE, JOURNEY_ACTIVE
+  quickSosMode           String    @default("STANDARD") // STANDARD, SILENT
+  onboardingStep         Int       @default(1)
+  createdAt              DateTime  @default(now())
+  updatedAt              DateTime  @updatedAt
 
-  trustedContacts       TrustedContact[]
-  sosSessions           SosSession[]
-  journeys              Journey[]
-  liveShares            LiveShareSession[]
-  safetyCheckins        SafetyCheckin[]
-  auditLogs             AuditLog[]
-  paymentHistories      PaymentHistory[]
-  organizationMemberships OrganizationMember[] @relation("OrgMemberUser")
-  managedOrganizations   OrganizationMember[] @relation("OrgOwner")
+  trustedContacts         TrustedContact[]
+  sosSessions             SosSession[]
+  journeys                Journey[]
+  safetyCheckins          SafetyCheckin[]
+  paymentHistories        PaymentHistory[]
+  organizationId          Int?
+  organization            User?                @relation("OrganizationUsers", fields: [organizationId], references: [id])
+  organizationUsers       User[]               @relation("OrganizationUsers")
+  orgReferralCode         String?              @unique
   parentLinks             ParentChildLink[]    @relation("ParentLinks")
   childLinks              ParentChildLink[]    @relation("ChildLinks")
+
+  referredByPartnerId Int?
+  referredByPartner   ReferralPartner? @relation("ReferredByPartner", fields: [referredByPartnerId], references: [id])
+  assignedCoupons     Coupon[]         @relation("AssignedCoupons")
+  createdCoupons      Coupon[]         @relation("CreatedCoupons")
 }
 
 model Plan {
-  id               Int              @id @default(autoincrement())
-  name             String
-  description      String?
-  basePrice        Float            @default(24.0)
-  gstPercentage    Float            @default(18.0)
-  totalPrice       Float            @default(28.32)
-  durationDays     Int              @default(30)
-  features         String?          @db.Text
-  isActive         Boolean          @default(true)
-  createdAt        DateTime         @default(now())
-  updatedAt        DateTime         @updatedAt
+  id            Int      @id @default(autoincrement())
+  name          String
+  description   String?
+  basePrice     Float    @default(24.0)
+  gstPercentage Float    @default(18.0)
+  totalPrice    Float    @default(28.32)
+  durationDays  Int      @default(30)
+  features      String?  @db.Text
+  isActive      Boolean  @default(true)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
 
   paymentHistories PaymentHistory[]
 }
 
 model PaymentHistory {
-  id            Int      @id @default(autoincrement())
+  id            Int     @id @default(autoincrement())
   userId        Int
-  user          User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user          User    @relation(fields: [userId], references: [id], onDelete: Cascade)
   planId        Int?
-  plan          Plan?    @relation(fields: [planId], references: [id])
-  txnid         String   @unique
+  plan          Plan?   @relation(fields: [planId], references: [id])
+  txnid         String  @unique
   amount        Float
   baseAmount    Float
   gstAmount     Float
   gstPercentage Float
-  status        String   @default("PENDING") // PENDING, SUCCESS, FAILED
+  status        String  @default("PENDING") // PENDING, SUCCESS, FAILED
   payuMoneyId   String?
   paymentMode   String?
   hash          String?
-  createdAt     DateTime @default(now())
-  updatedAt     DateTime @updatedAt
+
+  couponId Int?
+  coupon   Coupon? @relation(fields: [couponId], references: [id])
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 }
 
 model SystemSetting {
   id        Int      @id @default(autoincrement())
   key       String   @unique
-  value     String
+  value     String   @db.LongText
   updatedAt DateTime @updatedAt
 }
 
@@ -138,21 +147,10 @@ model SosAlert {
   id           Int        @id @default(autoincrement())
   sosSessionId Int
   sosSession   SosSession @relation(fields: [sosSessionId], references: [id])
-  channel      String     // EMAIL, SMS, WEBSOCKET
+  channel      String // EMAIL, SMS, WEBSOCKET
   recipient    String
   status       String     @default("SENT") // SENT, FAILED
   sentAt       DateTime   @default(now())
-}
-
-model LiveShareSession {
-  id              Int      @id @default(autoincrement())
-  userId          Int
-  user            User     @relation(fields: [userId], references: [id])
-  shareToken      String   @unique
-  durationMinutes Int
-  expiresAt       DateTime
-  isActive        Boolean  @default(true)
-  createdAt       DateTime @default(now())
 }
 
 model Journey {
@@ -183,44 +181,25 @@ model JourneyLocation {
 }
 
 model SafetyCheckin {
-  id           Int       @id @default(autoincrement())
+  id           Int      @id @default(autoincrement())
   userId       Int
-  user         User      @relation(fields: [userId], references: [id])
+  user         User     @relation(fields: [userId], references: [id])
   intervalMins Int
   triggerAt    DateTime
-  status       String    @default("PENDING") // PENDING, CONFIRMED_SAFE, EXPIRED_ESCALATED
-  createdAt    DateTime  @default(now())
-}
-
-model AdminUser {
-  id           Int      @id @default(autoincrement())
-  email        String   @unique
-  passwordHash String
-  name         String
-  role         String   @default("SUPER_ADMIN") // SUPER_ADMIN
+  status       String   @default("PENDING") // PENDING, CONFIRMED_SAFE, EXPIRED_ESCALATED
   createdAt    DateTime @default(now())
-}
-
-model AuditLog {
-  id        Int      @id @default(autoincrement())
-  userId    Int?
-  user      User?    @relation(fields: [userId], references: [id])
-  action    String
-  details   String   @db.Text
-  ipAddress String?
-  createdAt DateTime @default(now())
 }
 
 // Web Push Notification Subscription - Linked to user email
 // Contacts subscribe once → receive emergency alarms even with browser closed
 model PushSubscription {
-  id          Int      @id @default(autoincrement())
-  userEmail   String
-  endpoint    String   @unique @db.VarChar(500)
-  p256dh      String   @db.Text
-  auth        String
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  id        Int      @id @default(autoincrement())
+  userEmail String
+  endpoint  String   @unique @db.VarChar(500)
+  p256dh    String   @db.Text
+  auth      String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 }
 
 model ContactEnquiry {
@@ -237,19 +216,6 @@ model ContactEnquiry {
   updatedAt      DateTime  @updatedAt
 }
 
-model OrganizationMember {
-  id             Int      @id @default(autoincrement())
-  organizationId Int
-  organization   User     @relation("OrgOwner", fields: [organizationId], references: [id], onDelete: Cascade)
-  userId         Int
-  user           User     @relation("OrgMemberUser", fields: [userId], references: [id], onDelete: Cascade)
-  memberCode     String?
-  department     String?
-  status         String   @default("ACTIVE") // ACTIVE, PENDING
-  createdAt      DateTime @default(now())
-
-  @@unique([organizationId, userId])
-}
 
 model ParentChildLink {
   id           Int      @id @default(autoincrement())
@@ -263,4 +229,53 @@ model ParentChildLink {
   createdAt    DateTime @default(now())
 
   @@unique([parentId, childId])
+}
+
+model ReferralPartner {
+  id                  Int      @id @default(autoincrement())
+  name                String
+  email               String   @unique
+  mobile              String?
+  partnerReferralCode String   @unique
+  isActive            Boolean  @default(true)
+  createdAt           DateTime @default(now())
+  updatedAt           DateTime @updatedAt
+
+  referredUsers User[] @relation("ReferredByPartner")
+}
+
+model Coupon {
+  id                  Int       @id @default(autoincrement())
+  code                String    @unique
+  discountType        String // PERCENTAGE, FLAT_AMOUNT
+  discountValue       Float
+  maxUses             Int?
+  usesCount           Int       @default(0)
+  assignedUserId      Int?
+  createdById         Int?
+  isActive            Boolean   @default(true)
+  validFrom           DateTime?
+  validUntil          DateTime?
+  applicablePlanCodes Json?
+  createdAt           DateTime  @default(now())
+  updatedAt           DateTime  @updatedAt
+
+  assignedUser User?            @relation("AssignedCoupons", fields: [assignedUserId], references: [id])
+  creator      User?            @relation("CreatedCoupons", fields: [createdById], references: [id])
+  payments     PaymentHistory[]
+}
+
+model Donation {
+  id            Int      @id @default(autoincrement())
+  name          String
+  email         String
+  phone         String
+  amount        Float
+  status        String   @default("PENDING") // PENDING, SUCCESS, FAILED
+  txnid         String   @unique
+  payuMoneyId   String?
+  paymentMode   String?
+  hash          String?
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
 }

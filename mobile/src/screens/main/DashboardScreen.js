@@ -7,6 +7,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useDispatch, useSelector } from 'react-redux';
 import * as Haptics from 'expo-haptics';
+import { LinearGradient } from 'expo-linear-gradient';
 import { fetchContacts } from '../../redux/slices/contactsSlice';
 import { checkActiveSos, startEmergencySos } from '../../redux/slices/sosSlice';
 import { fetchUser } from '../../redux/slices/authSlice';
@@ -61,8 +62,6 @@ export default function DashboardScreen({ navigation }) {
 
   const readinessScore = contacts.length >= 3 && status === 'LIVE' ? 100 : contacts.length > 0 ? 85 : 45;
 
-  const readinessScore = contacts.length >= 3 && status === 'LIVE' ? 100 : contacts.length > 0 ? 85 : 45;
-
   const QUICK_ACTIONS = [
     { icon: 'navigate', label: 'Track Journey', sub: 'Share Live Route', onPress: () => navigation.navigate('Journey') },
     { icon: 'time', label: 'Check On Me', sub: 'Safety Timer', onPress: () => navigation.navigate('Journey') },
@@ -76,15 +75,37 @@ export default function DashboardScreen({ navigation }) {
 
         {/* ACTIVE SOS ALERT BANNER */}
         {activeSession && (
-          <TouchableOpacity style={styles.sosBanner} onPress={() => navigation.navigate('ActiveSOS')} activeOpacity={0.9}>
-            <View style={styles.sosBannerLeft}>
-              <Ionicons name="warning" size={24} color="#fff" />
-              <View>
-                <Text style={styles.sosBannerTitle}>🚨 EMERGENCY SOS ACTIVE</Text>
-                <Text style={styles.sosBannerSub}>Tap to open live command view</Text>
+          <TouchableOpacity onPress={() => navigation.navigate('ActiveSOS')} activeOpacity={0.9}>
+            <LinearGradient colors={['#FF2A6D', '#FF5C8A', '#FF2A6D']} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={styles.sosBanner}>
+              <View style={styles.sosBannerLeft}>
+                <View style={styles.sosBannerIconWrap}>
+                  <Ionicons name="warning" size={24} color="#fff" />
+                </View>
+                <View style={{ flex: 1 }}>
+                  <Text style={styles.sosBannerTitle}>🚨 EMERGENCY SOS ACTIVE</Text>
+                  <Text style={styles.sosBannerSub}>Encrypted GPS stream broadcasting to guardians</Text>
+                </View>
               </View>
-            </View>
-            <Ionicons name="chevron-forward" size={20} color="#fff" />
+              <Ionicons name="chevron-forward" size={24} color="#fff" />
+            </LinearGradient>
+          </TouchableOpacity>
+        )}
+
+        {/* INACTIVE SUBSCRIPTION BANNER */}
+        {user?.subscriptionStatus !== 'ACTIVE' && (
+          <TouchableOpacity onPress={() => navigation.navigate('Subscription')} activeOpacity={0.9}>
+            <LinearGradient colors={['#F59E0B', '#F43F5E', '#FF2A6D']} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={[styles.sosBanner, { borderColor: '#fff', borderWidth: 2 }]}>
+              <View style={styles.sosBannerLeft}>
+                <View style={styles.sosBannerIconWrap}>
+                  <Ionicons name="flash" size={24} color="#FEF3C7" />
+                </View>
+                <View style={{ flex: 1 }}>
+                  <Text style={styles.sosBannerTitle}>PLAN PENDING ACTIVATION</Text>
+                  <Text style={styles.sosBannerSub}>Activate 24/7 Live GPS Guardian Coverage</Text>
+                </View>
+              </View>
+              <Ionicons name="chevron-forward" size={24} color="#fff" />
+            </LinearGradient>
           </TouchableOpacity>
         )}
 
@@ -103,12 +124,12 @@ export default function DashboardScreen({ navigation }) {
         )}
 
         {/* HERO SAFETY CARD */}
-        <View style={styles.heroCard}>
+        <LinearGradient colors={['#FFFFFF', '#FFF0F3', '#FFFFFF']} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={styles.heroCard}>
           {/* 365-DAY badge */}
-          <View style={styles.heroBadge}>
+          <LinearGradient colors={['#FF5C8A', '#FF2A6D']} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={styles.heroBadge}>
             <Ionicons name="shield-checkmark" size={13} color="#fff" />
             <Text style={styles.heroBadgeText}>365-DAY PROTECTION ACTIVE</Text>
-          </View>
+          </LinearGradient>
 
           {/* Greeting */}
           <View style={styles.greetRow}>
@@ -141,7 +162,7 @@ export default function DashboardScreen({ navigation }) {
               </TouchableOpacity>
             ))}
           </View>
-        </View>
+        </LinearGradient>
 
         {/* READINESS METER */}
         <View style={styles.card}>
@@ -217,10 +238,11 @@ const styles = StyleSheet.create({
   scroll: { paddingHorizontal: 16, paddingTop: 12, paddingBottom: 24, gap: 14 },
 
   // SOS Banner
-  sosBanner: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', backgroundColor: COLORS.primary, borderRadius: 20, padding: 16 },
-  sosBannerLeft: { flexDirection: 'row', alignItems: 'center', gap: 10, flex: 1 },
+  sosBanner: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', borderRadius: 24, padding: 18, shadowColor: COLORS.primary, shadowOffset: { width: 0, height: 10 }, shadowOpacity: 0.25, shadowRadius: 20, elevation: 8 },
+  sosBannerLeft: { flexDirection: 'row', alignItems: 'center', gap: 14, flex: 1 },
+  sosBannerIconWrap: { width: 44, height: 44, borderRadius: 16, backgroundColor: 'rgba(255,255,255,0.2)', alignItems: 'center', justifyContent: 'center' },
   sosBannerTitle: { fontSize: 13, fontWeight: '900', color: '#fff', textTransform: 'uppercase', letterSpacing: 0.5 },
-  sosBannerSub: { fontSize: 11, fontWeight: '600', color: 'rgba(255,255,255,0.85)' },
+  sosBannerSub: { fontSize: 11, fontWeight: '700', color: 'rgba(255,255,255,0.95)', marginTop: 2 },
 
   // Journey Banner
   journeyBanner: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', backgroundColor: COLORS.surface, borderWidth: 1.5, borderColor: COLORS.primaryBorder, borderRadius: 20, padding: 14 },

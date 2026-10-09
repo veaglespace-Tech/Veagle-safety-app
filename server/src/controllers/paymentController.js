@@ -8,7 +8,7 @@ import { generatePayUHash, verifyPayUResponseHash } from '../utils/payu.js';
  * Initiate PayU Payment for User Subscription
  */
 export const initiatePayUPayment = asyncHandler(async (req, res) => {
-  const { planId, registrationToken, pendingToken } = req.body;
+  const { planId, registrationToken, pendingToken, couponCode } = req.body;
   const tokenFromHeader = req.headers['authorization'] && req.headers['authorization'].split(' ')[1];
   const regTokenToUse = registrationToken || pendingToken || tokenFromHeader;
 
@@ -49,20 +49,37 @@ export const initiatePayUPayment = asyncHandler(async (req, res) => {
     plan = await prisma.plan.findFirst({ where: { isActive: true } });
   }
 
-  const baseAmount = plan ? plan.basePrice : 24.0;
-  let gstPercentage = plan ? plan.gstPercentage : 18.0;
+  const gstSetting = await prisma.systemSetting.findUnique({ where: { key: 'GST_PERCENTAGE' } });
+  const globalGst = (gstSetting && gstSetting.value !== undefined && gstSetting.value !== null && !isNaN(parseFloat(gstSetting.value)))
+    ? parseFloat(gstSetting.value)
+    : 18.0;
 
-  if (baseAmount === 0) {
-    gstPercentage = 0;
-  } else {
-    const gstSetting = await prisma.systemSetting.findUnique({ where: { key: 'GST_PERCENTAGE' } });
-    if (gstSetting) {
-      gstPercentage = parseFloat(gstSetting.value) || 18.0;
+  const baseAmount = plan ? plan.basePrice : 24.0;
+  let gstPercentage = baseAmount === 0
+    ? 0
+    : (gstSetting && gstSetting.value !== undefined && gstSetting.value !== null && !isNaN(parseFloat(gstSetting.value)))
+      ? parseFloat(gstSetting.value)
+      : (plan && plan.gstPercentage !== undefined && plan.gstPercentage !== null && !isNaN(parseFloat(plan.gstPercentage)))
+        ? parseFloat(plan.gstPercentage)
+        : globalGst;
+
+  let discountedBaseAmount = baseAmount;
+  let coupon = null;
+
+  if (couponCode) {
+    coupon = await prisma.coupon.findUnique({ where: { code: couponCode.toUpperCase() } });
+    if (coupon && coupon.isActive) {
+      if (coupon.discountType === 'PERCENTAGE') {
+        discountedBaseAmount = baseAmount - (baseAmount * coupon.discountValue / 100);
+      } else if (coupon.discountType === 'FLAT_AMOUNT') {
+        discountedBaseAmount = baseAmount - coupon.discountValue;
+      }
+      if (discountedBaseAmount < 0) discountedBaseAmount = 0;
     }
   }
 
-  const gstAmount = baseAmount === 0 ? 0 : parseFloat(((baseAmount * gstPercentage) / 100).toFixed(2));
-  const totalAmount = baseAmount === 0 ? 0 : parseFloat((baseAmount + gstAmount).toFixed(2));
+  const gstAmount = (discountedBaseAmount === 0 || gstPercentage === 0) ? 0 : parseFloat(((discountedBaseAmount * gstPercentage) / 100).toFixed(2));
+  const totalAmount = discountedBaseAmount === 0 ? 0 : parseFloat((discountedBaseAmount + gstAmount).toFixed(2));
 
   // IF PLAN IS 100% FREE (0 INR): Activate subscription directly without PayU!
   if (baseAmount === 0 || totalAmount === 0) {
@@ -114,7 +131,7 @@ export const initiatePayUPayment = asyncHandler(async (req, res) => {
                 name: decodedRegistration.emergencyContactName,
                 relationship: 'Primary Guardian / Emergency Contact',
                 phone: decodedRegistration.emergencyContactPhone,
-                email: decodedRegistration.email,
+                email: decodedRegistration.parentEmail || '',
                 isVerified: true,
                 priorityOrder: 1,
               },
@@ -196,11 +213,12 @@ export const initiatePayUPayment = asyncHandler(async (req, res) => {
           planId: plan ? plan.id : null,
           txnid,
           amount: totalAmount,
-          baseAmount,
+          baseAmount: discountedBaseAmount,
           gstAmount,
           gstPercentage,
           status: 'PENDING',
           hash,
+          couponId: coupon ? coupon.id : null,
         },
       });
     } catch (payHistErr) {
@@ -217,8 +235,8 @@ export const initiatePayUPayment = asyncHandler(async (req, res) => {
       actionUrl: config.payu.baseUrl,
       key: config.payu.key,
       txnid,
-      amount: totalAmount,
-      baseAmount,
+      amount: parseFloat(totalAmount).toFixed(2),
+      baseAmount: discountedBaseAmount,
       gstAmount,
       gstPercentage,
       productinfo,
@@ -236,8 +254,16 @@ export const initiatePayUPayment = asyncHandler(async (req, res) => {
  * PayU Success Callback Handler
  */
 export const handlePayUSuccess = asyncHandler(async (req, res) => {
-  const payuResponse = req.body;
+  const payuResponse = Object.keys(req.body).length > 0 ? req.body : req.query;
   const { txnid, mihpayid, mode, status, registrationToken } = payuResponse;
+
+  if (!txnid) {
+    const fallbackUrl = `${config.payu.clientUrl}/payment`;
+    if (req.headers['content-type']?.includes('application/x-www-form-urlencoded') || req.method === 'GET') {
+      return res.redirect(fallbackUrl);
+    }
+    return res.status(400).json({ success: false, message: 'Invalid payment callback data' });
+  }
 
   const verification = verifyPayUResponseHash(payuResponse);
 
@@ -294,7 +320,7 @@ export const handlePayUSuccess = asyncHandler(async (req, res) => {
                 name: decodedRegistration.emergencyContactName,
                 relationship: 'Primary Guardian / Emergency Contact',
                 phone: decodedRegistration.emergencyContactPhone,
-                email: decodedRegistration.email,
+                email: decodedRegistration.parentEmail || '',
                 isVerified: true,
                 priorityOrder: 1,
               },
@@ -330,14 +356,20 @@ export const handlePayUSuccess = asyncHandler(async (req, res) => {
         },
       });
     } else if (user) {
+      const gstSetting = await prisma.systemSetting.findUnique({ where: { key: 'GST_PERCENTAGE' } });
+      const currentGst = (gstSetting && !isNaN(parseFloat(gstSetting.value))) ? parseFloat(gstSetting.value) : 18.0;
+      const paidAmt = parseFloat(payuResponse.amount || 24.0);
+      const computedBase = currentGst > 0 ? parseFloat((paidAmt / (1 + currentGst / 100)).toFixed(2)) : paidAmt;
+      const computedGstAmt = parseFloat((paidAmt - computedBase).toFixed(2));
+
       paymentRecord = await prisma.paymentHistory.create({
         data: {
           userId: user.id,
           txnid,
-          amount: parseFloat(payuResponse.amount || 28.32),
-          baseAmount: 24.0,
-          gstAmount: 4.32,
-          gstPercentage: 18.0,
+          amount: paidAmt,
+          baseAmount: computedBase,
+          gstAmount: computedGstAmt,
+          gstPercentage: currentGst,
           status: 'SUCCESS',
           payuMoneyId: mihpayid || payuResponse.payuMoneyId || null,
           paymentMode: mode || payuResponse.mode || 'ONLINE',
@@ -397,7 +429,16 @@ export const handlePayUSuccess = asyncHandler(async (req, res) => {
  * PayU Failure Callback Handler
  */
 export const handlePayUFailure = asyncHandler(async (req, res) => {
-  const { txnid } = req.body;
+  const payuResponse = Object.keys(req.body).length > 0 ? req.body : req.query;
+  const { txnid } = payuResponse;
+
+  if (!txnid) {
+    const fallbackUrl = `${config.payu.clientUrl}/payment`;
+    if (req.headers['content-type']?.includes('application/x-www-form-urlencoded') || req.method === 'GET') {
+      return res.redirect(fallbackUrl);
+    }
+    return res.status(400).json({ success: false, message: 'Invalid payment callback data' });
+  }
 
   if (txnid) {
     await prisma.paymentHistory.updateMany({

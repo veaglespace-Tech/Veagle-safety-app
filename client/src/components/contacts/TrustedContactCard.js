@@ -13,7 +13,7 @@ export const TrustedContactCard = ({ contact, onEdit, onDelete }) => {
         <div className="w-11 h-11 sm:w-12 sm:h-12 rounded-2xl bg-gradient-to-tr from-[#FF5C8A] to-[#FF2A6D] text-white flex items-center justify-center font-black text-sm sm:text-base border-2 border-white shadow-md shrink-0">
           {initial}
         </div>
-        
+
         <div className="min-w-0 flex-1">
           <div className="flex items-center space-x-1.5 min-w-0">
             <h4 className="font-black text-[#2A0826] text-xs sm:text-sm truncate">{contactName}</h4>
@@ -72,4 +72,3 @@ export const TrustedContactCard = ({ contact, onEdit, onDelete }) => {
     </div>
   );
 };
-

@@ -28,7 +28,6 @@ import HelpContactScreen from '../screens/info/HelpContactScreen';
 // New Feature Screens
 import CheckoutScreen from '../screens/subscription/CheckoutScreen';
 import PaymentSuccessScreen from '../screens/subscription/PaymentSuccessScreen';
-import OrganizationScreen from '../screens/main/OrganizationScreen';
 import GalleryScreen from '../screens/main/GalleryScreen';
 import AdminEnquiriesScreen from '../screens/main/AdminEnquiriesScreen';
 import UserSettingsScreen from '../screens/main/UserSettingsScreen';
@@ -84,7 +83,6 @@ export default function AppNavigator() {
             {/* Newly added UI Screens */}
             <Stack.Screen name="Checkout" component={CheckoutScreen} />
             <Stack.Screen name="PaymentSuccess" component={PaymentSuccessScreen} />
-            <Stack.Screen name="Organization" component={OrganizationScreen} />
             <Stack.Screen name="Gallery" component={GalleryScreen} />
             <Stack.Screen name="AdminEnquiries" component={AdminEnquiriesScreen} />
             <Stack.Screen name="UserSettings" component={UserSettingsScreen} />

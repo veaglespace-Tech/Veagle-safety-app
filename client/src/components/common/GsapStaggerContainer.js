@@ -3,7 +3,12 @@
 import React, { useRef, useEffect } from 'react';
 import gsap from 'gsap';
 
-export const GsapStaggerContainer = ({ children, className = '', staggerDuration = 0.12, yOffset = 30 }) => {
+export const GsapStaggerContainer = ({
+  children,
+  className = '',
+  staggerDuration = 0.12,
+  yOffset = 30,
+}) => {
   const containerRef = useRef(null);
 
   useEffect(() => {

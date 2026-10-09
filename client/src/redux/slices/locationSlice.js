@@ -1,10 +1,10 @@
 import { createSlice } from '@reduxjs/toolkit';
 
 const initialState = {
-  status: 'LIVE', // 'LIVE', 'STALE', 'DENIED', 'OFFLINE'
-  latitude: 18.5204,
-  longitude: 73.8567,
-  accuracy: 10,
+  status: 'OFFLINE', // 'LIVE', 'STALE', 'DENIED', 'OFFLINE'
+  latitude: null,
+  longitude: null,
+  accuracy: null,
   lastUpdated: null,
   isTracking: false,
 };

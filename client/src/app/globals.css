@@ -3,13 +3,13 @@
 @tailwind utilities;
 
 :root {
-  --background: #FFF0F3;
-  --foreground: #2A0826;
-  --primary: #FF5C8A;
-  --primary-hover: #FF2A6D;
-  --accent: #FFCCE1;
-  --text-dark: #2A0826;
-  --text-muted: #684E67;
+  --background: #fff0f3;
+  --foreground: #2a0826;
+  --primary: #ff5c8a;
+  --primary-hover: #ff2a6d;
+  --accent: #ffcce1;
+  --text-dark: #2a0826;
+  --text-muted: #684e67;
 }
 
 body {
@@ -17,6 +17,34 @@ body {
   color: var(--foreground);
   font-family: 'Manrope', sans-serif;
   overflow-x: hidden;
+}
+
+/* SMOOTH LIVE TRACKING MAP MARKER ANIMATION */
+.leaflet-marker-icon,
+.leaflet-marker-shadow {
+  transition: transform 1.2s linear !important;
+}
+
+/* Ensure Leaflet map tiles render properly inside modals */
+.leaflet-container {
+  z-index: 1 !important;
+}
+
+.leaflet-pane {
+  z-index: 1 !important;
+}
+
+.leaflet-tile-pane {
+  z-index: 1 !important;
+}
+
+.leaflet-tile {
+  visibility: visible !important;
+}
+
+/* Force Leaflet controls above tiles but below modal */
+.leaflet-control {
+  z-index: 2 !important;
 }
 
 /* SLEEK DROPDOWN SCROLLBAR */
@@ -30,35 +58,52 @@ body {
 }
 
 .custom-select-scrollbar::-webkit-scrollbar-thumb {
-  background: #FF5C8A;
+  background: #ff5c8a;
   border-radius: 10px;
 }
 
 .custom-select-scrollbar::-webkit-scrollbar-thumb:hover {
-  background: #FF2A6D;
+  background: #ff2a6d;
 }
 
 /* ULTRA-MODERN GRADIENT TYPOGRAPHY SYSTEM */
 .heading-gradient-hero {
-  background: linear-gradient(135deg, #2A0826 0%, #FF2A6D 45%, #FF5C8A 90%);
+  background: linear-gradient(135deg, #2a0826 0%, #ff2a6d 45%, #ff5c8a 90%);
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
   background-clip: text;
+  display: inline-block;
+  padding-left: 0.1em;
+  padding-right: 0.3em;
+  padding-bottom: 0.25em;
+  padding-top: 0.1em;
+  margin-right: -0.2em;
 }
 
 .heading-gradient-rose {
-  background: linear-gradient(135deg, #FF5C8A 0%, #FF2A6D 50%, #E01A4F 100%);
+  background: linear-gradient(135deg, #ff5c8a 0%, #ff2a6d 50%, #e01a4f 100%);
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
   background-clip: text;
+  display: inline-block;
+  padding-left: 0.1em;
+  padding-right: 0.3em;
+  padding-bottom: 0.25em;
+  padding-top: 0.1em;
+  margin-right: -0.2em;
 }
 
 .heading-highlight-pill {
   display: inline-block;
-  background: linear-gradient(135deg, #FF5C8A 0%, #FF2A6D 100%);
+  background: linear-gradient(135deg, #ff5c8a 0%, #ff2a6d 100%);
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
   background-clip: text;
+  padding-left: 0.1em;
+  padding-right: 0.3em;
+  padding-bottom: 0.25em;
+  padding-top: 0.1em;
+  margin-right: -0.2em;
 }
 
 /* ANTIQUE VIBRANT ANIMATIONS */
@@ -77,14 +122,17 @@ body {
 }
 
 @keyframes neonGlowPulse {
-
   0%,
   100% {
-    box-shadow: 0 0 20px rgba(255, 92, 138, 0.35), 0 0 40px rgba(255, 42, 109, 0.20);
+    box-shadow:
+      0 0 20px rgba(255, 92, 138, 0.35),
+      0 0 40px rgba(255, 42, 109, 0.2);
   }
 
   50% {
-    box-shadow: 0 0 32px rgba(255, 92, 138, 0.60), 0 0 60px rgba(255, 42, 109, 0.35);
+    box-shadow:
+      0 0 32px rgba(255, 92, 138, 0.6),
+      0 0 60px rgba(255, 42, 109, 0.35);
   }
 }
 
@@ -171,9 +219,9 @@ body {
   backface-visibility: hidden;
   -webkit-backface-visibility: hidden;
   overflow: hidden;
-  border: 1.5px solid #FF5C8A;
+  border: 1.5px solid #ff5c8a;
   box-shadow: 0 4px 18px rgba(255, 92, 138, 0.35);
-  background: #FFFFFF;
+  background: #ffffff;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -186,10 +234,12 @@ body {
 
 /* 3D POP-UP BUTTON SYSTEM */
 .btn-3d-rose-pop {
-  background: linear-gradient(135deg, #FF5C8A 0%, #FF2A6D 55%, #E01A4F 100%);
-  color: #FFFFFF !important;
-  border: 1.5px solid #FF5C8A;
-  box-shadow: 0 6px 0px #C70A40, 0 12px 28px rgba(255, 42, 109, 0.35);
+  background: linear-gradient(135deg, #ff5c8a 0%, #ff2a6d 55%, #e01a4f 100%);
+  color: #ffffff !important;
+  border: 1.5px solid #ff5c8a;
+  box-shadow:
+    0 6px 0px #c70a40,
+    0 12px 28px rgba(255, 42, 109, 0.35);
   transition: all 0.25s cubic-bezier(0.34, 1.56, 0.64, 1);
   transform: translateY(0);
   cursor: pointer;
@@ -197,20 +247,26 @@ body {
 
 .btn-3d-rose-pop:hover {
   transform: translateY(-6px) scale(1.03);
-  box-shadow: 0 12px 0px #C70A40, 0 20px 40px rgba(255, 42, 109, 0.55);
-  background: linear-gradient(135deg, #FF709B 0%, #FF3D7C 55%, #F0235C 100%);
+  box-shadow:
+    0 12px 0px #c70a40,
+    0 20px 40px rgba(255, 42, 109, 0.55);
+  background: linear-gradient(135deg, #ff709b 0%, #ff3d7c 55%, #f0235c 100%);
 }
 
 .btn-3d-rose-pop:active {
   transform: translateY(3px) scale(0.98);
-  box-shadow: 0 2px 0px #C70A40, 0 6px 16px rgba(255, 42, 109, 0.30);
+  box-shadow:
+    0 2px 0px #c70a40,
+    0 6px 16px rgba(255, 42, 109, 0.3);
 }
 
 .btn-3d-white-pop {
   background: rgba(255, 255, 255, 0.98);
-  color: #2A0826 !important;
-  border: 1.5px solid #FFCCE1;
-  box-shadow: 0 6px 0px #FFCCE1, 0 10px 24px rgba(42, 8, 38, 0.08);
+  color: #2a0826 !important;
+  border: 1.5px solid #ffcce1;
+  box-shadow:
+    0 6px 0px #ffcce1,
+    0 10px 24px rgba(42, 8, 38, 0.08);
   transition: all 0.25s cubic-bezier(0.34, 1.56, 0.64, 1);
   transform: translateY(0);
   cursor: pointer;
@@ -218,21 +274,25 @@ body {
 
 .btn-3d-white-pop:hover {
   transform: translateY(-6px) scale(1.03);
-  box-shadow: 0 12px 0px #FF99C2, 0 18px 36px rgba(255, 92, 138, 0.25);
-  border-color: #FF5C8A;
-  color: #FF2A6D !important;
+  box-shadow:
+    0 12px 0px #ff99c2,
+    0 18px 36px rgba(255, 92, 138, 0.25);
+  border-color: #ff5c8a;
+  color: #ff2a6d !important;
 }
 
 .btn-3d-white-pop:active {
   transform: translateY(3px) scale(0.98);
-  box-shadow: 0 2px 0px #FFCCE1, 0 4px 12px rgba(42, 8, 38, 0.08);
+  box-shadow:
+    0 2px 0px #ffcce1,
+    0 4px 12px rgba(42, 8, 38, 0.08);
 }
 
 /* CARD SYSTEM */
 .card-antique-pink {
   background: rgba(255, 255, 255, 0.95);
   backdrop-filter: blur(12px);
-  border: 1.5px solid #FFCCE1;
+  border: 1.5px solid #ffcce1;
   box-shadow: 0 8px 30px rgba(255, 92, 138, 0.08);
   transition: all 0.35s cubic-bezier(0.34, 1.56, 0.64, 1);
 }
@@ -240,14 +300,16 @@ body {
 .card-antique-pink:hover {
   transform: translateY(-4px) scale(1.015);
   box-shadow: 0 16px 40px rgba(255, 92, 138, 0.22);
-  border-color: #FF5C8A;
+  border-color: #ff5c8a;
 }
 
 /* VIBRANT DYNAMIC EMERGENCY SOS BUTTON GRADIENT */
 .sos-btn-gradient {
-  background: linear-gradient(135deg, #FF2A6D 0%, #FF5C8A 50%, #D91B55 100%) !important;
-  color: #FFFFFF !important;
-  box-shadow: 0 0 35px 8px rgba(255, 42, 109, 0.40), 0 4px 20px -2px rgba(255, 42, 109, 0.50);
+  background: linear-gradient(135deg, #ff2a6d 0%, #ff5c8a 50%, #d91b55 100%) !important;
+  color: #ffffff !important;
+  box-shadow:
+    0 0 35px 8px rgba(255, 42, 109, 0.4),
+    0 4px 20px -2px rgba(255, 42, 109, 0.5);
 }
 
 /* NAVIGATION TABS & CHIPS SYSTEM */
@@ -255,28 +317,32 @@ body {
   background: rgba(255, 240, 243, 0.85);
   backdrop-filter: blur(16px);
   -webkit-backdrop-filter: blur(16px);
-  border: 1.5px solid #FFCCE1;
-  box-shadow: 0 4px 20px -2px rgba(255, 92, 138, 0.12), inset 0 1px 1px rgba(255, 255, 255, 0.8);
+  border: 1.5px solid #ffcce1;
+  box-shadow:
+    0 4px 20px -2px rgba(255, 92, 138, 0.12),
+    inset 0 1px 1px rgba(255, 255, 255, 0.8);
   border-radius: 20px;
   padding: 4px;
 }
 
 .nav-chip-active {
-  background: linear-gradient(135deg, #FF5C8A 0%, #FF2A6D 60%, #D91B55 100%) !important;
-  color: #FFFFFF !important;
-  box-shadow: 0 6px 20px -2px rgba(255, 92, 138, 0.45), inset 0 1px 1.5px rgba(255, 255, 255, 0.6) !important;
+  background: linear-gradient(135deg, #ff5c8a 0%, #ff2a6d 60%, #d91b55 100%) !important;
+  color: #ffffff !important;
+  box-shadow:
+    0 6px 20px -2px rgba(255, 92, 138, 0.45),
+    inset 0 1px 1.5px rgba(255, 255, 255, 0.6) !important;
   animation: chipBounce 0.35s cubic-bezier(0.34, 1.56, 0.64, 1);
   transform: scale(1.03);
 }
 
 .nav-chip-hover {
-  color: #2A0826;
+  color: #2a0826;
   transition: all 0.25s cubic-bezier(0.34, 1.56, 0.64, 1);
 }
 
 .nav-chip-hover:hover {
   background: rgba(255, 255, 255, 0.95);
-  color: #FF2A6D;
+  color: #ff2a6d;
   transform: translateY(-1.5px) scale(1.04);
   box-shadow: 0 6px 18px rgba(255, 92, 138, 0.22);
 }
@@ -296,8 +362,8 @@ html {
   height: 0 !important;
 }
 .no-scrollbar {
-  -ms-overflow-style: none !important;  /* IE and Edge */
-  scrollbar-width: none !important;  /* Firefox */
+  -ms-overflow-style: none !important; /* IE and Edge */
+  scrollbar-width: none !important; /* Firefox */
 }
 
 /* CUSTOM SCROLLBAR */
@@ -306,16 +372,16 @@ html {
 }
 
 ::-webkit-scrollbar-track {
-  background: #FFF0F3;
+  background: #fff0f3;
 }
 
 ::-webkit-scrollbar-thumb {
-  background: #FFCCE1;
+  background: #ffcce1;
   border-radius: 4px;
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background: #FF5C8A;
+  background: #ff5c8a;
 }
 
 /* 3D FLIP CARD STYLES (FULL WEBKIT MOBILE & DESKTOP SUPPORT) */

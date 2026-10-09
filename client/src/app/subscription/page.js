@@ -3,6 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import { fetchUser } from '../../redux/slices/authSlice.js';
+import { fetchPlans } from '../../redux/slices/planSlice.js';
 import { AppLayout } from '../../components/layout/AppLayout.js';
 import Link from 'next/link';
 import {
@@ -22,34 +23,56 @@ import {
 export default function SubscriptionPage() {
   const dispatch = useDispatch();
   const { user } = useSelector((state) => state?.auth || {});
+  const { plans = [] } = useSelector((state) => state?.plan || {});
   const [mounted, setMounted] = useState(false);
 
   useEffect(() => {
     setMounted(true);
     dispatch(fetchUser());
+    dispatch(fetchPlans());
   }, [dispatch]);
 
   const isActive = mounted && user?.subscriptionStatus === 'ACTIVE';
-  
-  // Dates calculation
-  const createdDate = mounted && user?.createdAt
-    ? new Date(user.createdAt).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' })
-    : '01 Aug 2026';
 
-  const expiryDate = mounted && user?.subscriptionExpiresAt
-    ? new Date(user.subscriptionExpiresAt).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' })
-    : '01 Aug 2027';
+  // Dates calculation
+  const createdDate =
+    mounted && user?.createdAt
+      ? new Date(user.createdAt).toLocaleDateString('en-IN', {
+          day: '2-digit',
+          month: 'short',
+          year: 'numeric',
+        })
+      : '01 Aug 2026';
+
+  const expiryDate =
+    mounted && user?.subscriptionExpiresAt
+      ? new Date(user.subscriptionExpiresAt).toLocaleDateString('en-IN', {
+          day: '2-digit',
+          month: 'short',
+          year: 'numeric',
+        })
+      : '01 Aug 2027';
+
+  const activePlan = plans[0] || {};
+  const basePrice = activePlan.basePrice !== undefined ? Number(activePlan.basePrice) : 24.0;
+  const gstRate =
+    activePlan.gstPercentage !== undefined && activePlan.gstPercentage !== null && !isNaN(Number(activePlan.gstPercentage))
+      ? Number(activePlan.gstPercentage)
+      : 18.0;
+  const totalAmount =
+    activePlan.totalPrice !== undefined && activePlan.totalPrice !== null && !isNaN(Number(activePlan.totalPrice))
+      ? Number(activePlan.totalPrice)
+      : Number((basePrice + (basePrice * gstRate) / 100).toFixed(2));
+  const gstAmount = Number(((basePrice * gstRate) / 100).toFixed(2));
 
   return (
     <AppLayout>
       <div className="bg-[#FFF0F3] text-[#2A0826] font-sans relative overflow-hidden">
-        
         {/* BACKGROUND AMBIENT GLOW MESHES */}
         <div className="absolute w-[800px] h-[800px] rounded-full bg-[#FF5C8A]/15 blur-[160px] top-[-100px] left-[-200px] pointer-events-none" />
         <div className="absolute w-[800px] h-[800px] rounded-full bg-[#E6A100]/15 blur-[160px] bottom-[100px] right-[-200px] pointer-events-none" />
 
         <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 pt-6 pb-4 relative z-10 space-y-6 animate-fade-up">
-
           {/* PAGE TITLE BANNER */}
           <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 bg-white/90 backdrop-blur-md p-6 rounded-3xl border-2 border-[#FFCCE1] shadow-md">
             <div className="flex items-center space-x-3.5">
@@ -78,17 +101,22 @@ export default function SubscriptionPage() {
 
           {/* MASTER ACTIVE PLAN CARD */}
           <div className="bg-gradient-to-br from-white via-[#FFF0F3] to-white border-2 border-[#FFCCE1] shadow-[0_16px_50px_rgba(255,92,138,0.18)] rounded-[36px] overflow-hidden p-6 sm:p-8 space-y-6 relative">
-            
             <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 border-b-2 border-[#FFCCE1] pb-6">
               <div>
                 <div className="flex items-center space-x-2">
                   <span className="bg-[#FFF0F3] text-[#FF2A6D] font-black text-[10px] uppercase px-3 py-1 rounded-full border border-[#FFCCE1]">
                     365-Day Unlimited Protection
                   </span>
-                  <span className={`font-black text-[10px] uppercase px-3 py-1 rounded-full flex items-center space-x-1 ${
-                    isActive ? 'bg-emerald-50 text-emerald-600 border border-emerald-300' : 'bg-amber-50 text-amber-600 border border-amber-300'
-                  }`}>
-                    <span className={`w-2 h-2 rounded-full ${isActive ? 'bg-emerald-500 animate-ping' : 'bg-amber-500'} inline-block mr-1`} />
+                  <span
+                    className={`font-black text-[10px] uppercase px-3 py-1 rounded-full flex items-center space-x-1 ${
+                      isActive
+                        ? 'bg-emerald-50 text-emerald-600 border border-emerald-300'
+                        : 'bg-amber-50 text-amber-600 border border-amber-300'
+                    }`}
+                  >
+                    <span
+                      className={`w-2 h-2 rounded-full ${isActive ? 'bg-emerald-500 animate-ping' : 'bg-amber-500'} inline-block mr-1`}
+                    />
                     {isActive ? 'Active Plan' : 'Pending Activation'}
                   </span>
                 </div>
@@ -98,11 +126,18 @@ export default function SubscriptionPage() {
               </div>
 
               <div className="text-right sm:text-right">
-                <p className="text-xs font-black text-[#684E67] uppercase tracking-wider">Total Paid</p>
-                <p className="text-3xl font-black text-[#FF2A6D] tracking-tight mt-0.5">
-                  ₹28.32 <span className="text-xs font-bold text-[#684E67]">/ year</span>
+                <p className="text-xs font-black text-[#684E67] uppercase tracking-wider">
+                  Total Paid
                 </p>
-                <p className="text-[10px] font-bold text-[#684E67] mt-0.5">Includes ₹24.00 Base + 18% GST (₹4.32)</p>
+                <p className="text-3xl font-black text-[#FF2A6D] tracking-tight mt-0.5">
+                  ₹{totalAmount.toFixed(2)}{' '}
+                  <span className="text-xs font-bold text-[#684E67]">/ year</span>
+                </p>
+                <p className="text-[10px] font-bold text-[#684E67] mt-0.5">
+                  {gstRate === 0
+                    ? `Includes ₹${basePrice.toFixed(2)} Base (0% GST)`
+                    : `Includes ₹${basePrice.toFixed(2)} Base + ${gstRate}% GST (₹${gstAmount.toFixed(2)})`}
+                </p>
               </div>
             </div>
 
@@ -149,7 +184,9 @@ export default function SubscriptionPage() {
 
             {/* INCLUDED FEATURES SUMMARY LIST */}
             <div className="space-y-3 pt-2">
-              <h3 className="font-black text-sm uppercase tracking-wider text-[#FF2A6D]">Included Plan Features & Benefits</h3>
+              <h3 className="font-black text-sm uppercase tracking-wider text-[#FF2A6D]">
+                Included Plan Features & Benefits
+              </h3>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 {[
                   '24/7 Unlimited One-Tap Emergency SOS Broadcast',
@@ -157,20 +194,20 @@ export default function SubscriptionPage() {
                   'Instant Multi-Channel Guardian Alerts (SMS, Email, App)',
                   'Loud Siren Audio Alarm & Device Vibration Drill',
                   '5 Verified Emergency Trusted Guardians Network',
-                  'HQ SuperAdmin Emergency Command Center Monitoring',
+                  'SuperAdmin Emergency Command Center Monitoring',
                 ].map((feature, idx) => (
-                  <div key={idx} className="flex items-center space-x-2.5 bg-white p-3 rounded-xl border border-[#FFCCE1] text-xs font-bold text-[#2A0826]">
+                  <div
+                    key={idx}
+                    className="flex items-center space-x-2.5 bg-white p-3 rounded-xl border border-[#FFCCE1] text-xs font-bold text-[#2A0826]"
+                  >
                     <CheckCircle2 className="w-4 h-4 text-emerald-500 shrink-0" />
                     <span>{feature}</span>
                   </div>
                 ))}
               </div>
             </div>
-
           </div>
-
         </div>
-
       </div>
     </AppLayout>
   );

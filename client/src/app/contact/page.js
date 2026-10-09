@@ -4,10 +4,22 @@ import React, { useState } from 'react';
 import { PublicNavbar } from '../../components/layout/PublicNavbar.js';
 import { Footer } from '../../components/layout/Footer.js';
 import { api } from '../../utils/api.js';
-import { 
-  PhoneCall, Mail, MapPin, Send, ShieldCheck, 
-  Clock, User, MessageSquare, CheckCircle2, Phone, 
-  Sparkles, Shield, HeartHandshake, Headphones
+import { settingApi } from '../../redux/api/settingApi.js';
+import {
+  PhoneCall,
+  Mail,
+  MapPin,
+  Send,
+  ShieldCheck,
+  Clock,
+  User,
+  MessageSquare,
+  CheckCircle2,
+  Phone,
+  Sparkles,
+  Shield,
+  HeartHandshake,
+  Headphones,
 } from 'lucide-react';
 import { AnimatedHeading } from '../../components/common/AnimatedHeading.jsx';
 import { MagneticButton } from '../../components/ui/MagneticButton.js';
@@ -18,6 +30,21 @@ export default function ContactSupportPage() {
   const [submitted, setSubmitted] = useState(false);
   const [loading, setLoading] = useState(false);
   const [errorNotice, setErrorNotice] = useState(null);
+  const [supportEmail, setSupportEmail] = useState('support@sakhisuraksha.org');
+
+  React.useEffect(() => {
+    const fetchEmail = async () => {
+      try {
+        const res = await settingApi.fetchSettings(['SUPPORT_EMAIL']);
+        if (res.success && res.data.SUPPORT_EMAIL) {
+          setSupportEmail(res.data.SUPPORT_EMAIL);
+        }
+      } catch (err) {
+        // Fallback to default
+      }
+    };
+    fetchEmail();
+  }, []);
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [phone, setPhone] = useState('');
@@ -54,26 +81,27 @@ export default function ContactSupportPage() {
       <div className="absolute w-[750px] h-[750px] rounded-full bg-[#FFCCE1]/25 blur-[160px] bottom-[60px] right-[-220px] pointer-events-none" />
 
       <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16 space-y-14 relative z-10">
-        
         {/* TOP HERO HEADER */}
         <div className="text-center space-y-4 max-w-3xl mx-auto">
-
-          <AnimatedHeading as="h1" variant="shimmer" className="text-4xl sm:text-6xl font-black tracking-tight leading-tight">
+          <AnimatedHeading
+            as="h1"
+            variant="shimmer"
+            className="text-4xl sm:text-6xl font-black tracking-tight leading-tight"
+          >
             <span className="heading-gradient-hero">We Are </span>
             <span className="heading-highlight-pill">Always Here For You</span>
           </AnimatedHeading>
 
           <p className="text-[#684E67] text-base sm:text-lg font-bold max-w-2xl mx-auto leading-relaxed">
-            Reach out to our safety command team, access 24/7 national emergency helplines, or send us a direct inquiry.
+            Reach out to our safety command team, access 24/7 national emergency helplines, or send
+            us a direct inquiry.
           </p>
         </div>
 
         {/* 2-COLUMN MAIN CONTENT GRID */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-10 max-w-6xl mx-auto items-start">
-          
-          {/* LEFT COLUMN: EMERGENCY HELPLINES & HQ DETAILS */}
+          {/* LEFT COLUMN: EMERGENCY HELPLINES & DETAILS */}
           <div className="space-y-8">
-            
             {/* NATIONAL EMERGENCY HELPLINES CARD */}
             <div className="bg-white/95 backdrop-blur-xl p-8 rounded-3xl space-y-6 border-1.5 border-[#FFCCE1] shadow-[0_10px_35px_rgba(255,92,138,0.12)] relative overflow-hidden">
               {/* ACCENT GLOW STRIP */}
@@ -85,8 +113,12 @@ export default function ContactSupportPage() {
                     <PhoneCall className="w-6 h-6" />
                   </div>
                   <div>
-                    <h3 className="text-xl font-black text-[#2A0826] tracking-tight">Emergency Helplines</h3>
-                    <p className="text-xs text-[#684E67] font-extrabold">Instant Toll-Free Emergency Dispatch</p>
+                    <h3 className="text-xl font-black text-[#2A0826] tracking-tight">
+                      Emergency Helplines
+                    </h3>
+                    <p className="text-xs text-[#684E67] font-extrabold">
+                      Instant Toll-Free Emergency Dispatch
+                    </p>
                   </div>
                 </div>
                 <span className="text-[10px] font-black text-[#FF2A6D] bg-[#FFF0F3] px-3.5 py-1.5 rounded-full border-1.5 border-[#FF5C8A] uppercase tracking-wider shadow-sm animate-pulse">
@@ -98,8 +130,12 @@ export default function ContactSupportPage() {
                 {/* 112 HELPLINE */}
                 <li className="flex justify-between items-center bg-[#FFF0F3]/80 p-4 rounded-2xl border-1.5 border-[#FFCCE1] hover:border-[#FF5C8A] transition-all">
                   <div>
-                    <span className="font-black text-[#2A0826] text-sm block">National Emergency Number</span>
-                    <span className="text-[11px] text-[#684E67] font-bold">Police, Ambulance, Fire Dispatch</span>
+                    <span className="font-black text-[#2A0826] text-sm block">
+                      National Emergency Number
+                    </span>
+                    <span className="text-[11px] text-[#684E67] font-bold">
+                      Police, Ambulance, Fire Dispatch
+                    </span>
                   </div>
                   <a
                     href="tel:112"
@@ -113,8 +149,12 @@ export default function ContactSupportPage() {
                 {/* 1091 HELPLINE */}
                 <li className="flex justify-between items-center bg-[#FFF0F3]/80 p-4 rounded-2xl border-1.5 border-[#FFCCE1] hover:border-[#FF5C8A] transition-all">
                   <div>
-                    <span className="font-black text-[#2A0826] text-sm block">Women Helpline (All India)</span>
-                    <span className="text-[11px] text-[#684E67] font-bold">24/7 National Women Safety Support</span>
+                    <span className="font-black text-[#2A0826] text-sm block">
+                      Women Helpline (All India)
+                    </span>
+                    <span className="text-[11px] text-[#684E67] font-bold">
+                      24/7 National Women Safety Support
+                    </span>
                   </div>
                   <a
                     href="tel:1091"
@@ -128,8 +168,12 @@ export default function ContactSupportPage() {
                 {/* 181 HELPLINE */}
                 <li className="flex justify-between items-center bg-[#FFF0F3]/80 p-4 rounded-2xl border-1.5 border-[#FFCCE1] hover:border-[#FF5C8A] transition-all">
                   <div>
-                    <span className="font-black text-[#2A0826] text-sm block">Domestic Abuse & Violence</span>
-                    <span className="text-[11px] text-[#684E67] font-bold">NCW Women Support Line</span>
+                    <span className="font-black text-[#2A0826] text-sm block">
+                      Domestic Abuse & Violence
+                    </span>
+                    <span className="text-[11px] text-[#684E67] font-bold">
+                      NCW Women Support Line
+                    </span>
                   </div>
                   <a
                     href="tel:181"
@@ -143,8 +187,12 @@ export default function ContactSupportPage() {
                 {/* 100 HELPLINE */}
                 <li className="flex justify-between items-center bg-[#FFF0F3]/80 p-4 rounded-2xl border-1.5 border-[#FFCCE1] hover:border-[#FF5C8A] transition-all">
                   <div>
-                    <span className="font-black text-[#2A0826] text-sm block">Police Control Room</span>
-                    <span className="text-[11px] text-[#684E67] font-bold">Local City Police Dispatch</span>
+                    <span className="font-black text-[#2A0826] text-sm block">
+                      Police Control Room
+                    </span>
+                    <span className="text-[11px] text-[#684E67] font-bold">
+                      Local City Police Dispatch
+                    </span>
                   </div>
                   <a
                     href="tel:100"
@@ -157,26 +205,33 @@ export default function ContactSupportPage() {
               </ul>
             </div>
 
-            {/* HQ COMMAND CENTER CARD */}
+            {/* COMMAND CENTER CARD */}
             <div className="bg-white/95 backdrop-blur-xl p-8 rounded-3xl space-y-5 border-1.5 border-[#FFCCE1] shadow-[0_10px_35px_rgba(255,92,138,0.10)] relative overflow-hidden">
               <div className="flex items-center space-x-3.5">
                 <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-[#FFF0F3] to-[#FFCCE1] text-[#FF2A6D] flex items-center justify-center border-1.5 border-[#FF5C8A] shadow-sm">
                   <MapPin className="w-6 h-6" />
                 </div>
                 <div>
-                  <h3 className="text-xl font-black text-[#2A0826]">Sakhi Suraksha SOS HQ Command</h3>
-                  <p className="text-xs text-[#684E67] font-bold">Veagle Safety Network Operations</p>
+                  <h3 className="text-xl font-black text-[#2A0826]">Sakhi Suraksha SOS Command</h3>
+                  <p className="text-xs text-[#684E67] font-bold">
+                    Veagle Safety Network Operations
+                  </p>
                 </div>
               </div>
 
               <p className="text-xs text-[#684E67] leading-relaxed font-bold">
-                Veagle Safety Network Operations HQ, Pune & Mumbai Data Centers, Maharashtra, India.
+                Veagle Safety Network Operations, Pune & Mumbai Data Centers, Maharashtra, India.
               </p>
 
               <div className="pt-3 border-t-1.5 border-[#FFCCE1] space-y-2.5 text-xs font-extrabold">
                 <div className="flex items-center space-x-2.5 text-[#2A0826]">
                   <Mail className="w-4 h-4 text-[#FF5C8A] shrink-0" />
-                  <span>Email: <a href="mailto:support@sakhisuraksha.org" className="text-[#FF2A6D] underline">support@sakhisuraksha.org</a></span>
+                  <span>
+                    Email:{' '}
+                    <a href={`mailto:${supportEmail}`} className="text-[#FF2A6D] underline">
+                      {supportEmail}
+                    </a>
+                  </span>
                 </div>
                 <div className="flex items-center space-x-2.5 text-[#2A0826]">
                   <Clock className="w-4 h-4 text-[#FF5C8A] shrink-0" />
@@ -184,7 +239,6 @@ export default function ContactSupportPage() {
                 </div>
               </div>
             </div>
-
           </div>
 
           {/* RIGHT COLUMN: CONTACT FORM */}
@@ -193,9 +247,10 @@ export default function ContactSupportPage() {
             <div className="absolute top-0 left-0 right-0 h-1.5 bg-gradient-to-r from-[#FF5C8A] via-[#FF2A6D] to-[#E01A4F]" />
 
             <div className="space-y-1.5">
-              <h3 className="text-2xl font-black text-[#2A0826]">Send Message to Safety HQ</h3>
+              <h3 className="text-2xl font-black text-[#2A0826]">Send Message to Safety</h3>
               <p className="text-xs text-[#684E67] font-bold">
-                Fill out the details below and our dedicated safety command team will respond shortly.
+                Fill out the details below and our dedicated safety command team will respond
+                shortly.
               </p>
             </div>
 
@@ -206,7 +261,9 @@ export default function ContactSupportPage() {
                 </div>
                 <h4 className="text-xl font-black text-[#2A0826]">Inquiry Sent Successfully!</h4>
                 <p className="text-xs text-[#684E67] font-bold max-w-sm mx-auto leading-relaxed">
-                  Thank you for contacting us, <span className="font-black text-[#FF2A6D]">{name || 'valued user'}</span>. Our safety team will review your message and reach back within 2 hours.
+                  Thank you for contacting us,{' '}
+                  <span className="font-black text-[#FF2A6D]">{name || 'valued user'}</span>. Our
+                  safety team will review your message and reach back within 2 hours.
                 </p>
                 <button
                   type="button"
@@ -218,7 +275,6 @@ export default function ContactSupportPage() {
               </div>
             ) : (
               <form onSubmit={handleSubmit} className="space-y-5 text-xs">
-                
                 <div>
                   <label className="block text-[#2A0826] font-black mb-1.5">Your Full Name *</label>
                   <div className="relative">
@@ -236,7 +292,9 @@ export default function ContactSupportPage() {
 
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div>
-                    <label className="block text-[#2A0826] font-black mb-1.5">Email Address *</label>
+                    <label className="block text-[#2A0826] font-black mb-1.5">
+                      Email Address *
+                    </label>
                     <div className="relative">
                       <Mail className="w-4 h-4 text-[#FF5C8A] absolute left-3.5 top-1/2 -translate-y-1/2" />
                       <input
@@ -251,7 +309,9 @@ export default function ContactSupportPage() {
                   </div>
 
                   <div>
-                    <label className="block text-[#2A0826] font-black mb-1.5">Phone Number (Optional)</label>
+                    <label className="block text-[#2A0826] font-black mb-1.5">
+                      Phone Number (Optional)
+                    </label>
                     <div className="relative">
                       <Phone className="w-4 h-4 text-[#FF5C8A] absolute left-3.5 top-1/2 -translate-y-1/2" />
                       <input
@@ -274,7 +334,9 @@ export default function ContactSupportPage() {
                   >
                     <option value="General Safety Inquiry">General Safety Inquiry</option>
                     <option value="Technical Support">Technical Support / App Assistance</option>
-                    <option value="Billing / Plan Assistance">Billing / Plan Formalities Assistance</option>
+                    <option value="Billing / Plan Assistance">
+                      Billing / Plan Formalities Assistance
+                    </option>
                     <option value="Emergency Escalation">Emergency Escalation Feedback</option>
                   </select>
                 </div>
@@ -299,16 +361,13 @@ export default function ContactSupportPage() {
                     type="submit"
                     className="btn-3d-rose-pop px-9 py-4 rounded-full text-xs font-black uppercase tracking-wider flex items-center justify-center space-x-3 whitespace-nowrap"
                   >
-                    <span>SEND INQUIRY TO SAFETY HQ</span>
+                    <span>SEND INQUIRY TO SAFETY</span>
                     <Send className="w-4 h-4 shrink-0" />
                   </button>
                 </div>
-
               </form>
             )}
-
           </div>
-
         </div>
       </section>
       <Footer />

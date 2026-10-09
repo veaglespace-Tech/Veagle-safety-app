@@ -2,9 +2,10 @@
 
 import React, { useState, useEffect } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
-import { resolveEmergencySos, toggleAlarm } from '../../redux/slices/sosSlice.js';
+import { resolveEmergencySos, toggleAlarm, clearSosState, checkActiveSos } from '../../redux/slices/sosSlice.js';
 import { startEmergencySiren, stopEmergencySiren } from '../../utils/sirenAudio.js';
 import { LiveLocationMap } from '../../components/location/DynamicLiveLocationMap.js';
+import { useBrowserLocation } from '../../hooks/useBrowserLocation.js';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import {
@@ -25,7 +26,7 @@ import {
 export default function ActiveSOSLivePage() {
   const dispatch = useDispatch();
   const { activeSession, isAlarmPlaying } = useSelector((state) => state?.sos || {});
-  const { latitude = 18.5204, longitude = 73.8567, accuracy = 10 } = useSelector((state) => state?.location || {});
+  const { latitude, longitude, accuracy, status, lastUpdated } = useSelector((state) => state?.location || {});
   const { user } = useSelector((state) => state?.auth || {});
   const [showConfirmSafeModal, setShowConfirmSafeModal] = useState(false);
   const [copied, setCopied] = useState(false);
@@ -44,10 +45,8 @@ export default function ActiveSOSLivePage() {
       return;
     }
 
-    // Auto-start siren audio on active emergency session
-    try {
-      startEmergencySiren();
-    } catch (e) {}
+    // DO NOT auto-start siren audio on active emergency session for the victim.
+    // It is dangerous and could alert an attacker.
 
     const startTime = new Date(activeSession.startedAt).getTime();
     const interval = setInterval(() => {
@@ -60,8 +59,62 @@ export default function ActiveSOSLivePage() {
     };
   }, [activeSession, router, user]);
 
+  const { startLocationTracking, stopLocationTracking } = useBrowserLocation(activeSession?.id);
+
+  useEffect(() => {
+    if (activeSession) {
+      startLocationTracking();
+    }
+  }, [activeSession]);
+
+  // Listen for admin-initiated SOS resolve via Socket.IO
+  useEffect(() => {
+    if (!activeSession) return;
+
+    let socket = null;
+    const connectSocket = async () => {
+      try {
+        const { io } = await import('socket.io-client');
+        const { SERVER_URL } = await import('../../utils/api.js');
+        socket = io(SERVER_URL, {
+          path: '/api/socket.io',
+          transports: ['websocket', 'polling'],
+          reconnectionAttempts: 3,
+        });
+
+        socket.on('connect', () => {
+          if (user) {
+            const cleanPhone = user.phone ? user.phone.replace(/\D/g, '') : null;
+            socket.emit('register-user', {
+              email: user.email?.trim().toLowerCase(),
+              phone: cleanPhone,
+              role: user.role,
+            });
+          }
+        });
+
+        socket.on('SOS_ALARM_STOP', () => {
+          console.log('[ActiveSOS] Admin resolved SOS — clearing session');
+          stopEmergencySiren();
+          stopLocationTracking();
+          dispatch(clearSosState());
+        });
+      } catch (e) {
+        console.warn('[ActiveSOS] Socket connect error:', e.message);
+      }
+    };
+
+    connectSocket();
+
+    return () => {
+      if (socket) socket.disconnect();
+    };
+  }, [activeSession?.id, user]);
+
   const formatElapsed = (secs) => {
-    const m = Math.floor(secs / 60).toString().padStart(2, '0');
+    const m = Math.floor(secs / 60)
+      .toString()
+      .padStart(2, '0');
     const s = (secs % 60).toString().padStart(2, '0');
     return `${m}:${s}`;
   };
@@ -70,6 +123,7 @@ export default function ActiveSOSLivePage() {
     if (isResolving) return;
     setIsResolving(true);
     stopEmergencySiren();
+    stopLocationTracking();
     try {
       console.log('[handleMarkSafe] Resolving SOS session:', activeSession?.id);
       await dispatch(resolveEmergencySos(activeSession?.id)).unwrap();
@@ -94,11 +148,13 @@ export default function ActiveSOSLivePage() {
   };
 
   const [mounted, setMounted] = useState(false);
-  useEffect(() => { setMounted(true); }, []);
+  useEffect(() => {
+    setMounted(true);
+  }, []);
 
   if (!activeSession) return null;
 
-  const firstName = mounted && (user?.fullName || user?.name) ? (user.fullName || user.name).split(' ')[0] : 'User';
+  const firstName = (user?.fullName || user?.name) ? (user.fullName || user.name).split(' ')[0] : 'User';
 
   return (
     <div className="min-h-screen bg-tichi-emergency/5">
@@ -125,149 +181,164 @@ export default function ActiveSOSLivePage() {
         </div>
       </div>
 
-      <div className="max-w-xl mx-auto px-4 py-4 space-y-4 pb-4 lg:max-w-2xl">
-        <div className="rounded-2xl overflow-hidden shadow-plum-lg border-2 border-tichi-emergency/30 h-64">
-          <LiveLocationMap
-            lat={latitude || 28.6139}
-            lng={longitude || 77.2090}
-            accuracy={accuracy || 12}
-            userName={`${firstName} (EMERGENCY)`}
-            isEmergency={true}
-          />
+      <div className="max-w-xl mx-auto px-4 py-4 pb-4 lg:max-w-6xl lg:grid lg:grid-cols-12 lg:gap-8 lg:py-8">
+        
+        {/* LEFT COLUMN: MAP (Takes more space on desktop) */}
+        <div className="lg:col-span-7 xl:col-span-8 mb-4 lg:mb-0">
+          <div className="rounded-2xl overflow-hidden shadow-plum-lg border-2 border-tichi-emergency/30 h-64 lg:h-[600px] w-full">
+            <LiveLocationMap
+              lat={latitude || 28.6139}
+              lng={longitude || 77.209}
+              accuracy={accuracy || 12}
+              userName={`${firstName} (EMERGENCY)`}
+              isEmergency={true}
+              locationHistory={activeSession?.locations ? [...activeSession.locations].reverse() : []}
+            />
+          </div>
         </div>
 
-        <div className="grid grid-cols-3 gap-2.5">
-          {[
-            { icon: MapPin, label: 'GPS Accuracy', value: `±${accuracy || '--'}m` },
-            { icon: Users, label: 'Notified', value: '3 Contacts' },
-            { icon: Clock, label: 'Duration', value: formatElapsed(elapsed) },
-          ].map((stat) => {
-            const Icon = stat.icon;
-            return (
-              <div key={stat.label} className="bg-white border border-blush-border rounded-card p-3 text-center shadow-card">
-                <Icon className="w-4 h-4 text-plum mx-auto mb-1" />
-                <p className="text-xs font-extrabold text-tichi-text">{stat.value}</p>
-                <p className="text-[10px] text-tichi-muted">{stat.label}</p>
-              </div>
-            );
-          })}
-        </div>
-
-        <div className="bg-white border border-blush-border rounded-card p-4 shadow-card">
-          <p className="text-xs font-bold text-tichi-text mb-1.5">Live Tracking Link</p>
-          <div className="flex items-center space-x-2 mb-3">
-            <div className="flex-1 bg-blush-subtle border border-blush-border rounded-xl px-3 py-2 min-w-0">
-              <p className="text-[11px] text-tichi-muted font-mono truncate">{activeSession.trackingUrl}</p>
-            </div>
-            <button
-              onClick={copyTrackingLink}
-              className={`flex items-center space-x-1.5 px-3 py-2 rounded-xl text-xs font-bold transition-colors shrink-0 ${
-                copied ? 'bg-tichi-success text-white' : 'bg-plum text-white hover:bg-plum-dark'
-              }`}
-            >
-              <Copy className="w-3.5 h-3.5" />
-              <span>{copied ? 'Copied!' : 'Copy'}</span>
-            </button>
+        {/* RIGHT COLUMN: CONTROLS & STATS */}
+        <div className="lg:col-span-5 xl:col-span-4 space-y-4">
+          <div className="grid grid-cols-3 gap-2.5">
+            {[
+              { icon: MapPin, label: 'GPS Accuracy', value: `±${accuracy || '--'}m` },
+              { icon: Users, label: 'Notified', value: '3 Contacts' },
+              { icon: Clock, label: 'Duration', value: formatElapsed(elapsed) },
+            ].map((stat) => {
+              const Icon = stat.icon;
+              return (
+                <div
+                  key={stat.label}
+                  className="bg-white border border-blush-border rounded-card p-3 text-center shadow-card flex flex-col items-center justify-center"
+                >
+                  <Icon className="w-4 h-4 text-plum mb-1" />
+                  <p className="text-xs font-extrabold text-tichi-text">{stat.value}</p>
+                  <p className="text-[10px] text-tichi-muted">{stat.label}</p>
+                </div>
+              );
+            })}
           </div>
 
-          {/* MAIN WHATSAPP SOS SHARE BUTTON */}
-          {(() => {
-            const victimName = user?.fullName || 'Sakhi Member';
-            const victimPhone = user?.phone || '';
-            const gmapUrl = `https://www.google.com/maps?q=${latitude},${longitude}`;
-            const messageText = `🚨 SAKHI EMERGENCY SOS ALERT!\n\nVictim: ${victimName}\nPhone: ${victimPhone}\n\n📍 GPS Coordinates:\nLat: ${latitude}, Lng: ${longitude}\n\n👉 Live Location Tracking:\n${activeSession?.trackingUrl || ''}\n\n🌐 Google Maps:\n${gmapUrl}`;
-            const generalWhatsappUrl = activeSession?.whatsappShareUrl || `https://api.whatsapp.com/send?text=${encodeURIComponent(messageText)}`;
-
-            return (
-              <div className="space-y-3">
-                <a
-                  href={generalWhatsappUrl}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="w-full bg-[#25D366] hover:bg-[#1EBE57] text-white font-extrabold py-3.5 px-4 rounded-xl shadow-md transition-all flex items-center justify-center space-x-2.5 text-xs sm:text-sm active:scale-[0.98] cursor-pointer"
-                >
-                  <MessageSquare className="w-4 h-4 fill-white text-[#25D366]" />
-                  <span>SHARE SOS DETAILS ON WHATSAPP</span>
-                  <Share2 className="w-4 h-4 ml-auto" />
-                </a>
-
-                {activeSession?.whatsappAlerts && activeSession.whatsappAlerts.length > 0 && (
-                  <div className="pt-1">
-                    <p className="text-[10px] font-black text-tichi-muted uppercase tracking-wider mb-1.5">
-                      Direct WhatsApp to Guardians:
-                    </p>
-                    <div className="flex flex-wrap gap-2">
-                      {activeSession.whatsappAlerts.map((wa, idx) => (
-                        <a
-                          key={idx}
-                          href={wa.whatsappUrl}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="bg-[#25D366]/10 hover:bg-[#25D366]/20 border border-[#25D366]/40 text-[#128C7E] px-2.5 py-1.5 rounded-lg text-[11px] font-extrabold flex items-center space-x-1 transition-all"
-                        >
-                          <MessageSquare className="w-3 h-3 text-[#25D366]" />
-                          <span>Send to {wa.contactName}</span>
-                        </a>
-                      ))}
-                    </div>
-                  </div>
-                )}
+          <div className="bg-white border border-blush-border rounded-card p-4 shadow-card">
+            <p className="text-xs font-bold text-tichi-text mb-1.5">Live Tracking Link</p>
+            <div className="flex items-center space-x-2 mb-3">
+              <div className="flex-1 bg-blush-subtle border border-blush-border rounded-xl px-3 py-2 min-w-0">
+                <p className="text-[11px] text-tichi-muted font-mono truncate">
+                  {activeSession.trackingUrl}
+                </p>
               </div>
-            );
-          })()}
-        </div>
-
-        <div className="grid grid-cols-2 gap-3">
-          <a
-            href="tel:112"
-            className="bg-tichi-emergency text-white font-extrabold p-4 rounded-card text-center shadow-sos-glow flex flex-col items-center justify-center space-y-2 hover:brightness-105 active:scale-95 transition-all"
-          >
-            <PhoneCall className="w-7 h-7" />
-            <div>
-              <span className="text-base font-black block">CALL 112</span>
-              <span className="text-[10px] text-white/80">National Emergency</span>
+              <button
+                onClick={copyTrackingLink}
+                className={`flex items-center space-x-1.5 px-3 py-2 rounded-xl text-xs font-bold transition-colors shrink-0 ${
+                  copied ? 'bg-tichi-success text-white' : 'bg-plum text-white hover:bg-plum-dark'
+                }`}
+              >
+                <Copy className="w-3.5 h-3.5" />
+                <span>{copied ? 'Copied!' : 'Copy'}</span>
+              </button>
             </div>
-          </a>
 
-          <Link
-            href="/contacts"
-            className="bg-plum text-white font-extrabold p-4 rounded-card text-center shadow-plum-lg flex flex-col items-center justify-center space-y-2 hover:bg-plum-dark active:scale-95 transition-all"
-          >
-            <Users className="w-7 h-7 text-rose" />
-            <div>
-              <span className="text-base font-black block">CALL CONTACT</span>
-              <span className="text-[10px] text-rose/80">Trusted Network</span>
-            </div>
-          </Link>
-        </div>
+            {/* MAIN WHATSAPP SOS SHARE BUTTON */}
+            {(() => {
+              const victimName = user?.fullName || 'Sakhi Member';
+              const victimPhone = user?.phone || '';
+              const gmapUrl = `https://www.google.com/maps?q=${latitude},${longitude}`;
+              const messageText = `🚨 SAKHI EMERGENCY SOS ALERT!\n\nVictim: ${victimName}\nPhone: ${victimPhone}\n\n📍 GPS Coordinates:\nLat: ${latitude}, Lng: ${longitude}\n\n👉 Live Location Tracking:\n${activeSession?.trackingUrl || ''}\n\n🌐 Google Maps:\n${gmapUrl}`;
+              const generalWhatsappUrl =
+                activeSession?.whatsappShareUrl ||
+                `https://api.whatsapp.com/send?text=${encodeURIComponent(messageText)}`;
 
-        <div className="grid grid-cols-2 gap-3">
-          <button
-            onClick={() => {
-              if (isAlarmPlaying) {
-                stopEmergencySiren();
-              } else {
-                startEmergencySiren();
-              }
-              dispatch(toggleAlarm());
-            }}
-            className={`font-bold p-4 rounded-card flex flex-col items-center justify-center space-y-1.5 border transition-all active:scale-95 cursor-pointer ${
-              isAlarmPlaying
-                ? 'bg-amber-500 text-white border-amber-600 shadow-lg animate-pulse'
-                : 'bg-white text-plum border-blush-border hover:bg-plum-50 hover:border-plum/30 shadow-card'
-            }`}
-          >
-            {isAlarmPlaying ? <BellOff className="w-5 h-5" /> : <Bell className="w-5 h-5" />}
-            <span className="text-xs">{isAlarmPlaying ? 'STOP ALARM' : 'SOUND ALARM'}</span>
-          </button>
+              return (
+                <div className="space-y-3">
+                  <a
+                    href={generalWhatsappUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="w-full bg-[#25D366] hover:bg-[#1EBE57] text-white font-extrabold py-3.5 px-4 rounded-xl shadow-md transition-all flex items-center justify-center space-x-2.5 text-xs sm:text-sm active:scale-[0.98] cursor-pointer"
+                  >
+                    <MessageSquare className="w-4 h-4 fill-white text-[#25D366]" />
+                    <span>SHARE SOS DETAILS</span>
+                    <Share2 className="w-4 h-4 ml-auto" />
+                  </a>
 
-          <button
-            onClick={() => setShowConfirmSafeModal(true)}
-            className="bg-tichi-success text-white font-bold p-4 rounded-card flex flex-col items-center justify-center space-y-1.5 shadow-lg hover:brightness-105 active:scale-95 transition-all"
-          >
-            <ShieldCheck className="w-5 h-5" />
-            <span className="text-xs">I'M SAFE NOW</span>
-          </button>
+                  {activeSession?.whatsappAlerts && activeSession.whatsappAlerts.length > 0 && (
+                    <div className="pt-1">
+                      <p className="text-[10px] font-black text-tichi-muted uppercase tracking-wider mb-1.5">
+                        Direct WhatsApp to Guardians:
+                      </p>
+                      <div className="flex flex-wrap gap-2">
+                        {activeSession.whatsappAlerts.map((wa, idx) => (
+                          <a
+                            key={idx}
+                            href={wa.whatsappUrl}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="bg-[#25D366]/10 hover:bg-[#25D366]/20 border border-[#25D366]/40 text-[#128C7E] px-2.5 py-1.5 rounded-lg text-[11px] font-extrabold flex items-center space-x-1 transition-all"
+                          >
+                            <MessageSquare className="w-3 h-3 text-[#25D366]" />
+                            <span>{wa.contactName}</span>
+                          </a>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              );
+            })()}
+          </div>
+
+          <div className="grid grid-cols-2 gap-3">
+            <a
+              href="tel:112"
+              className="bg-tichi-emergency text-white font-extrabold p-4 rounded-card text-center shadow-sos-glow flex flex-col items-center justify-center space-y-2 hover:brightness-105 active:scale-95 transition-all"
+            >
+              <PhoneCall className="w-7 h-7" />
+              <div>
+                <span className="text-base font-black block">CALL 112</span>
+                <span className="text-[10px] text-white/80">National Emergency</span>
+              </div>
+            </a>
+
+            <Link
+              href="/contacts"
+              className="bg-plum text-white font-extrabold p-4 rounded-card text-center shadow-plum-lg flex flex-col items-center justify-center space-y-2 hover:bg-plum-dark active:scale-95 transition-all"
+            >
+              <Users className="w-7 h-7 text-rose" />
+              <div>
+                <span className="text-base font-black block">CONTACTS</span>
+                <span className="text-[10px] text-rose/80">Trusted Network</span>
+              </div>
+            </Link>
+          </div>
+
+          <div className="grid grid-cols-2 gap-3">
+            <button
+              onClick={() => {
+                if (isAlarmPlaying) {
+                  stopEmergencySiren();
+                } else {
+                  startEmergencySiren();
+                }
+                dispatch(toggleAlarm());
+              }}
+              className={`font-bold p-4 rounded-card flex flex-col items-center justify-center space-y-1.5 border transition-all active:scale-95 cursor-pointer ${
+                isAlarmPlaying
+                  ? 'bg-amber-500 text-white border-amber-600 shadow-lg animate-pulse'
+                  : 'bg-white text-plum border-blush-border hover:bg-plum-50 hover:border-plum/30 shadow-card'
+              }`}
+            >
+              {isAlarmPlaying ? <BellOff className="w-5 h-5" /> : <Bell className="w-5 h-5" />}
+              <span className="text-xs">{isAlarmPlaying ? 'STOP ALARM' : 'SOUND ALARM'}</span>
+            </button>
+
+            <button
+              onClick={() => setShowConfirmSafeModal(true)}
+              className="bg-tichi-success text-white font-bold p-4 rounded-card flex flex-col items-center justify-center space-y-1.5 shadow-lg hover:brightness-105 active:scale-95 transition-all"
+            >
+              <ShieldCheck className="w-5 h-5" />
+              <span className="text-xs">I'M SAFE NOW</span>
+            </button>
+          </div>
         </div>
       </div>
 
@@ -276,7 +347,10 @@ export default function ActiveSOSLivePage() {
           <div className="bg-white rounded-2xl max-w-sm w-full shadow-modal overflow-hidden animate-scale-in">
             <div className="flex items-center justify-between px-5 py-4 border-b border-blush-border">
               <h3 className="font-extrabold text-base text-tichi-text">Confirm You're Safe</h3>
-              <button onClick={() => setShowConfirmSafeModal(false)} className="w-8 h-8 rounded-xl flex items-center justify-center hover:bg-blush-subtle text-tichi-muted hover:text-plum transition-colors">
+              <button
+                onClick={() => setShowConfirmSafeModal(false)}
+                className="w-8 h-8 rounded-xl flex items-center justify-center hover:bg-blush-subtle text-tichi-muted hover:text-plum transition-colors"
+              >
                 <X className="w-4 h-4" />
               </button>
             </div>
@@ -289,7 +363,8 @@ export default function ActiveSOSLivePage() {
               <div className="text-center">
                 <p className="font-bold text-sm text-tichi-text">Are you completely safe?</p>
                 <p className="text-xs text-tichi-muted mt-2 leading-relaxed">
-                  This will stop live location tracking, deactivate the emergency link, and send a "safe" notification to all your trusted contacts.
+                  This will stop live location tracking, deactivate the emergency link, and send a
+                  "safe" notification to all your trusted contacts.
                 </p>
               </div>
 

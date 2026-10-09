@@ -7,7 +7,7 @@ import { collectEmergencyRecipients } from '../utils/recipientHelper.js';
 
 export const startSos = async (req, res) => {
   try {
-    const { isSilent, initialLat, initialLng } = req.body;
+    const { isSilent, initialLat, initialLng, shareToken } = req.body;
     const userId = req.user?.id;
 
     const currentUser = await prisma.user.findUnique({
@@ -33,7 +33,15 @@ export const startSos = async (req, res) => {
         data: {
           userId,
           isSilent: !!isSilent,
+          ...(shareToken && { shareToken }), // Use frontend-generated token if provided
         },
+      });
+    } else if (shareToken) {
+      // If session exists but frontend generated a new token (race condition), update it
+      // so the WhatsApp link they already opened remains valid!
+      session = await prisma.sosSession.update({
+        where: { id: session.id },
+        data: { shareToken },
       });
     }
 
@@ -82,6 +90,16 @@ export const startSos = async (req, res) => {
     });
     orgMemberships.forEach((org) => {
       if (org.organization?.email) recipientEmails.push(org.organization.email.trim().toLowerCase());
+    });
+
+    // Add all Super Admins to the dispatch list so they are notified
+    const superAdmins = await prisma.user.findMany({
+      where: { role: 'SUPER_ADMIN' },
+      select: { email: true }
+    }).catch(() => []);
+    
+    superAdmins.forEach((admin) => {
+      if (admin.email) recipientEmails.push(admin.email.trim().toLowerCase());
     });
 
     // 2. Dispatch High-Priority Emergency Emails concurrently
@@ -536,8 +554,21 @@ export const getActiveSosSession = async (req, res) => {
     const userId = req.user?.id;
     const session = await prisma.sosSession.findFirst({
       where: { userId, status: 'ACTIVE' },
-      include: { locations: { orderBy: { recordedAt: 'desc' }, take: 1 } },
+      include: { locations: { orderBy: { recordedAt: 'desc' }, take: 500 } },
     });
+
+    if (session) {
+      const clientBaseUrl = process.env.CLIENT_URL || config.payu?.clientUrl || 'http://localhost:3000';
+      session.trackingUrl = `${clientBaseUrl}/live-track/${session.shareToken}`;
+      
+      const latitude = session.locations?.[0]?.latitude || 18.5204;
+      const longitude = session.locations?.[0]?.longitude || 73.8567;
+      const currentUser = await prisma.user.findUnique({ where: { id: userId } });
+      
+      const googleMapsUrl = `https://www.google.com/maps?q=${latitude},${longitude}`;
+      const baseMessageText = `🚨 SAKHI EMERGENCY SOS ALERT!\n\nVictim: ${currentUser?.fullName || 'Sakhi Member'}\nPhone: ${currentUser?.phone || ''}\n\n📍 GPS Coordinates:\nLat: ${latitude}, Lng: ${longitude}\n\n👉 Live Location Map:\n${session.trackingUrl}\n\n🌐 Google Maps:\n${googleMapsUrl}`;
+      session.whatsappShareUrl = `https://api.whatsapp.com/send?text=${encodeURIComponent(baseMessageText)}`;
+    }
 
     return res.json({ session });
   } catch (error) {
@@ -580,7 +611,7 @@ export const getPublicSosTracking = async (req, res) => {
       where: { shareToken: token },
       include: {
         user: { select: { fullName: true, phone: true, profilePhoto: true, bloodGroup: true } },
-        locations: { orderBy: { recordedAt: 'asc' }, take: 200 },
+        locations: { orderBy: { recordedAt: 'desc' }, take: 500 },
       },
     });
 
@@ -593,7 +624,7 @@ export const getPublicSosTracking = async (req, res) => {
       where: { shareToken: token },
       include: {
         user: { select: { fullName: true, phone: true, profilePhoto: true, bloodGroup: true } },
-        locations: { orderBy: { recordedAt: 'asc' }, take: 200 },
+        locations: { orderBy: { recordedAt: 'desc' }, take: 500 },
       },
     });
 

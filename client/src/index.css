@@ -17,8 +17,8 @@
 
   body {
     font-family: 'Manrope', 'Inter', system-ui, sans-serif;
-    background-color: #FFF0F3;
-    color: #2A0826;
+    background-color: #fff0f3;
+    color: #2a0826;
     line-height: 1.5;
     user-select: none;
     -webkit-font-smoothing: antialiased;
@@ -26,17 +26,19 @@
   }
 
   *:focus-visible {
-    outline: 2px solid #FF5C8A;
+    outline: 2px solid #ff5c8a;
     outline-offset: 3px;
     border-radius: 10px;
   }
 
   ::selection {
-    background: #FF5C8A;
-    color: #FFFFFF;
+    background: #ff5c8a;
+    color: #ffffff;
   }
 
-  input, textarea, select {
+  input,
+  textarea,
+  select {
     user-select: auto;
     -webkit-user-select: auto;
   }
@@ -48,27 +50,33 @@
 
 /* VIBRANT DYNAMIC EMERGENCY SOS BUTTON GRADIENT */
 .sos-btn-gradient {
-  background: linear-gradient(135deg, #FF2A6D 0%, #FF5C8A 50%, #D91B55 100%) !important;
-  color: #FFFFFF !important;
-  box-shadow: 0 0 35px 8px rgba(255, 42, 109, 0.40), 0 4px 20px -2px rgba(255, 42, 109, 0.50);
+  background: linear-gradient(135deg, #ff2a6d 0%, #ff5c8a 50%, #d91b55 100%) !important;
+  color: #ffffff !important;
+  box-shadow:
+    0 0 35px 8px rgba(255, 42, 109, 0.4),
+    0 4px 20px -2px rgba(255, 42, 109, 0.5);
 }
 
 /* 1. MODERN ANTIQUE BABY PINK BUTTONS */
 .btn-baby-pink {
-  background: linear-gradient(135deg, #FF5C8A 0%, #FF7597 40%, #FF3B70 80%, #E6A100 100%);
+  background: linear-gradient(135deg, #ff5c8a 0%, #ff7597 40%, #ff3b70 80%, #e6a100 100%);
   background-size: 220% auto;
-  color: #FFFFFF;
+  color: #ffffff;
   font-weight: 900;
   border-radius: 18px;
   border: 1px solid rgba(255, 255, 255, 0.45);
-  box-shadow: inset 0 1px 1px rgba(255, 255, 255, 0.6), 0 8px 25px -4px rgba(255, 92, 138, 0.45);
+  box-shadow:
+    inset 0 1px 1px rgba(255, 255, 255, 0.6),
+    0 8px 25px -4px rgba(255, 92, 138, 0.45);
   transition: all 0.35s cubic-bezier(0.34, 1.56, 0.64, 1);
   letter-spacing: 0.05em;
 }
 .btn-baby-pink:hover {
   background-position: right center;
   transform: translateY(-2.5px) scale(1.02);
-  box-shadow: inset 0 1px 2px rgba(255, 255, 255, 0.8), 0 14px 35px -4px rgba(255, 92, 138, 0.60);
+  box-shadow:
+    inset 0 1px 2px rgba(255, 255, 255, 0.8),
+    0 14px 35px -4px rgba(255, 92, 138, 0.6);
   border-color: rgba(255, 255, 255, 0.8);
 }
 .btn-baby-pink:active {
@@ -80,20 +88,24 @@
   background: rgba(255, 255, 255, 0.95);
   backdrop-filter: blur(12px);
   -webkit-backdrop-filter: blur(12px);
-  color: #2A0826;
+  color: #2a0826;
   font-weight: 800;
-  border: 1.5px solid #FFCCE1;
+  border: 1.5px solid #ffcce1;
   border-radius: 18px;
-  box-shadow: inset 0 1px 1px rgba(255, 255, 255, 0.8), 0 4px 18px -3px rgba(42, 8, 38, 0.06);
+  box-shadow:
+    inset 0 1px 1px rgba(255, 255, 255, 0.8),
+    0 4px 18px -3px rgba(42, 8, 38, 0.06);
   transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
   letter-spacing: 0.03em;
 }
 .btn-baby-pink-outline:hover {
-  border-color: #FF5C8A;
-  color: #FF5C8A;
-  background: #FFF8FA;
+  border-color: #ff5c8a;
+  color: #ff5c8a;
+  background: #fff8fa;
   transform: translateY(-2px);
-  box-shadow: inset 0 1px 2px rgba(255, 255, 255, 1), 0 10px 28px -4px rgba(255, 92, 138, 0.22);
+  box-shadow:
+    inset 0 1px 2px rgba(255, 255, 255, 1),
+    0 10px 28px -4px rgba(255, 92, 138, 0.22);
 }
 
 /* 2. MODERN ANTIQUE PINK CARDS */
@@ -101,37 +113,66 @@
   background: rgba(255, 255, 255, 0.96);
   backdrop-filter: blur(16px);
   -webkit-backdrop-filter: blur(16px);
-  border: 1.5px solid #FFCCE1;
+  border: 1.5px solid #ffcce1;
   border-radius: 24px;
-  box-shadow: 0 8px 30px -4px rgba(255, 92, 138, 0.12), inset 0 1px 0 rgba(255, 255, 255, 0.9);
+  box-shadow:
+    0 8px 30px -4px rgba(255, 92, 138, 0.12),
+    inset 0 1px 0 rgba(255, 255, 255, 0.9);
   transition: all 0.35s ease;
 }
 .card-antique-pink:hover {
-  border-color: #FF5C8A;
-  box-shadow: 0 14px 40px -4px rgba(255, 92, 138, 0.20), inset 0 1px 0 rgba(255, 255, 255, 1);
+  border-color: #ff5c8a;
+  box-shadow:
+    0 14px 40px -4px rgba(255, 92, 138, 0.2),
+    inset 0 1px 0 rgba(255, 255, 255, 1);
 }
 
 /* 3. DYNAMIC TEXT ANIMATION SHIMMER */
 @keyframes textShimmer {
-  0% { background-position: 0% 50%; }
-  50% { background-position: 100% 50%; }
-  100% { background-position: 0% 50%; }
+  0% {
+    background-position: 0% 50%;
+  }
+  50% {
+    background-position: 100% 50%;
+  }
+  100% {
+    background-position: 0% 50%;
+  }
 }
 
 @keyframes glowPulse {
-  0%, 100% { text-shadow: 0 0 20px rgba(255, 92, 138, 0.5), 0 0 40px rgba(255, 92, 138, 0.2); }
-  50% { text-shadow: 0 0 35px rgba(255, 92, 138, 0.8), 0 0 60px rgba(255, 92, 138, 0.4); }
+  0%,
+  100% {
+    text-shadow:
+      0 0 20px rgba(255, 92, 138, 0.5),
+      0 0 40px rgba(255, 92, 138, 0.2);
+  }
+  50% {
+    text-shadow:
+      0 0 35px rgba(255, 92, 138, 0.8),
+      0 0 60px rgba(255, 92, 138, 0.4);
+  }
 }
 
 @keyframes titleReveal {
-  0% { opacity: 0; transform: translateY(18px) scale(0.97); }
-  100% { opacity: 1; transform: translateY(0) scale(1); }
+  0% {
+    opacity: 0;
+    transform: translateY(18px) scale(0.97);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
 }
 
 /* MARQUEE CONTINUOUS SCROLLING ANIMATION */
 @keyframes marqueeScroll {
-  0% { transform: translateX(0%); }
-  100% { transform: translateX(-50%); }
+  0% {
+    transform: translateX(0%);
+  }
+  100% {
+    transform: translateX(-50%);
+  }
 }
 
 .animate-marquee {
@@ -145,14 +186,14 @@
 }
 
 .text-baby-pink-gradient {
-  background: linear-gradient(135deg, #2A0826 0%, #FF5C8A 45%, #E6A100 85%, #FF3B70 100%);
+  background: linear-gradient(135deg, #2a0826 0%, #ff5c8a 45%, #e6a100 85%, #ff3b70 100%);
   background-size: 200% auto;
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
 }
 
 .text-shimmer-animated {
-  background: linear-gradient(90deg, #2A0826 0%, #FF5C8A 35%, #FF7597 65%, #2A0826 100%);
+  background: linear-gradient(90deg, #2a0826 0%, #ff5c8a 35%, #ff7597 65%, #2a0826 100%);
   background-size: 200% linear;
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
@@ -161,7 +202,7 @@
 }
 
 .text-gold-shimmer-animated {
-  background: linear-gradient(90deg, #E6A100 0%, #FFD700 35%, #FF5C8A 65%, #E6A100 100%);
+  background: linear-gradient(90deg, #e6a100 0%, #ffd700 35%, #ff5c8a 65%, #e6a100 100%);
   background-size: 200% linear;
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
@@ -191,7 +232,7 @@
   height: 6px;
 }
 ::-webkit-scrollbar-track {
-  background: #FFF0F3;
+  background: #fff0f3;
 }
 ::-webkit-scrollbar-thumb {
   background: rgba(255, 92, 138, 0.35);
@@ -206,7 +247,7 @@
   width: 100%;
   height: 100%;
   border-radius: 20px;
-  z-index: 10;
+  z-index: 1;
   font-family: 'Manrope', sans-serif;
 }
 
@@ -215,13 +256,15 @@
   background: rgba(255, 255, 255, 0.95);
   backdrop-filter: blur(12px);
   -webkit-backdrop-filter: blur(12px);
-  color: #2A0826;
+  color: #2a0826;
   font-size: 0.8125rem;
   font-weight: 800;
   padding: 0.55rem 1.25rem;
-  border: 1.5px solid #FFCCE1;
+  border: 1.5px solid #ffcce1;
   border-radius: 9999px;
-  box-shadow: inset 0 1px 1px rgba(255, 255, 255, 0.8), 0 4px 15px -3px rgba(255, 92, 138, 0.12);
+  box-shadow:
+    inset 0 1px 1px rgba(255, 255, 255, 0.8),
+    0 4px 15px -3px rgba(255, 92, 138, 0.12);
   transition: all 0.35s cubic-bezier(0.34, 1.56, 0.64, 1);
   letter-spacing: 0.02em;
   position: relative;
@@ -232,11 +275,13 @@
 }
 
 .btn-signin-luxury:hover {
-  border-color: #FF5C8A;
-  color: #FF5C8A;
-  background: #FFF0F5;
+  border-color: #ff5c8a;
+  color: #ff5c8a;
+  background: #fff0f5;
   transform: translateY(-2.5px) scale(1.04);
-  box-shadow: inset 0 1px 2px rgba(255, 255, 255, 1), 0 8px 25px -4px rgba(255, 92, 138, 0.3);
+  box-shadow:
+    inset 0 1px 2px rgba(255, 255, 255, 1),
+    0 8px 25px -4px rgba(255, 92, 138, 0.3);
 }
 
 .btn-signin-luxury:active {
@@ -244,15 +289,17 @@
 }
 
 .btn-signup-luxury {
-  background: linear-gradient(135deg, #FF5C8A 0%, #FF7597 45%, #FF3B70 80%, #E6A100 100%);
+  background: linear-gradient(135deg, #ff5c8a 0%, #ff7597 45%, #ff3b70 80%, #e6a100 100%);
   background-size: 220% auto;
-  color: #FFFFFF;
+  color: #ffffff;
   font-size: 0.8125rem;
   font-weight: 900;
   padding: 0.55rem 1.35rem;
   border-radius: 9999px;
   border: 1px solid rgba(255, 255, 255, 0.6);
-  box-shadow: inset 0 1px 1px rgba(255, 255, 255, 0.8), 0 6px 22px -3px rgba(255, 92, 138, 0.45);
+  box-shadow:
+    inset 0 1px 1px rgba(255, 255, 255, 0.8),
+    0 6px 22px -3px rgba(255, 92, 138, 0.45);
   transition: all 0.35s cubic-bezier(0.34, 1.56, 0.64, 1);
   letter-spacing: 0.03em;
   position: relative;
@@ -265,11 +312,12 @@
 .btn-signup-luxury:hover {
   background-position: right center;
   transform: translateY(-2.5px) scale(1.05);
-  box-shadow: inset 0 1px 2px rgba(255, 255, 255, 0.9), 0 12px 32px -4px rgba(255, 92, 138, 0.65);
+  box-shadow:
+    inset 0 1px 2px rgba(255, 255, 255, 0.9),
+    0 12px 32px -4px rgba(255, 92, 138, 0.65);
   border-color: rgba(255, 255, 255, 0.9);
 }
 
 .btn-signup-luxury:active {
   transform: translateY(0px) scale(0.97);
 }
-

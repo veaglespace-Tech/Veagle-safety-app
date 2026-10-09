@@ -165,9 +165,10 @@ export default function UserProfileSettingsPage() {
       dispatch(fetchUser());
     } catch (err) {
       console.error('Avatar update error:', err);
-      const errMsg = typeof err === 'string'
-        ? err
-        : (err?.error || err?.message || 'Failed to update profile photo.');
+      const errMsg =
+        typeof err === 'string'
+          ? err
+          : err?.error || err?.message || 'Failed to update profile photo.';
       setAvatarToast({
         type: 'error',
         text: `❌ ${errMsg}`,
@@ -201,9 +202,8 @@ export default function UserProfileSettingsPage() {
     updateUserAvatar('');
   };
 
-  const isEmailChanged = mounted && user?.email
-    ? email.trim().toLowerCase() !== user.email.trim().toLowerCase()
-    : false;
+  const isEmailChanged =
+    mounted && user?.email ? email.trim().toLowerCase() !== user.email.trim().toLowerCase() : false;
 
   const handleToggleEdit = () => {
     if (isEditing) {
@@ -231,7 +231,10 @@ export default function UserProfileSettingsPage() {
     try {
       await authApi.sendEmailChangeOtp({ newEmail: email.trim() });
       setShowInlineOtpInput(true);
-      setInlineEmailNotice({ type: 'success', text: `✅ Verification OTP sent to ${email.trim()}. Enter code below.` });
+      setInlineEmailNotice({
+        type: 'success',
+        text: `✅ Verification OTP sent to ${email.trim()}. Enter code below.`,
+      });
     } catch (err) {
       setInlineEmailNotice({
         type: 'error',
@@ -259,11 +262,15 @@ export default function UserProfileSettingsPage() {
 
       setIsInlineEmailVerified(true);
       setShowInlineOtpInput(false);
-      setInlineEmailNotice({ type: 'success', text: '🎉 New email address verified successfully!' });
+      setInlineEmailNotice({
+        type: 'success',
+        text: '🎉 New email address verified successfully!',
+      });
     } catch (err) {
       setInlineEmailNotice({
         type: 'error',
-        text: err.response?.data?.error || 'Invalid OTP code. Please check your inbox and try again.',
+        text:
+          err.response?.data?.error || 'Invalid OTP code. Please check your inbox and try again.',
       });
     } finally {
       setIsVerifyingInlineOtp(false);
@@ -274,6 +281,37 @@ export default function UserProfileSettingsPage() {
   const handleFormSubmit = async (e) => {
     e.preventDefault();
     setToastMessage(null);
+
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    const phoneRegex = /^[6-9]\d{9}$/;
+
+    if (!email.trim() || !emailRegex.test(email.trim())) {
+      setToastMessage({
+        type: 'error',
+        text: 'Please enter a valid email address (e.g. name@example.com).',
+      });
+      return;
+    }
+
+    const cleanPhone = phone.replace(/\D/g, '');
+    if (!cleanPhone || !phoneRegex.test(cleanPhone)) {
+      setToastMessage({
+        type: 'error',
+        text: 'Please enter a valid 10-digit mobile number starting with 6, 7, 8, or 9.',
+      });
+      return;
+    }
+
+    if (emergencyContactPhone && emergencyContactPhone.trim()) {
+      const cleanEmergencyPhone = emergencyContactPhone.replace(/\D/g, '');
+      if (!phoneRegex.test(cleanEmergencyPhone)) {
+        setToastMessage({
+          type: 'error',
+          text: 'Emergency contact mobile number must be a valid 10-digit number starting with 6, 7, 8, or 9.',
+        });
+        return;
+      }
+    }
 
     if (isEmailChanged && !isInlineEmailVerified) {
       setToastMessage({
@@ -317,7 +355,10 @@ export default function UserProfileSettingsPage() {
       }
 
       await dispatch(updateProfileSettings(payload)).unwrap();
-      setToastMessage({ type: 'success', text: '🎉 Profile and security settings updated successfully!' });
+      setToastMessage({
+        type: 'success',
+        text: '🎉 Profile and security settings updated successfully!',
+      });
       setIsEditing(false);
       setNewPassword('');
       setConfirmPassword('');
@@ -325,7 +366,7 @@ export default function UserProfileSettingsPage() {
     } catch (err) {
       setToastMessage({
         type: 'error',
-        text: typeof err === 'string' ? err : (err.message || 'Failed to update profile settings.'),
+        text: typeof err === 'string' ? err : err.message || 'Failed to update profile settings.',
       });
     } finally {
       setIsSubmitting(false);
@@ -366,7 +407,12 @@ export default function UserProfileSettingsPage() {
   const displayPhone = user?.phone || 'N/A';
   const displayBloodGroup = user?.bloodGroup || 'O+';
   const displayAvatar = user?.profilePhoto || null;
-  const initials = displayName.split(' ').map((n) => n[0]).join('').substring(0, 2).toUpperCase();
+  const initials = displayName
+    .split(' ')
+    .map((n) => n[0])
+    .join('')
+    .substring(0, 2)
+    .toUpperCase();
 
   const diagnostics = [
     { label: 'GPS Location Access', value: 'ALIVE (0.01s)', status: true, icon: MapPin },
@@ -379,7 +425,6 @@ export default function UserProfileSettingsPage() {
     <AppLayout>
       <div className="min-h-screen bg-gradient-to-b from-[#FFF0F3] via-white to-[#FFF0F3] py-6 sm:py-10 px-3 sm:px-6 font-sans text-[#2A0826]">
         <div className="max-w-5xl mx-auto space-y-6">
-          
           {/* HEADER CARD */}
           <div className="bg-gradient-to-r from-white via-[#FFF0F3] to-white border-2 border-[#FFCCE1] shadow-[0_10px_30px_rgba(255,92,138,0.12)] rounded-3xl p-5 sm:p-6 flex flex-col sm:flex-row items-center justify-between gap-4">
             <div className="flex items-center space-x-3.5 text-center sm:text-left">
@@ -392,7 +437,8 @@ export default function UserProfileSettingsPage() {
                   <span className="heading-gradient-rose">Profile Management</span>
                 </h1>
                 <p className="text-xs text-[#684E67] font-bold leading-snug">
-                  Click <span className="text-[#FF2A6D] font-black">UPDATE PROFILE</span> to unlock and edit any of your profile details.
+                  Click <span className="text-[#FF2A6D] font-black">UPDATE PROFILE</span> to unlock
+                  and edit any of your profile details.
                 </p>
               </div>
             </div>
@@ -423,13 +469,16 @@ export default function UserProfileSettingsPage() {
           {/* MASTER USER SUMMARY CARD */}
           <div className="bg-gradient-to-br from-white via-[#FFF0F3] to-white border-2 border-[#FFCCE1] shadow-[0_16px_50px_rgba(255,92,138,0.18)] rounded-[36px] overflow-hidden relative p-6 sm:p-8">
             <div className="flex flex-col sm:flex-row items-center space-y-4 sm:space-y-0 sm:space-x-6 text-center sm:text-left">
-              
               {/* AVATAR RING */}
               <div className="relative group shrink-0">
                 <div className="w-28 h-28 rounded-3xl bg-gradient-to-tr from-[#FF5C8A] via-[#FF2A6D] to-[#FFD166] p-0.5 shadow-xl relative overflow-hidden">
                   <div className="w-full h-full bg-white rounded-[22px] flex items-center justify-center font-black text-3xl text-[#2A0826] overflow-hidden relative">
                     {displayAvatar ? (
-                      <img src={displayAvatar} alt="Profile Avatar" className="w-full h-full object-cover" />
+                      <img
+                        src={displayAvatar}
+                        alt="Profile Avatar"
+                        className="w-full h-full object-cover"
+                      />
                     ) : (
                       <span>{initials}</span>
                     )}
@@ -493,37 +542,72 @@ export default function UserProfileSettingsPage() {
                 </div>
 
                 {avatarToast && (
-                  <div className={`text-xs font-black px-4 py-1.5 rounded-full inline-block shadow-xs animate-shake ${avatarToast.type === 'error' ? 'bg-rose-50 text-[#FF2A6D] border border-[#FF2A6D]' : 'bg-emerald-50 text-emerald-600 border border-emerald-300'}`}>
+                  <div
+                    className={`text-xs font-black px-4 py-1.5 rounded-full inline-block shadow-xs animate-shake ${avatarToast.type === 'error' ? 'bg-rose-50 text-[#FF2A6D] border border-[#FF2A6D]' : 'bg-emerald-50 text-emerald-600 border border-emerald-300'}`}
+                  >
                     {avatarToast.text}
                   </div>
                 )}
               </div>
-
             </div>
           </div>
 
           {/* MASTER EDITABLE PROFILE & SETTINGS FORM */}
           <form onSubmit={handleFormSubmit} className="space-y-8">
-            
             {/* FEEDBACK TOAST BANNER */}
             {toastMessage && (
-              <div className={`p-4 rounded-2xl text-xs font-black shadow-md animate-shake ${
-                toastMessage.type === 'error'
-                  ? 'bg-rose-50 text-[#FF2A6D] border-2 border-[#FF2A6D]'
-                  : toastMessage.type === 'info'
-                  ? 'bg-amber-50 text-amber-800 border-2 border-amber-400'
-                  : 'bg-emerald-50 text-emerald-700 border-2 border-emerald-400'
-              }`}>
+              <div
+                className={`p-4 rounded-2xl text-xs font-black shadow-md animate-shake ${
+                  toastMessage.type === 'error'
+                    ? 'bg-rose-50 text-[#FF2A6D] border-2 border-[#FF2A6D]'
+                    : toastMessage.type === 'info'
+                      ? 'bg-amber-50 text-amber-800 border-2 border-amber-400'
+                      : 'bg-emerald-50 text-emerald-700 border-2 border-emerald-400'
+                }`}
+              >
                 {toastMessage.text}
               </div>
             )}
 
+            {/* MASTER STICKY SUBMIT ACTION BAR (VISIBLE IN EDIT MODE) */}
+            {isEditing && (
+              <div className="sticky top-4 z-50 bg-white/95 backdrop-blur-md p-4 sm:p-5 rounded-3xl border-2 border-[#FF2A6D] shadow-2xl flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 sm:gap-4 animate-slide-down mb-6">
+                <div className="min-w-0">
+                  <p className="font-black text-xs sm:text-sm text-[#2A0826] whitespace-nowrap">
+                    Edit Mode Unlocked
+                  </p>
+                  <p className="text-[11px] font-bold text-[#684E67] truncate">
+                    Click Save Changes to commit all details to database
+                  </p>
+                </div>
+
+                <div className="flex items-center justify-end space-x-2.5 shrink-0">
+                  <button
+                    type="button"
+                    onClick={handleToggleEdit}
+                    className="px-4.5 py-2.5 bg-gray-100 text-gray-700 hover:bg-gray-200 font-black text-xs rounded-2xl transition-all cursor-pointer shrink-0 whitespace-nowrap"
+                  >
+                    Cancel
+                  </button>
+
+                  <button
+                    type="submit"
+                    disabled={isSubmitting}
+                    className="bg-gradient-to-r from-[#FF5C8A] via-[#FF2A6D] to-[#E01A4F] text-white font-black px-6 py-2.5 rounded-2xl text-xs uppercase tracking-wider shadow-md hover:scale-105 active:scale-95 transition-all flex items-center justify-center space-x-1.5 cursor-pointer disabled:opacity-50 shrink-0 whitespace-nowrap border border-white/20"
+                  >
+                    <Save className="w-4 h-4 shrink-0" />
+                    <span>{isSubmitting ? 'SAVING...' : 'SAVE ALL CHANGES'}</span>
+                  </button>
+                </div>
+              </div>
+            )}
+
             {/* UNIFIED MASTER GLASS PANEL (REPLACES SCATTERED CARDS) */}
-            <div className={`bg-white/95 backdrop-blur-2xl border-2 rounded-[40px] p-6 sm:p-10 shadow-[0_20px_60px_rgba(42,8,38,0.08)] space-y-10 transition-all ${isEditing ? 'border-[#FF2A6D] ring-4 ring-[#FF2A6D]/10' : 'border-[#FFCCE1]'}`}>
-              
+            <div
+              className={`bg-white/95 backdrop-blur-2xl border-2 rounded-[40px] p-6 sm:p-10 shadow-[0_20px_60px_rgba(42,8,38,0.08)] space-y-10 transition-all ${isEditing ? 'border-[#FF2A6D] ring-4 ring-[#FF2A6D]/10' : 'border-[#FFCCE1]'}`}
+            >
               {/* SECTION QUICK-JUMPER NAVIGATION PILLS (WITH INVISIBLE SCROLLBAR, ARROWS & MOUSE WHEEL SCROLL) */}
               <div className="relative flex items-center border-b-2 border-[#FFCCE1]/60 pb-3">
-                
                 {/* LEFT SCROLL BUTTON */}
                 <button
                   type="button"
@@ -546,31 +630,55 @@ export default function UserProfileSettingsPage() {
                 >
                   {isParent ? (
                     <>
-                      <a href="#sec-1" className="px-4 py-2 bg-[#FFF0F3] hover:bg-[#FF2A6D] hover:text-white text-[#FF2A6D] rounded-full text-xs font-black transition-all border border-[#FFCCE1] shrink-0 hover:scale-105 active:scale-95 shadow-xs">
+                      <a
+                        href="#sec-1"
+                        className="px-4 py-2 bg-[#FFF0F3] hover:bg-[#FF2A6D] hover:text-white text-[#FF2A6D] rounded-full text-xs font-black transition-all border border-[#FFCCE1] shrink-0 hover:scale-105 active:scale-95 shadow-xs"
+                      >
                         1. Personal Details
                       </a>
-                      <a href="#sec-4" className="px-4 py-2 bg-[#FFF0F3] hover:bg-[#FF2A6D] hover:text-white text-[#FF2A6D] rounded-full text-xs font-black transition-all border border-[#FFCCE1] shrink-0 hover:scale-105 active:scale-95 shadow-xs">
+                      <a
+                        href="#sec-4"
+                        className="px-4 py-2 bg-[#FFF0F3] hover:bg-[#FF2A6D] hover:text-white text-[#FF2A6D] rounded-full text-xs font-black transition-all border border-[#FFCCE1] shrink-0 hover:scale-105 active:scale-95 shadow-xs"
+                      >
                         2. Security & Password
                       </a>
                     </>
                   ) : (
                     <>
-                      <a href="#sec-1" className="px-4 py-2 bg-[#FFF0F3] hover:bg-[#FF2A6D] hover:text-white text-[#FF2A6D] rounded-full text-xs font-black transition-all border border-[#FFCCE1] shrink-0 hover:scale-105 active:scale-95 shadow-xs">
+                      <a
+                        href="#sec-1"
+                        className="px-4 py-2 bg-[#FFF0F3] hover:bg-[#FF2A6D] hover:text-white text-[#FF2A6D] rounded-full text-xs font-black transition-all border border-[#FFCCE1] shrink-0 hover:scale-105 active:scale-95 shadow-xs"
+                      >
                         1. Personal Details
                       </a>
-                      <a href="#sec-2" className="px-4 py-2 bg-[#FFF0F3] hover:bg-[#FF2A6D] hover:text-white text-[#FF2A6D] rounded-full text-xs font-black transition-all border border-[#FFCCE1] shrink-0 hover:scale-105 active:scale-95 shadow-xs">
+                      <a
+                        href="#sec-2"
+                        className="px-4 py-2 bg-[#FFF0F3] hover:bg-[#FF2A6D] hover:text-white text-[#FF2A6D] rounded-full text-xs font-black transition-all border border-[#FFCCE1] shrink-0 hover:scale-105 active:scale-95 shadow-xs"
+                      >
                         2. Address & Location
                       </a>
-                      <a href="#sec-3" className="px-4 py-2 bg-[#FFF0F3] hover:bg-[#FF2A6D] hover:text-white text-[#FF2A6D] rounded-full text-xs font-black transition-all border border-[#FFCCE1] shrink-0 hover:scale-105 active:scale-95 shadow-xs">
+                      <a
+                        href="#sec-3"
+                        className="px-4 py-2 bg-[#FFF0F3] hover:bg-[#FF2A6D] hover:text-white text-[#FF2A6D] rounded-full text-xs font-black transition-all border border-[#FFCCE1] shrink-0 hover:scale-105 active:scale-95 shadow-xs"
+                      >
                         3. Emergency Guardian
                       </a>
-                      <a href="#sec-4" className="px-4 py-2 bg-[#FFF0F3] hover:bg-[#FF2A6D] hover:text-white text-[#FF2A6D] rounded-full text-xs font-black transition-all border border-[#FFCCE1] shrink-0 hover:scale-105 active:scale-95 shadow-xs">
+                      <a
+                        href="#sec-4"
+                        className="px-4 py-2 bg-[#FFF0F3] hover:bg-[#FF2A6D] hover:text-white text-[#FF2A6D] rounded-full text-xs font-black transition-all border border-[#FFCCE1] shrink-0 hover:scale-105 active:scale-95 shadow-xs"
+                      >
                         4. Security & Password
                       </a>
-                      <a href="#sec-5" className="px-4 py-2 bg-[#FFF0F3] hover:bg-[#FF2A6D] hover:text-white text-[#FF2A6D] rounded-full text-xs font-black transition-all border border-[#FFCCE1] shrink-0 hover:scale-105 active:scale-95 shadow-xs">
+                      <a
+                        href="#sec-5"
+                        className="px-4 py-2 bg-[#FFF0F3] hover:bg-[#FF2A6D] hover:text-white text-[#FF2A6D] rounded-full text-xs font-black transition-all border border-[#FFCCE1] shrink-0 hover:scale-105 active:scale-95 shadow-xs"
+                      >
                         5. Medical Notes
                       </a>
-                      <a href="#sec-6" className="px-4 py-2 bg-[#FFF0F3] hover:bg-[#FF2A6D] hover:text-white text-[#FF2A6D] rounded-full text-xs font-black transition-all border border-[#FFCCE1] shrink-0 hover:scale-105 active:scale-95 shadow-xs">
+                      <a
+                        href="#sec-6"
+                        className="px-4 py-2 bg-[#FFF0F3] hover:bg-[#FF2A6D] hover:text-white text-[#FF2A6D] rounded-full text-xs font-black transition-all border border-[#FFCCE1] shrink-0 hover:scale-105 active:scale-95 shadow-xs"
+                      >
                         6. System Health
                       </a>
                     </>
@@ -589,16 +697,23 @@ export default function UserProfileSettingsPage() {
               </div>
 
               {/* FORM SECTION 1: PERSONAL INFORMATION & INLINE EMAIL VERIFICATION */}
-              <div id="sec-1" className="scroll-mt-24 border-b-2 border-[#FFCCE1]/60 pb-8 space-y-6">
+              <div
+                id="sec-1"
+                className="scroll-mt-24 border-b-2 border-[#FFCCE1]/60 pb-8 space-y-6"
+              >
                 <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b-2 border-[#FFCCE1] pb-4">
                   <div className="flex items-center space-x-3.5 min-w-0">
                     <div className="w-10 h-10 rounded-2xl bg-[#FFF0F3] text-[#FF2A6D] flex items-center justify-center border border-[#FFCCE1] shrink-0">
                       <UserIcon className="w-5 h-5 text-[#FF2A6D]" />
                     </div>
                     <div className="min-w-0">
-                      <h3 className="font-black text-base sm:text-lg text-[#2A0826] tracking-tight">1. Personal Member Details</h3>
+                      <h3 className="font-black text-base sm:text-lg text-[#2A0826] tracking-tight">
+                        1. Personal Member Details
+                      </h3>
                       <p className="text-xs text-[#684E67] font-bold leading-snug">
-                        {isParent ? 'Update your full legal name, email address, and mobile phone number' : 'Update your full legal name, email address, phone number, and blood group'}
+                        {isParent
+                          ? 'Update your full legal name, email address, and mobile phone number'
+                          : 'Update your full legal name, email address, phone number, and blood group'}
                       </p>
                     </div>
                   </div>
@@ -612,7 +727,9 @@ export default function UserProfileSettingsPage() {
 
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div>
-                    <label className="block text-xs font-black text-[#684E67] mb-1">Full Name *</label>
+                    <label className="block text-xs font-black text-[#684E67] mb-1">
+                      Full Name *
+                    </label>
                     <div className="relative">
                       <UserIcon className="w-4 h-4 text-[#684E67] absolute left-3.5 top-1/2 -translate-y-1/2" />
                       <input
@@ -691,45 +808,55 @@ export default function UserProfileSettingsPage() {
                     </div>
 
                     {inlineEmailNotice && (
-                      <div className={`mt-2 p-2.5 rounded-xl text-[11px] font-black ${
-                        inlineEmailNotice.type === 'error' ? 'bg-rose-50 text-[#FF2A6D] border border-[#FF2A6D]' : 'bg-emerald-50 text-emerald-700 border border-emerald-300'
-                      }`}>
+                      <div
+                        className={`mt-2 p-2.5 rounded-xl text-[11px] font-black ${
+                          inlineEmailNotice.type === 'error'
+                            ? 'bg-rose-50 text-[#FF2A6D] border border-[#FF2A6D]'
+                            : 'bg-emerald-50 text-emerald-700 border border-emerald-300'
+                        }`}
+                      >
                         {inlineEmailNotice.text}
                       </div>
                     )}
 
-                    {isEditing && isEmailChanged && showInlineOtpInput && !isInlineEmailVerified && (
-                      <div className="mt-3 bg-[#FFF0F3] p-3.5 rounded-2xl border-2 border-[#FF2A6D] space-y-2.5 animate-slide-down">
-                        <p className="text-[11px] font-black text-[#2A0826]">
-                          Enter 6-digit verification OTP sent to <span className="text-[#FF2A6D]">{email}</span>:
-                        </p>
-                        
-                        <div className="flex items-center space-x-2">
-                          <input
-                            type="text"
-                            maxLength={6}
-                            placeholder="6-digit OTP"
-                            value={inlineOtpCode}
-                            onChange={(e) => setInlineOtpCode(e.target.value.replace(/\D/g, ''))}
-                            className="flex-1 px-3 py-2 bg-white border-2 border-[#FF2A6D] rounded-xl text-center font-mono font-black text-sm tracking-widest outline-none text-[#2A0826]"
-                          />
+                    {isEditing &&
+                      isEmailChanged &&
+                      showInlineOtpInput &&
+                      !isInlineEmailVerified && (
+                        <div className="mt-3 bg-[#FFF0F3] p-3.5 rounded-2xl border-2 border-[#FF2A6D] space-y-2.5 animate-slide-down">
+                          <p className="text-[11px] font-black text-[#2A0826]">
+                            Enter 6-digit verification OTP sent to{' '}
+                            <span className="text-[#FF2A6D]">{email}</span>:
+                          </p>
 
-                          <button
-                            type="button"
-                            onClick={handleVerifyInlineOtp}
-                            disabled={isVerifyingInlineOtp}
-                            className="bg-emerald-600 hover:bg-emerald-700 text-white font-black text-xs px-4 py-2.5 rounded-xl shadow transition-all flex items-center space-x-1 shrink-0 cursor-pointer disabled:opacity-50"
-                          >
-                            <CheckCircle2 className="w-4 h-4" />
-                            <span>{isVerifyingInlineOtp ? 'VERIFYING...' : 'VERIFY OTP'}</span>
-                          </button>
+                          <div className="flex items-center space-x-2">
+                            <input
+                              type="text"
+                              maxLength={6}
+                              placeholder="6-digit OTP"
+                              value={inlineOtpCode}
+                              onChange={(e) => setInlineOtpCode(e.target.value.replace(/\D/g, ''))}
+                              className="flex-1 px-3 py-2 bg-white border-2 border-[#FF2A6D] rounded-xl text-center font-mono font-black text-sm tracking-widest outline-none text-[#2A0826]"
+                            />
+
+                            <button
+                              type="button"
+                              onClick={handleVerifyInlineOtp}
+                              disabled={isVerifyingInlineOtp}
+                              className="bg-emerald-600 hover:bg-emerald-700 text-white font-black text-xs px-4 py-2.5 rounded-xl shadow transition-all flex items-center space-x-1 shrink-0 cursor-pointer disabled:opacity-50"
+                            >
+                              <CheckCircle2 className="w-4 h-4" />
+                              <span>{isVerifyingInlineOtp ? 'VERIFYING...' : 'VERIFY OTP'}</span>
+                            </button>
+                          </div>
                         </div>
-                      </div>
-                    )}
+                      )}
                   </div>
 
                   <div>
-                    <label className="block text-xs font-black text-[#684E67] mb-1">Mobile Phone Number *</label>
+                    <label className="block text-xs font-black text-[#684E67] mb-1">
+                      Mobile Phone Number *
+                    </label>
                     <div className="relative">
                       <PhoneCall className="w-4 h-4 text-[#684E67] absolute left-3.5 top-1/2 -translate-y-1/2" />
                       <input
@@ -750,7 +877,9 @@ export default function UserProfileSettingsPage() {
                   </div>
 
                   <div>
-                    <label className="block text-xs font-black text-[#684E67] mb-1">Blood Group *</label>
+                    <label className="block text-xs font-black text-[#684E67] mb-1">
+                      Blood Group *
+                    </label>
                     <CustomSelect
                       options={[
                         { value: 'A+', label: 'A+' },
@@ -773,20 +902,29 @@ export default function UserProfileSettingsPage() {
               {!isParent && (
                 <>
                   {/* FORM SECTION 2: RESIDENTIAL ADDRESS & LOCATION */}
-                  <div id="sec-2" className="scroll-mt-24 border-b-2 border-[#FFCCE1]/60 pb-8 space-y-6">
+                  <div
+                    id="sec-2"
+                    className="scroll-mt-24 border-b-2 border-[#FFCCE1]/60 pb-8 space-y-6"
+                  >
                     <div className="flex items-start sm:items-center space-x-3.5 border-b-2 border-[#FFCCE1] pb-4 min-w-0">
                       <div className="w-10 h-10 rounded-2xl bg-[#FFF0F3] text-[#FF2A6D] flex items-center justify-center border border-[#FFCCE1] shrink-0 mt-0.5 sm:mt-0">
                         <MapPin className="w-5 h-5 text-[#FF2A6D]" />
                       </div>
                       <div className="min-w-0 flex-1">
-                        <h3 className="font-black text-base sm:text-lg text-[#2A0826] tracking-tight">2. Residential Location & Address</h3>
-                        <p className="text-xs text-[#684E67] font-bold leading-relaxed">Address details used for emergency dispatch & guardian response</p>
+                        <h3 className="font-black text-base sm:text-lg text-[#2A0826] tracking-tight">
+                          2. Residential Location & Address
+                        </h3>
+                        <p className="text-xs text-[#684E67] font-bold leading-relaxed">
+                          Address details used for emergency dispatch & guardian response
+                        </p>
                       </div>
                     </div>
 
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                       <div className="sm:col-span-2">
-                        <label className="block text-xs font-black text-[#684E67] mb-1">Full Residential Address *</label>
+                        <label className="block text-xs font-black text-[#684E67] mb-1">
+                          Full Residential Address *
+                        </label>
                         <div className="relative">
                           <MapPin className="w-4 h-4 text-[#684E67] absolute left-3.5 top-1/2 -translate-y-1/2" />
                           <input
@@ -806,7 +944,9 @@ export default function UserProfileSettingsPage() {
                       </div>
 
                       <div>
-                        <label className="block text-xs font-black text-[#684E67] mb-1">City *</label>
+                        <label className="block text-xs font-black text-[#684E67] mb-1">
+                          City *
+                        </label>
                         <div className="relative">
                           <Building className="w-4 h-4 text-[#684E67] absolute left-3.5 top-1/2 -translate-y-1/2" />
                           <input
@@ -826,7 +966,9 @@ export default function UserProfileSettingsPage() {
                       </div>
 
                       <div>
-                        <label className="block text-xs font-black text-[#684E67] mb-1">State *</label>
+                        <label className="block text-xs font-black text-[#684E67] mb-1">
+                          State *
+                        </label>
                         <div className="relative">
                           <Map className="w-4 h-4 text-[#684E67] absolute left-3.5 top-1/2 -translate-y-1/2" />
                           <input
@@ -846,7 +988,9 @@ export default function UserProfileSettingsPage() {
                       </div>
 
                       <div>
-                        <label className="block text-xs font-black text-[#684E67] mb-1">Pincode *</label>
+                        <label className="block text-xs font-black text-[#684E67] mb-1">
+                          Pincode *
+                        </label>
                         <input
                           type="text"
                           required
@@ -866,20 +1010,29 @@ export default function UserProfileSettingsPage() {
                   </div>
 
                   {/* FORM SECTION 3: EMERGENCY GUARDIAN CONTACT DETAILS */}
-                  <div id="sec-3" className="scroll-mt-24 border-b-2 border-[#FFCCE1]/60 pb-8 space-y-6">
+                  <div
+                    id="sec-3"
+                    className="scroll-mt-24 border-b-2 border-[#FFCCE1]/60 pb-8 space-y-6"
+                  >
                     <div className="flex items-start sm:items-center space-x-3.5 border-b-2 border-[#FFCCE1] pb-4 min-w-0">
                       <div className="w-10 h-10 rounded-2xl bg-[#FFF0F3] text-[#FF2A6D] flex items-center justify-center border border-[#FFCCE1] shrink-0 mt-0.5 sm:mt-0">
                         <Users className="w-5 h-5 text-[#FF2A6D]" />
                       </div>
                       <div className="min-w-0 flex-1">
-                        <h3 className="font-black text-base sm:text-lg text-[#2A0826] tracking-tight">3. Primary Emergency Guardian Contact</h3>
-                        <p className="text-xs text-[#684E67] font-bold leading-relaxed">First guardian notified automatically during an emergency SOS broadcast</p>
+                        <h3 className="font-black text-base sm:text-lg text-[#2A0826] tracking-tight">
+                          3. Primary Emergency Guardian Contact
+                        </h3>
+                        <p className="text-xs text-[#684E67] font-bold leading-relaxed">
+                          First guardian notified automatically during an emergency SOS broadcast
+                        </p>
                       </div>
                     </div>
 
                     <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                       <div>
-                        <label className="block text-xs font-black text-[#684E67] mb-1">Guardian Name *</label>
+                        <label className="block text-xs font-black text-[#684E67] mb-1">
+                          Guardian Name *
+                        </label>
                         <div className="relative">
                           <Users className="w-4 h-4 text-[#684E67] absolute left-3.5 top-1/2 -translate-y-1/2" />
                           <input
@@ -899,7 +1052,9 @@ export default function UserProfileSettingsPage() {
                       </div>
 
                       <div>
-                        <label className="block text-xs font-black text-[#684E67] mb-1">Relationship *</label>
+                        <label className="block text-xs font-black text-[#684E67] mb-1">
+                          Relationship *
+                        </label>
                         {isEditing ? (
                           <CustomSelect
                             options={[
@@ -925,7 +1080,9 @@ export default function UserProfileSettingsPage() {
                       </div>
 
                       <div>
-                        <label className="block text-xs font-black text-[#684E67] mb-1">Guardian Mobile Number *</label>
+                        <label className="block text-xs font-black text-[#684E67] mb-1">
+                          Guardian Mobile Number *
+                        </label>
                         <div className="relative">
                           <PhoneCall className="w-4 h-4 text-[#684E67] absolute left-3.5 top-1/2 -translate-y-1/2" />
                           <input
@@ -935,7 +1092,9 @@ export default function UserProfileSettingsPage() {
                             maxLength={10}
                             placeholder="10-digit number"
                             value={emergencyContactPhone}
-                            onChange={(e) => setEmergencyContactPhone(e.target.value.replace(/\D/g, ''))}
+                            onChange={(e) =>
+                              setEmergencyContactPhone(e.target.value.replace(/\D/g, ''))
+                            }
                             className={`w-full pl-10 pr-3 py-3 border-1.5 rounded-xl text-xs text-[#2A0826] font-mono font-bold outline-none transition-all ${
                               isEditing
                                 ? 'bg-[#FFF0F3] border-[#FF2A6D] focus:bg-white'
@@ -950,20 +1109,29 @@ export default function UserProfileSettingsPage() {
               )}
 
               {/* FORM SECTION 4: SECURITY & PASSWORD UPDATE */}
-              <div id="sec-4" className="scroll-mt-24 border-b-2 border-[#FFCCE1]/60 pb-8 space-y-6">
+              <div
+                id="sec-4"
+                className="scroll-mt-24 border-b-2 border-[#FFCCE1]/60 pb-8 space-y-6"
+              >
                 <div className="flex items-start sm:items-center space-x-3.5 border-b-2 border-[#FFCCE1] pb-4 min-w-0">
                   <div className="w-10 h-10 rounded-2xl bg-[#FFF0F3] text-[#FF2A6D] flex items-center justify-center border border-[#FFCCE1] shrink-0 mt-0.5 sm:mt-0">
                     <Lock className="w-5 h-5 text-[#FF2A6D]" />
                   </div>
                   <div className="min-w-0 flex-1">
-                    <h3 className="font-black text-base sm:text-lg text-[#2A0826] tracking-tight">4. Account Password & Security</h3>
-                    <p className="text-xs text-[#684E67] font-bold leading-relaxed">Leave blank if you do not wish to change your account password</p>
+                    <h3 className="font-black text-base sm:text-lg text-[#2A0826] tracking-tight">
+                      4. Account Password & Security
+                    </h3>
+                    <p className="text-xs text-[#684E67] font-bold leading-relaxed">
+                      Leave blank if you do not wish to change your account password
+                    </p>
                   </div>
                 </div>
 
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div>
-                    <label className="block text-xs font-black text-[#684E67] mb-1">New Password (Optional)</label>
+                    <label className="block text-xs font-black text-[#684E67] mb-1">
+                      New Password (Optional)
+                    </label>
                     <div className="relative">
                       <KeyRound className="w-4 h-4 text-[#684E67] absolute left-3.5 top-1/2 -translate-y-1/2" />
                       <input
@@ -991,7 +1159,9 @@ export default function UserProfileSettingsPage() {
                   </div>
 
                   <div>
-                    <label className="block text-xs font-black text-[#684E67] mb-1">Confirm New Password</label>
+                    <label className="block text-xs font-black text-[#684E67] mb-1">
+                      Confirm New Password
+                    </label>
                     <input
                       type={showPass ? 'text' : 'password'}
                       disabled={!isEditing}
@@ -1011,14 +1181,22 @@ export default function UserProfileSettingsPage() {
               {!isParent && (
                 <>
                   {/* FORM SECTION 5: MEDICAL / HEALTH NOTES FOR RESPONDERS */}
-                  <div id="sec-5" className="scroll-mt-24 border-b-2 border-[#FFCCE1]/60 pb-8 space-y-6">
+                  <div
+                    id="sec-5"
+                    className="scroll-mt-24 border-b-2 border-[#FFCCE1]/60 pb-8 space-y-6"
+                  >
                     <div className="flex items-start sm:items-center space-x-3.5 border-b-2 border-[#FFCCE1] pb-4 min-w-0">
                       <div className="w-10 h-10 rounded-2xl bg-[#FFF0F3] text-[#FF2A6D] flex items-center justify-center border border-[#FFCCE1] shrink-0 mt-0.5 sm:mt-0">
                         <FileText className="w-5 h-5 text-[#FF2A6D]" />
                       </div>
                       <div className="min-w-0 flex-1">
-                        <h3 className="font-black text-base sm:text-lg text-[#2A0826] tracking-tight">5. Emergency Medical Notes & Instructions</h3>
-                        <p className="text-xs text-[#684E67] font-bold leading-relaxed">Allergies, medical conditions, or specific emergency instructions for guardians</p>
+                        <h3 className="font-black text-base sm:text-lg text-[#2A0826] tracking-tight">
+                          5. Emergency Medical Notes & Instructions
+                        </h3>
+                        <p className="text-xs text-[#684E67] font-bold leading-relaxed">
+                          Allergies, medical conditions, or specific emergency instructions for
+                          guardians
+                        </p>
                       </div>
                     </div>
 
@@ -1040,35 +1218,6 @@ export default function UserProfileSettingsPage() {
                 </>
               )}
 
-              {/* MASTER STICKY SUBMIT ACTION BAR (VISIBLE IN EDIT MODE) */}
-              {isEditing && (
-                <div className="sticky bottom-4 z-40 bg-white/95 backdrop-blur-md p-4 sm:p-5 rounded-3xl border-2 border-[#FF2A6D] shadow-2xl flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 sm:gap-4 animate-slide-up">
-                  <div className="min-w-0">
-                    <p className="font-black text-xs sm:text-sm text-[#2A0826] whitespace-nowrap">Edit Mode Unlocked</p>
-                    <p className="text-[11px] font-bold text-[#684E67] truncate">Click Save Changes to commit all details to database</p>
-                  </div>
-
-                  <div className="flex items-center justify-end space-x-2.5 shrink-0">
-                    <button
-                      type="button"
-                      onClick={handleToggleEdit}
-                      className="px-4.5 py-2.5 bg-gray-100 text-gray-700 hover:bg-gray-200 font-black text-xs rounded-2xl transition-all cursor-pointer shrink-0 whitespace-nowrap"
-                    >
-                      Cancel
-                    </button>
-
-                    <button
-                      type="submit"
-                      disabled={isSubmitting}
-                      className="bg-gradient-to-r from-[#FF5C8A] via-[#FF2A6D] to-[#E01A4F] text-white font-black px-6 py-2.5 rounded-2xl text-xs uppercase tracking-wider shadow-md hover:scale-105 active:scale-95 transition-all flex items-center justify-center space-x-1.5 cursor-pointer disabled:opacity-50 shrink-0 whitespace-nowrap border border-white/20"
-                    >
-                      <Save className="w-4 h-4 shrink-0" />
-                      <span>{isSubmitting ? 'SAVING...' : 'SAVE ALL CHANGES'}</span>
-                    </button>
-                  </div>
-                </div>
-              )}
-
               {!isParent && (
                 <>
                   {/* SECTION 6: 24/7 SYSTEM HEALTH DIAGNOSTICS & SOS DRILL RUNNER */}
@@ -1079,8 +1228,12 @@ export default function UserProfileSettingsPage() {
                           <Shield className="w-5 h-5 text-[#FF2A6D]" />
                         </div>
                         <div className="min-w-0 flex-1">
-                          <h3 className="font-black text-base sm:text-lg text-[#2A0826] tracking-tight">24/7 System Health Metrics & SOS Drill Runner</h3>
-                          <p className="text-xs text-[#684E67] font-bold leading-relaxed">Verify device sensors, GPS stream, and siren audio capability</p>
+                          <h3 className="font-black text-base sm:text-lg text-[#2A0826] tracking-tight">
+                            24/7 System Health Metrics & SOS Drill Runner
+                          </h3>
+                          <p className="text-xs text-[#684E67] font-bold leading-relaxed">
+                            Verify device sensors, GPS stream, and siren audio capability
+                          </p>
                         </div>
                       </div>
                       <span className="text-[11px] font-black text-emerald-600 bg-emerald-50 px-3 py-1.5 rounded-full border border-emerald-300 shrink-0 whitespace-nowrap self-start sm:self-auto">
@@ -1092,14 +1245,21 @@ export default function UserProfileSettingsPage() {
                       {diagnostics.map((item) => {
                         const Icon = item.icon;
                         return (
-                          <div key={item.label} className="bg-[#FFF0F3] border border-[#FFCCE1] rounded-2xl p-4 flex items-center justify-between">
+                          <div
+                            key={item.label}
+                            className="bg-[#FFF0F3] border border-[#FFCCE1] rounded-2xl p-4 flex items-center justify-between"
+                          >
                             <div className="flex items-center space-x-3">
-                              <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${item.status ? 'bg-emerald-50 text-emerald-600 border border-emerald-200' : 'bg-amber-50 text-amber-600 border border-amber-200'}`}>
+                              <div
+                                className={`w-10 h-10 rounded-xl flex items-center justify-center ${item.status ? 'bg-emerald-50 text-emerald-600 border border-emerald-200' : 'bg-amber-50 text-amber-600 border border-amber-200'}`}
+                              >
                                 <Icon className="w-5 h-5" />
                               </div>
                               <div>
                                 <p className="text-xs font-black text-[#2A0826]">{item.label}</p>
-                                <p className={`text-[11px] font-extrabold mt-0.5 ${item.status ? 'text-emerald-600' : 'text-amber-600'}`}>
+                                <p
+                                  className={`text-[11px] font-extrabold mt-0.5 ${item.status ? 'text-emerald-600' : 'text-amber-600'}`}
+                                >
                                   {item.value}
                                 </p>
                               </div>
@@ -1115,9 +1275,12 @@ export default function UserProfileSettingsPage() {
                           <Play className="w-5 h-5 text-[#FF5C8A] animate-pulse" />
                         </div>
                         <div>
-                          <h4 className="font-black text-base text-white">Run SOS Emergency Drill</h4>
+                          <h4 className="font-black text-base text-white">
+                            Run SOS Emergency Drill
+                          </h4>
                           <p className="text-xs text-white/80 font-extrabold mt-0.5 leading-relaxed">
-                            Test device vibration, siren audio & GPS stream safely without notifying guardians.
+                            Test device vibration, siren audio & GPS stream safely without notifying
+                            guardians.
                           </p>
                         </div>
                       </div>
@@ -1129,7 +1292,9 @@ export default function UserProfileSettingsPage() {
                           className="flex-1 bg-gradient-to-r from-[#FF5C8A] via-[#FF2A6D] to-[#E01A4F] text-white py-3.5 rounded-full text-xs uppercase tracking-wider font-black shadow-[0_8px_25px_rgba(255,42,109,0.4)] flex items-center justify-center space-x-2 hover:scale-[1.02] active:scale-95 transition-all cursor-pointer"
                         >
                           <Play className="w-4 h-4" />
-                          <span>{testSuccess ? '✓ DRILL PASSED!' : 'START DRILL READINESS TEST'}</span>
+                          <span>
+                            {testSuccess ? '✓ DRILL PASSED!' : 'START DRILL READINESS TEST'}
+                          </span>
                         </button>
 
                         <button
@@ -1147,7 +1312,6 @@ export default function UserProfileSettingsPage() {
               )}
             </div>
           </form>
-
         </div>
       </div>
     </AppLayout>

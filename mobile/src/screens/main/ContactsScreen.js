@@ -10,6 +10,7 @@ import {
   fetchContacts, addContact, updateContact, deleteContact,
 } from '../../redux/slices/contactsSlice';
 import Animated, { FadeInUp, FadeInDown, Layout } from 'react-native-reanimated';
+import { LinearGradient } from 'expo-linear-gradient';
 import { COLORS } from '../../theme/colors';
 import { RELATIONSHIPS } from '../../utils/constants';
 
@@ -106,9 +107,11 @@ export default function ContactsScreen() {
             </Text>
           </View>
           {contacts.length < MAX_CONTACTS && (
-            <TouchableOpacity style={styles.addBtn} onPress={openAddModal} activeOpacity={0.85}>
-              <Ionicons name="person-add" size={16} color="#fff" />
-              <Text style={styles.addBtnText}>Add</Text>
+            <TouchableOpacity onPress={openAddModal} activeOpacity={0.85}>
+              <LinearGradient colors={['#FF5C8A', '#FF2A6D']} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={styles.addBtn}>
+                <Ionicons name="person-add" size={16} color="#fff" />
+                <Text style={styles.addBtnText}>Add</Text>
+              </LinearGradient>
             </TouchableOpacity>
           )}
         </Animated.View>
@@ -117,7 +120,7 @@ export default function ContactsScreen() {
         {isLoading ? (
           <ActivityIndicator color={COLORS.primary} size="large" style={{ marginTop: 40 }} />
         ) : contacts.length === 0 ? (
-          <View style={styles.emptyCard}>
+          <LinearGradient colors={['#FFFFFF', '#FFF0F3', '#FFFFFF']} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={styles.emptyCard}>
             <View style={styles.emptyIconWrap}>
               <Ionicons name="shield-outline" size={32} color={COLORS.primary} />
             </View>
@@ -125,10 +128,12 @@ export default function ContactsScreen() {
             <Text style={styles.emptySub}>
               Add trusted family members or friends. They'll receive instant emergency emails with your live location link when SOS is activated.
             </Text>
-            <TouchableOpacity style={styles.addFirstBtn} onPress={openAddModal} activeOpacity={0.85}>
-              <Text style={styles.addFirstBtnText}>+ Add First Contact</Text>
+            <TouchableOpacity onPress={openAddModal} activeOpacity={0.85}>
+              <LinearGradient colors={['#FF5C8A', '#FF2A6D']} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={styles.addFirstBtn}>
+                <Text style={styles.addFirstBtnText}>+ Add First Contact</Text>
+              </LinearGradient>
             </TouchableOpacity>
-          </View>
+          </LinearGradient>
         ) : (
           <View style={{ gap: 10 }}>
             {contacts.map((contact, index) => (
@@ -217,15 +222,21 @@ export default function ContactsScreen() {
                 <TextInput style={styles.fieldInput} value={email} onChangeText={setEmail} placeholder="contact@example.com" placeholderTextColor={COLORS.primaryBorder} keyboardType="email-address" autoCapitalize="none" />
 
                 <TouchableOpacity
-                  style={[styles.saveBtn, (saving || !name || !phone) && styles.saveBtnDisabled]}
                   onPress={handleSave}
                   disabled={saving || !name || !phone}
                   activeOpacity={0.85}
                 >
-                  {saving
-                    ? <ActivityIndicator color="#fff" size="small" />
-                    : <Text style={styles.saveBtnText}>{editingContact ? 'UPDATE TRUSTED CONTACT' : 'SAVE TRUSTED CONTACT'}</Text>
-                  }
+                  <LinearGradient 
+                    colors={['#FF5C8A', '#FF2A6D']} 
+                    start={{ x: 0, y: 0 }} 
+                    end={{ x: 1, y: 1 }} 
+                    style={[styles.saveBtn, (saving || !name || !phone) && styles.saveBtnDisabled]}
+                  >
+                    {saving
+                      ? <ActivityIndicator color="#fff" size="small" />
+                      : <Text style={styles.saveBtnText}>{editingContact ? 'UPDATE TRUSTED CONTACT' : 'SAVE TRUSTED CONTACT'}</Text>
+                    }
+                  </LinearGradient>
                 </TouchableOpacity>
               </ScrollView>
             )}

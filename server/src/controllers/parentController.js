@@ -13,28 +13,44 @@ export const getParentOverview = asyncHandler(async (req, res) => {
   if (parentUser) {
     const parentEmailClean = parentUser.email ? parentUser.email.trim().toLowerCase() : '';
     const parentPhoneClean = parentUser.phone ? parentUser.phone.replace(/\D/g, '') : '';
+    const phoneLast10 = parentPhoneClean.length >= 10 ? parentPhoneClean.slice(-10) : parentPhoneClean;
+
+    const userConditions = [];
+    if (parentEmailClean) {
+      userConditions.push({ parentEmail: parentEmailClean });
+    }
+    if (phoneLast10 && phoneLast10.length >= 6) {
+      userConditions.push({ emergencyContactPhone: { contains: phoneLast10 } });
+    }
 
     // Find children who listed this parent's email or phone in their user record
-    const autoMatchingChildren = await prisma.user.findMany({
-      where: {
-        id: { not: parentId },
-        OR: [
-          parentEmailClean ? { parentEmail: parentEmailClean } : undefined,
-          parentPhoneClean ? { emergencyContactPhone: { contains: parentPhoneClean } } : undefined,
-        ].filter(Boolean),
-      },
-    });
+    const autoMatchingChildren = userConditions.length > 0
+      ? await prisma.user.findMany({
+          where: {
+            id: { not: parentId },
+            role: { not: 'SUPER_ADMIN' },
+            OR: userConditions,
+          },
+        })
+      : [];
+
+    const contactConditions = [];
+    if (parentEmailClean) {
+      contactConditions.push({ email: parentEmailClean });
+    }
+    if (phoneLast10 && phoneLast10.length >= 6) {
+      contactConditions.push({ phone: { contains: phoneLast10 } });
+    }
 
     // Find children who listed this parent's email/phone in TrustedContact records
-    const matchingContacts = await prisma.trustedContact.findMany({
-      where: {
-        OR: [
-          parentEmailClean ? { email: parentEmailClean } : undefined,
-          parentPhoneClean ? { phone: { contains: parentPhoneClean } } : undefined,
-        ].filter(Boolean),
-      },
-      select: { userId: true },
-    });
+    const matchingContacts = contactConditions.length > 0
+      ? await prisma.trustedContact.findMany({
+          where: {
+            OR: contactConditions,
+          },
+          select: { userId: true },
+        })
+      : [];
 
     const contactUserIds = matchingContacts.map((tc) => tc.userId);
 
@@ -59,7 +75,7 @@ export const getParentOverview = asyncHandler(async (req, res) => {
           create: {
             parentId,
             childId,
-            relationship: 'Parent',
+            relationship: 'Child',
             status: 'ACTIVE',
           },
         });
@@ -86,7 +102,7 @@ export const getParentOverview = asyncHandler(async (req, res) => {
             include: {
               locations: {
                 orderBy: { recordedAt: 'desc' },
-                take: 1,
+                take: 500,
               },
             },
             take: 1,
@@ -108,36 +124,39 @@ export const getParentOverview = asyncHandler(async (req, res) => {
     },
   });
 
-  const childrenList = links.map((link) => {
-    const c = link.child;
-    const activeSos = c.sosSessions && c.sosSessions.length > 0 ? c.sosSessions[0] : null;
-    const activeJourney = c.journeys && c.journeys.length > 0 ? c.journeys[0] : null;
-    const latestLocation = activeSos?.locations && activeSos.locations.length > 0 ? activeSos.locations[0] : null;
+  const childrenList = links
+    .filter((link) => Boolean(link.child))
+    .map((link) => {
+      const c = link.child;
+      const activeSos = c.sosSessions && c.sosSessions.length > 0 ? c.sosSessions[0] : null;
+      const activeJourney = c.journeys && c.journeys.length > 0 ? c.journeys[0] : null;
+      const latestLocation = activeSos?.locations && activeSos.locations.length > 0 ? activeSos.locations[0] : null;
 
-    return {
-      linkId: link.id,
-      relationship: link.relationship,
-      status: link.status,
-      createdAt: link.createdAt,
-      child: {
-        id: c.id,
-        fullName: c.fullName,
-        email: c.email,
-        phone: c.phone,
-        safetyStatus: c.safetyStatus,
-        subscriptionStatus: c.subscriptionStatus,
-      },
-      activeSos: activeSos
-        ? {
-            id: activeSos.id,
-            startedAt: activeSos.startedAt,
-            shareToken: activeSos.shareToken,
-            latestLocation,
-          }
-        : null,
-      activeJourney,
-    };
-  });
+      return {
+        linkId: link.id,
+        relationship: link.relationship,
+        status: link.status,
+        createdAt: link.createdAt,
+        child: {
+          id: c.id,
+          fullName: c.fullName,
+          email: c.email,
+          phone: c.phone,
+          safetyStatus: c.safetyStatus,
+          subscriptionStatus: c.subscriptionStatus,
+        },
+        activeSos: activeSos
+          ? {
+              id: activeSos.id,
+              startedAt: activeSos.startedAt,
+              shareToken: activeSos.shareToken,
+              latestLocation,
+              locations: activeSos.locations || [],
+            }
+          : null,
+        activeJourney,
+      };
+    });
 
   const totalChildren = childrenList.length;
   const activeSosCount = childrenList.filter((c) => c.activeSos || c.child.safetyStatus === 'SOS_ACTIVE').length;
@@ -165,22 +184,26 @@ export const linkChild = asyncHandler(async (req, res) => {
     return res.status(400).json({ error: 'Please enter child mobile number or email address.' });
   }
 
+  const cleanEmail = identifier.trim().toLowerCase();
+  const cleanPhone = identifier.replace(/\D/g, '');
+  const phoneLast10 = cleanPhone.length >= 10 ? cleanPhone.slice(-10) : cleanPhone;
+
   // Find child by email or phone
   const childUser = await prisma.user.findFirst({
     where: {
       OR: [
-        { email: identifier.trim().toLowerCase() },
-        { phone: identifier.trim() },
-      ],
+        { email: cleanEmail },
+        phoneLast10 ? { phone: { contains: phoneLast10 } } : undefined,
+      ].filter(Boolean),
     },
   });
 
   if (!childUser) {
-    return res.status(404).json({ error: 'No account found with this email or mobile number.' });
+    return res.status(404).json({ error: 'No user account found with this email or mobile number.' });
   }
 
   if (childUser.id === parentId) {
-    return res.status(400).json({ error: 'You cannot link your own Parent account as a child.' });
+    return res.status(400).json({ error: 'You cannot link your own account as a child.' });
   }
 
   // Check if already linked
@@ -201,7 +224,7 @@ export const linkChild = asyncHandler(async (req, res) => {
     data: {
       parentId,
       childId: childUser.id,
-      relationship: relationship?.trim() || 'Parent',
+      relationship: relationship?.trim() || 'Child',
       status: 'ACTIVE',
     },
     include: {

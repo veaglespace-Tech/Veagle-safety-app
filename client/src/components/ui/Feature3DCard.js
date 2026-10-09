@@ -42,7 +42,9 @@ export const Feature3DCard = ({
         {/* FRONT FACE OF 3D CARD */}
         <div
           className={`absolute inset-0 w-full h-full backface-hidden bg-white/95 backdrop-blur-2xl p-8 rounded-3xl border-1.5 border-[#FFCCE1] hover:border-[#FF5C8A] shadow-[0_10px_30px_rgba(255,92,138,0.10)] hover:shadow-[0_20px_50px_rgba(255,92,138,0.25)] flex flex-col justify-between transition-all duration-300 ${
-            isFlipped ? 'pointer-events-none opacity-0 sm:opacity-100' : 'pointer-events-auto opacity-100'
+            isFlipped
+              ? 'pointer-events-none opacity-0 sm:opacity-100'
+              : 'pointer-events-auto opacity-100'
           }`}
         >
           <div>
@@ -54,16 +56,16 @@ export const Feature3DCard = ({
               {title}
             </h3>
 
-            <p className="text-xs text-[#684E67] font-bold leading-relaxed">
-              {desc}
-            </p>
+            <p className="text-xs text-[#684E67] font-bold leading-relaxed">{desc}</p>
           </div>
         </div>
 
         {/* BACK FACE OF 3D CARD (MATCHED TO WEBSITE BRAND PALETTE) */}
         <div
           className={`absolute inset-0 w-full h-full backface-hidden rotate-y-180 p-7 rounded-3xl border-2 border-white/30 text-white flex flex-col justify-between shadow-[0_20px_60px_rgba(255,42,109,0.35)] relative overflow-hidden ${gradient} ${
-            isFlipped ? 'pointer-events-auto opacity-100' : 'pointer-events-none opacity-0 sm:opacity-100'
+            isFlipped
+              ? 'pointer-events-auto opacity-100'
+              : 'pointer-events-none opacity-0 sm:opacity-100'
           }`}
         >
           {/* AMBIENT BACKGROUND GLOW INSIDE BACK FACE */}
@@ -84,7 +86,10 @@ export const Feature3DCard = ({
 
             <ul className="space-y-2 text-xs font-extrabold text-white/95">
               {points?.map((pt, i) => (
-                <li key={i} className="flex items-start gap-2.5 bg-white/15 backdrop-blur-md p-2.5 rounded-2xl border border-white/25 shadow-xs">
+                <li
+                  key={i}
+                  className="flex items-start gap-2.5 bg-white/15 backdrop-blur-md p-2.5 rounded-2xl border border-white/25 shadow-xs"
+                >
                   <CheckCircle2 size={15} className="text-[#FFE600] shrink-0 mt-0.5 stroke-[2.5]" />
                   <span className="leading-snug">{pt}</span>
                 </li>

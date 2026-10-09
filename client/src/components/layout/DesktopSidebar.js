@@ -18,12 +18,15 @@ import {
   Sparkles,
   ChevronRight,
   CreditCard,
+  Settings,
   AlertOctagon,
   Navigation,
   Activity,
   Heart,
   Menu,
   X,
+  Network,
+  Ticket,
 } from 'lucide-react';
 import { useSelector, useDispatch } from 'react-redux';
 import { logout as reduxLogout } from '../../redux/slices/authSlice.js';
@@ -53,14 +56,20 @@ export const DesktopSidebar = () => {
     }
   }, []);
 
-  const currentUser = reduxAuth?.user || (mounted && typeof window !== 'undefined' && localStorage.getItem('tichi_user') ? JSON.parse(localStorage.getItem('tichi_user')) : null);
+  const currentUser =
+    reduxAuth?.user ||
+    (mounted && typeof window !== 'undefined' && localStorage.getItem('tichi_user')
+      ? JSON.parse(localStorage.getItem('tichi_user'))
+      : null);
   const isSuperAdmin = mounted && currentUser?.role === 'SUPER_ADMIN';
   const currentAdminTab = searchParams?.get('tab') || 'overview';
 
   const handleLogout = () => {
     dispatch(reduxLogout());
     if (typeof window !== 'undefined') {
-      window.location.href = '/auth?mode=login';
+      localStorage.clear();
+      sessionStorage.clear();
+      window.location.replace('/auth?mode=login');
     } else {
       router.push('/auth?mode=login');
     }
@@ -73,19 +82,92 @@ export const DesktopSidebar = () => {
     { path: '/dashboard', label: 'Home', icon: Home, desc: 'Safety Dashboard' },
     { path: '/track-journey', label: 'Track Journey', icon: MapPin, desc: 'Journey & Check-ins' },
     { path: '/contacts', label: 'Contacts', icon: Users, desc: 'Trusted Network' },
-    { path: '/subscription', label: 'Subscription', icon: ShieldCheck, desc: 'Active Plan & Validity' },
+    {
+      path: '/subscription',
+      label: 'Subscription',
+      icon: ShieldCheck,
+      desc: 'Active Plan & Validity',
+    },
   ];
 
   const parentNavItems = [];
 
-  const orgNavItems = [];
+  const orgNavItems = [
+    {
+      path: '/organization',
+      label: 'Live Monitor',
+      icon: Activity,
+      desc: 'Real-time safety tracking',
+    },
+    {
+      path: '/organization?tab=members',
+      label: 'Member Directory',
+      icon: Users,
+      desc: 'Manage enrolled users',
+    },
+    {
+      path: '/organization?tab=settings',
+      label: 'Referral & Settings',
+      icon: Settings,
+      desc: 'Your referral link',
+    },
+  ];
 
   const adminNavItems = [
-    { path: '/admin', label: 'Emergency Command', icon: AlertOctagon, desc: 'Active SOS & Incident HQ' },
-    { path: '/admin/users', label: 'User Management', icon: Users, desc: 'All Users & Free Grants' },
-    { path: '/admin/plans', label: 'Plans & Dynamic GST', icon: Sliders, desc: 'DB Plans & Global GST' },
-    { path: '/admin/payments', label: 'Payment Receipts', icon: CreditCard, desc: 'Txn History & Revenue' },
-    { path: '/admin/enquiries', label: 'Contact Support', icon: HelpCircle, desc: 'Support & Inquiries' },
+    {
+      path: '/admin',
+      label: 'Emergency Command',
+      icon: AlertOctagon,
+      desc: 'Active SOS & Incident',
+    },
+    {
+      path: '/admin/users',
+      label: 'User Management',
+      icon: Users,
+      desc: 'All Users & Free Grants',
+    },
+    {
+      path: '/admin/plans',
+      label: 'Plans & Dynamic GST',
+      icon: Sliders,
+      desc: 'DB Plans & Global GST',
+    },
+    {
+      path: '/admin/coupons',
+      label: 'Coupons & Discounts',
+      icon: Ticket,
+      desc: 'Manage Promo Codes',
+    },
+    {
+      path: '/admin/referrals',
+      label: 'Referral Partners',
+      icon: Network,
+      desc: 'Partner Network & Codes',
+    },
+    {
+      path: '/admin/payments',
+      label: 'Payment Receipts',
+      icon: CreditCard,
+      desc: 'Txn History & Revenue',
+    },
+    {
+      path: '/admin/donations',
+      label: 'Donations',
+      icon: Heart,
+      desc: 'Donation tracking',
+    },
+    {
+      path: '/admin/enquiries',
+      label: 'Contact Support',
+      icon: HelpCircle,
+      desc: 'Support & Inquiries',
+    },
+    {
+      path: '/admin/settings',
+      label: 'Platform Settings',
+      icon: Settings,
+      desc: 'Site & Gallery Setup',
+    },
     { path: '/contacts', label: 'My Guardians', icon: Users, desc: 'Personal Safety Contacts' },
     { path: '/track-journey', label: 'Track My Journey', icon: MapPin, desc: 'Live Route Sharing' },
   ];
@@ -99,18 +181,25 @@ export const DesktopSidebar = () => {
         : memberNavItems;
 
   const displayName = mounted
-    ? (currentUser?.fullName || currentUser?.name || (currentUser?.email ? currentUser.email.split('@')[0] : 'Kaveri'))
+    ? currentUser?.fullName ||
+      currentUser?.name ||
+      (currentUser?.email ? currentUser.email.split('@')[0] : 'Kaveri')
     : 'Kaveri';
 
-  const initials = mounted && (currentUser?.fullName || currentUser?.name)
-    ? (currentUser.fullName || currentUser.name).split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2)
-    : 'KS';
+  const initials =
+    mounted && (currentUser?.fullName || currentUser?.name)
+      ? (currentUser.fullName || currentUser.name)
+          .split(' ')
+          .map((n) => n[0])
+          .join('')
+          .toUpperCase()
+          .slice(0, 2)
+      : 'KS';
 
   return (
     <>
       {/* 1. DESKTOP FIXED SIDEBAR */}
       <aside className="hidden lg:flex fixed left-0 top-0 bottom-0 w-72 flex-col bg-white/90 backdrop-blur-2xl border-r border-[#FFCCE1]/70 z-50 font-sans shadow-[6px_0_30px_rgba(255,92,138,0.06)]">
-
         {/* BRAND HEADER LOGO */}
         <div className="px-6 py-6 border-b border-[#FFCCE1]/60 bg-white/60">
           <Link href="/" className="flex items-center space-x-3.5 group cursor-pointer">
@@ -120,7 +209,11 @@ export const DesktopSidebar = () => {
                 Sakhi Suraksha
               </h1>
               <p className="text-[10px] font-extrabold text-[#FF2A6D] tracking-widest uppercase mt-0.5">
-                {isParent ? 'Parental Command' : isOrganization ? 'Organization Portal' : '24/7 Safety Command'}
+                {isParent
+                  ? 'Parental Command'
+                  : isOrganization
+                    ? 'Organization Portal'
+                    : '24/7 Safety Command'}
               </p>
             </div>
           </Link>
@@ -140,7 +233,7 @@ export const DesktopSidebar = () => {
             {isSuperAdmin && (
               <div className="flex items-center space-x-2 px-2 pb-1 text-[11px] font-black text-[#FF2A6D] uppercase tracking-wider">
                 <Command className="w-4 h-4 text-[#FF2A6D]" />
-                <span>SuperAdmin Command HQ</span>
+                <span>SuperAdmin Command</span>
               </div>
             )}
             {isParent && (
@@ -153,46 +246,54 @@ export const DesktopSidebar = () => {
                 }`}
               >
                 <ShieldCheck className="w-5 h-5 shrink-0" />
-                <span>CHILD SAFETY GUARDIAN HQ</span>
+                <span>CHILD SAFETY GUARDIAN</span>
               </Link>
             )}
             {isOrganization && (
-              <Link
-                href="/organization"
-                className={`flex items-center space-x-3 px-4 py-3.5 rounded-2xl text-xs font-black uppercase tracking-wider transition-all border shadow-sm cursor-pointer ${
-                  pathname === '/organization'
-                    ? 'bg-gradient-to-r from-[#FF5C8A] via-[#FF2A6D] to-[#E01A4F] text-white shadow-md border-white'
-                    : 'bg-[#FFF0F3] text-[#FF2A6D] border-[#FFCCE1] hover:bg-[#FF2A6D] hover:text-white'
-                }`}
-              >
-                <Users className="w-5 h-5 shrink-0" />
-                <span>ORGANIZATION MONITOR HQ</span>
-              </Link>
+              <div className="flex items-center space-x-2 px-2 pb-1 text-[11px] font-black text-[#FF2A6D] uppercase tracking-wider">
+                <Users className="w-4 h-4 text-[#FF2A6D]" />
+                <span>Organization Portal</span>
+              </div>
             )}
 
             {activeNavItems.map((item) => {
               const Icon = item.icon;
-              const isActive = pathname === item.path;
+              // For organization tabs, check if the search param matches, otherwise check pathname
+              let isActive = pathname === item.path;
+              if (isOrganization && item.path.includes('?tab=')) {
+                 const tab = item.path.split('?tab=')[1];
+                 isActive = searchParams?.get('tab') === tab;
+              } else if (isOrganization && item.path === '/organization') {
+                 isActive = !searchParams?.get('tab') || searchParams?.get('tab') === 'monitor';
+              }
 
               return (
                 <Link
                   key={item.path}
                   href={item.path}
-                  className={`flex items-center space-x-3.5 px-4 py-3.5 rounded-2xl text-xs transition-all duration-300 group relative border ${isActive
+                  className={`flex items-center space-x-3.5 px-4 py-3.5 rounded-2xl text-xs transition-all duration-300 group relative border ${
+                    isActive
                       ? 'bg-gradient-to-r from-[#FF5C8A] via-[#FF2A6D] to-[#E01A4F] text-white font-black shadow-lg shadow-[#FF2A6D]/25 border-white/30 scale-[1.02]'
                       : 'bg-white/80 text-[#2A0826] border-[#FFCCE1]/60 hover:border-[#FF2A6D]/60 hover:bg-[#FFF0F3]/80 hover:shadow-md hover:shadow-[#FF2A6D]/5 hover:-translate-y-0.5'
-                    }`}
+                  }`}
                 >
-                  <div className={`p-2.5 rounded-xl shrink-0 transition-transform group-hover:scale-105 ${isActive ? 'bg-white/20 text-white' : 'bg-[#FFF0F3] text-[#FF2A6D]'
-                    }`}>
+                  <div
+                    className={`p-2.5 rounded-xl shrink-0 transition-transform group-hover:scale-105 ${
+                      isActive ? 'bg-white/20 text-white' : 'bg-[#FFF0F3] text-[#FF2A6D]'
+                    }`}
+                  >
                     <Icon className="w-4 h-4" />
                   </div>
 
                   <div className="flex-1 min-w-0">
-                    <p className={`font-black text-xs tracking-tight ${isActive ? 'text-white' : 'text-[#2A0826] group-hover:text-[#FF2A6D]'}`}>
+                    <p
+                      className={`font-black text-xs tracking-tight ${isActive ? 'text-white' : 'text-[#2A0826] group-hover:text-[#FF2A6D]'}`}
+                    >
                       {item.label}
                     </p>
-                    <p className={`text-[10.5px] font-semibold truncate mt-0.5 ${isActive ? 'text-white/90' : 'text-[#684E67]'}`}>
+                    <p
+                      className={`text-[10.5px] font-semibold truncate mt-0.5 ${isActive ? 'text-white/90' : 'text-[#684E67]'}`}
+                    >
                       {item.desc}
                     </p>
                   </div>
@@ -206,20 +307,35 @@ export const DesktopSidebar = () => {
         <div className="px-5 py-5 border-t border-[#FFCCE1]/60 bg-white/70 backdrop-blur-md space-y-3">
           {!isParent && !isOrganization && (
             <Link
-              href={isSuperAdmin ? '/admin?tab=overview' : (activeSession ? '/active-sos' : '/dashboard')}
+              href={
+                isSuperAdmin ? '/admin?tab=overview' : activeSession ? '/active-sos' : '/dashboard'
+              }
               className="flex items-center justify-center space-x-2.5 w-full bg-gradient-to-r from-[#FF5C8A] via-[#FF2A6D] to-[#E01A4F] text-white font-black px-4 py-3.5 rounded-2xl text-xs shadow-md shadow-[#FF2A6D]/25 hover:shadow-lg hover:shadow-[#FF2A6D]/35 hover:scale-[1.01] active:scale-95 transition-all uppercase tracking-wider border border-white/30"
             >
               <AlertTriangle className="w-4 h-4 animate-pulse" />
-              <span>{isSuperAdmin ? '🚨 EMERGENCY COMMAND' : (activeSession ? '🚨 VIEW SOS STATUS' : 'EMERGENCY SOS')}</span>
+              <span>
+                {isSuperAdmin
+                  ? '🚨 EMERGENCY COMMAND'
+                  : activeSession
+                    ? '🚨 VIEW SOS STATUS'
+                    : 'EMERGENCY SOS'}
+              </span>
             </Link>
           )}
 
           {/* LOGGED IN USER CARD WITH SIGN OUT */}
           <div className="bg-[#FFF0F3]/80 border border-[#FFCCE1] p-3 rounded-2xl flex items-center justify-between shadow-xs">
-            <Link href="/settings" className="flex items-center space-x-3 min-w-0 group cursor-pointer flex-1">
+            <Link
+              href="/settings"
+              className="flex items-center space-x-3 min-w-0 group cursor-pointer flex-1"
+            >
               <div className="w-9 h-9 rounded-xl bg-gradient-to-tr from-[#FF5C8A] to-[#FF2A6D] text-white flex items-center justify-center font-black text-xs shrink-0 shadow-xs overflow-hidden">
                 {mounted && currentUser?.profilePhoto ? (
-                  <img src={currentUser.profilePhoto} alt={displayName} className="w-full h-full object-cover" />
+                  <img
+                    src={currentUser.profilePhoto}
+                    alt={displayName}
+                    className="w-full h-full object-cover"
+                  />
                 ) : (
                   initials
                 )}
@@ -258,7 +374,9 @@ export const DesktopSidebar = () => {
               aria-label="Open SuperAdmin Menu"
             >
               <Command className="w-5 h-5 text-amber-300 animate-pulse shrink-0" />
-              <span className="text-xs font-black uppercase tracking-wider text-amber-300">ADMIN MENU</span>
+              <span className="text-xs font-black uppercase tracking-wider text-amber-300">
+                ADMIN MENU
+              </span>
               <span className="w-2.5 h-2.5 rounded-full bg-[#FF2A6D] animate-ping ml-0.5 shrink-0" />
             </button>
           </div>
@@ -276,14 +394,18 @@ export const DesktopSidebar = () => {
               <div className="relative w-80 max-w-[85vw] bg-white h-full flex flex-col shadow-2xl z-10 overflow-hidden border-r-2 border-[#FFCCE1] animate-slide-right">
                 {/* BRAND HEADER & CLOSE BUTTON */}
                 <div className="px-5 py-5 border-b border-[#FFCCE1]/70 bg-gradient-to-r from-[#FFF0F3] via-white to-[#FFF0F3] flex items-center justify-between shadow-xs">
-                  <Link href="/" onClick={() => setMobileOpen(false)} className="flex items-center space-x-3 group cursor-pointer">
+                  <Link
+                    href="/"
+                    onClick={() => setMobileOpen(false)}
+                    className="flex items-center space-x-3 group cursor-pointer"
+                  >
                     <Logo3DFlip size={40} className="shrink-0" />
                     <div style={{ lineHeight: 1.2 }}>
                       <h2 className="font-black text-sm text-[#2A0826] tracking-tight">
                         Sakhi Suraksha
                       </h2>
                       <p className="text-[9px] font-black text-[#FF2A6D] tracking-widest uppercase mt-0.5">
-                        SuperAdmin Mobile HQ
+                        SuperAdmin Mobile
                       </p>
                     </div>
                   </Link>
@@ -310,7 +432,7 @@ export const DesktopSidebar = () => {
                 <nav className="flex-1 px-4 py-5 space-y-2.5 overflow-y-auto scrollbar-none">
                   <div className="flex items-center space-x-2 px-2 pb-1 text-[11px] font-black text-[#FF2A6D] uppercase tracking-wider">
                     <Command className="w-4 h-4 text-[#FF2A6D]" />
-                    <span>SuperAdmin Command HQ</span>
+                    <span>SuperAdmin Command</span>
                   </div>
 
                   {adminNavItems.map((item) => {
@@ -322,20 +444,27 @@ export const DesktopSidebar = () => {
                         key={item.path}
                         href={item.path}
                         onClick={() => setMobileOpen(false)}
-                        className={`flex items-center space-x-3 px-3.5 py-3 rounded-2xl text-xs font-bold transition-all duration-300 border ${isActive
+                        className={`flex items-center space-x-3 px-3.5 py-3 rounded-2xl text-xs font-bold transition-all duration-300 border ${
+                          isActive
                             ? 'bg-gradient-to-r from-[#FF5C8A] via-[#FF2A6D] to-[#E01A4F] text-white font-black shadow-md border-white scale-[1.01]'
                             : 'bg-white text-[#2A0826] border-[#FFCCE1]/60 hover:border-[#FF2A6D]/60 hover:bg-[#FFF0F3]'
-                          }`}
+                        }`}
                       >
-                        <div className={`p-2.5 rounded-xl shrink-0 ${isActive ? 'bg-white/20 text-white' : 'bg-[#FFF0F3] text-[#FF2A6D]'}`}>
+                        <div
+                          className={`p-2.5 rounded-xl shrink-0 ${isActive ? 'bg-white/20 text-white' : 'bg-[#FFF0F3] text-[#FF2A6D]'}`}
+                        >
                           <Icon className="w-4 h-4" />
                         </div>
 
                         <div className="flex-1 min-w-0">
-                          <p className={`font-black text-xs tracking-tight truncate ${isActive ? 'text-white' : 'text-[#2A0826]'}`}>
+                          <p
+                            className={`font-black text-xs tracking-tight truncate ${isActive ? 'text-white' : 'text-[#2A0826]'}`}
+                          >
                             {item.label}
                           </p>
-                          <p className={`text-[10px] font-semibold truncate mt-0.5 ${isActive ? 'text-white/90' : 'text-[#684E67]'}`}>
+                          <p
+                            className={`text-[10px] font-semibold truncate mt-0.5 ${isActive ? 'text-white/90' : 'text-[#684E67]'}`}
+                          >
                             {item.desc}
                           </p>
                         </div>
@@ -364,7 +493,11 @@ export const DesktopSidebar = () => {
                     >
                       <div className="w-9 h-9 rounded-xl bg-gradient-to-tr from-[#FF5C8A] to-[#FF2A6D] text-white flex items-center justify-center font-black text-xs shrink-0 shadow-xs overflow-hidden">
                         {mounted && currentUser?.profilePhoto ? (
-                          <img src={currentUser.profilePhoto} alt={displayName} className="w-full h-full object-cover" />
+                          <img
+                            src={currentUser.profilePhoto}
+                            alt={displayName}
+                            className="w-full h-full object-cover"
+                          />
                         ) : (
                           initials
                         )}
@@ -373,9 +506,7 @@ export const DesktopSidebar = () => {
                         <p className="font-black text-xs text-[#2A0826] group-hover:text-[#FF2A6D] transition-colors truncate">
                           {displayName}
                         </p>
-                        <p className="text-[10px] font-bold text-[#FF2A6D] truncate">
-                          Super Admin
-                        </p>
+                        <p className="text-[10px] font-bold text-[#FF2A6D] truncate">Super Admin</p>
                       </div>
                     </Link>
 

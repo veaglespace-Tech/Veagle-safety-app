@@ -9,6 +9,7 @@ let ioInstance = null;
  */
 export function initSocketIO(httpServer) {
   ioInstance = new SocketIOServer(httpServer, {
+    path: '/api/socket.io',
     cors: {
       origin: '*',
       methods: ['GET', 'POST'],
@@ -37,6 +38,9 @@ export function initSocketIO(httpServer) {
         if (cleanPhone) {
           const phoneRoom = `user:${cleanPhone}`;
           socket.join(phoneRoom);
+          if (cleanPhone.length >= 10) {
+            socket.join(`user:${cleanPhone.slice(-10)}`);
+          }
           console.log(`[Socket.IO] ${socket.id} joined phone room: ${phoneRoom}`);
         }
       }
@@ -46,14 +50,18 @@ export function initSocketIO(httpServer) {
       }
     });
 
-    socket.on('sos:location-update', (data) => {
-      ioInstance.to(`track:${data.token}`).emit('location-updated', {
-        latitude: data.lat,
-        longitude: data.lng,
-        accuracy: data.accuracy || 10,
-        timestamp: new Date().toISOString(),
-      });
-      ioInstance.to('admin-ops').emit('admin:sos-location', data);
+    socket.on('join-track', ({ token }) => {
+      if (!token) return;
+      const room = `track:${token}`;
+      socket.join(room);
+      console.log(`[Socket.IO] ${socket.id} joined tracking room: ${room}`);
+    });
+
+    socket.on('leave-track', ({ token }) => {
+      if (!token) return;
+      const room = `track:${token}`;
+      socket.leave(room);
+      console.log(`[Socket.IO] ${socket.id} left tracking room: ${room}`);
     });
 
     socket.on('disconnect', () => {

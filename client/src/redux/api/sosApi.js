@@ -7,7 +7,12 @@ export const sosApi = {
   },
 
   updateSosLocation: async ({ sosSessionId, latitude, longitude, accuracy }) => {
-    const response = await apiClient.post('/sos/location', { sosSessionId, latitude, longitude, accuracy });
+    const response = await apiClient.post('/sos/location', {
+      sosSessionId,
+      latitude,
+      longitude,
+      accuracy,
+    });
     return response.data;
   },
 
@@ -18,6 +23,11 @@ export const sosApi = {
 
   fetchActiveSos: async () => {
     const response = await apiClient.get('/sos/active');
+    return response.data;
+  },
+
+  getSosLocation: async (id) => {
+    const response = await apiClient.get(`/sos/active/${id}/location`);
     return response.data;
   },
 

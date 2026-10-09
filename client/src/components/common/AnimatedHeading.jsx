@@ -11,7 +11,9 @@ export const AnimatedHeading = ({
   ...props
 }) => {
   if (variant === 'marquee') {
-    const list = items || (typeof children === 'string' ? children.split('✦').map((s) => s.trim()) : [children]);
+    const list =
+      items ||
+      (typeof children === 'string' ? children.split('✦').map((s) => s.trim()) : [children]);
     const icons = [ShieldCheck, Zap, Radio, Lock, Crown, Heart, ShieldAlert];
 
     const renderMarqueeGroup = (keyPrefix) => (
@@ -36,7 +38,11 @@ export const AnimatedHeading = ({
     );
 
     return (
-      <div className={`overflow-hidden whitespace-nowrap w-full py-2.5 ${className}`} style={style} {...props}>
+      <div
+        className={`overflow-hidden whitespace-nowrap w-full py-2.5 ${className}`}
+        style={style}
+        {...props}
+      >
         <div className="animate-marquee flex items-center space-x-8">
           {renderMarqueeGroup('g1')}
           {renderMarqueeGroup('g2')}
@@ -46,11 +52,7 @@ export const AnimatedHeading = ({
   }
 
   return (
-    <Component
-      className={`font-black text-tichi-text ${className}`}
-      style={style}
-      {...props}
-    >
+    <Component className={`font-black text-tichi-text ${className}`} style={style} {...props}>
       {children}
     </Component>
   );

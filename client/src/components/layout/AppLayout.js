@@ -9,6 +9,7 @@ import { DesktopSidebar } from './DesktopSidebar.js';
 
 import { GeoLocationTracker } from '../common/GeoLocationTracker.js';
 
+
 export const AppLayout = ({ children, fullScreen = false }) => {
   const pathname = usePathname();
   const router = useRouter();
@@ -19,37 +20,47 @@ export const AppLayout = ({ children, fullScreen = false }) => {
     setMounted(true);
   }, []);
 
+  const protectedPaths = [
+    '/dashboard',
+    '/active-sos',
+    '/contacts',
+    '/track-journey',
+    '/subscription',
+    '/settings',
+    '/profile',
+    '/admin',
+    '/organization',
+    '/parent',
+  ];
+
+  const isProtected = protectedPaths.some(
+    (path) => pathname === path || pathname.startsWith(path + '/')
+  );
+
+  const hasAuthToken =
+    Boolean(token) ||
+    (typeof window !== 'undefined' &&
+      (Boolean(localStorage.getItem('tichi_token')) || Boolean(localStorage.getItem('token'))));
+
   useEffect(() => {
     if (!mounted) return;
 
-    const protectedPaths = [
-      '/dashboard',
-      '/active-sos',
-      '/contacts',
-      '/track-journey',
-      '/subscription',
-      '/settings',
-      '/profile',
-      '/admin',
-      '/organization',
-      '/parent',
-    ];
-
-    const isProtected = protectedPaths.some((path) => pathname === path || pathname.startsWith(path + '/'));
-
-    const hasAuthToken =
-      Boolean(token) ||
-      (typeof window !== 'undefined' &&
-        (Boolean(localStorage.getItem('tichi_token')) || Boolean(localStorage.getItem('token'))));
-
-    // Unauthenticated user trying to access /admin routes -> redirect to /admin/login
-    if (pathname.startsWith('/admin') && pathname !== '/admin/login' && !hasAuthToken) {
-      router.push('/admin/login');
+    // Unauthenticated user trying to access /admin routes -> redirect to /auth?mode=login
+    if (pathname.startsWith('/admin') && !hasAuthToken) {
+      if (typeof window !== 'undefined') {
+        window.location.replace('/auth?mode=login');
+      } else {
+        router.push('/auth?mode=login');
+      }
       return;
     }
 
     if (isProtected && !hasAuthToken) {
-      router.push('/auth?mode=login');
+      if (typeof window !== 'undefined') {
+        window.location.replace('/auth?mode=login');
+      } else {
+        router.push('/auth?mode=login');
+      }
       return;
     }
 
@@ -60,22 +71,38 @@ export const AppLayout = ({ children, fullScreen = false }) => {
         if (storedUser?.role === 'SUPER_ADMIN') {
           isSuperAdmin = true;
         }
-      } catch (e) { }
+      } catch (e) {}
     }
 
-    // Non-admin trying to access /admin -> redirect to /admin/login
-    if (hasAuthToken && pathname.startsWith('/admin') && pathname !== '/admin/login' && !isSuperAdmin) {
-      router.push('/admin/login');
+    // Non-admin trying to access /admin -> redirect to /auth?mode=login
+    if (
+      hasAuthToken &&
+      pathname.startsWith('/admin') &&
+      !isSuperAdmin
+    ) {
+      router.push('/auth?mode=login');
       return;
     }
 
     // SuperAdmin trying to access member-only pages -> redirect to /admin
     const memberOnlyPaths = ['/dashboard', '/subscription'];
-    if (hasAuthToken && isSuperAdmin && memberOnlyPaths.some((p) => pathname === p || pathname.startsWith(p + '/'))) {
+    if (
+      hasAuthToken &&
+      isSuperAdmin &&
+      memberOnlyPaths.some((p) => pathname === p || pathname.startsWith(p + '/'))
+    ) {
       router.push('/admin');
       return;
     }
-  }, [mounted, pathname, token, user, router]);
+  }, [mounted, pathname, hasAuthToken, isProtected, user, router]);
+
+  if (mounted && isProtected && !hasAuthToken) {
+    return (
+      <div className="min-h-screen bg-[#FFF0F3] flex items-center justify-center">
+        <div className="w-8 h-8 rounded-full border-3 border-[#FF2A6D] border-t-transparent animate-spin" />
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-blush flex flex-col relative overflow-x-hidden">
@@ -89,11 +116,13 @@ export const AppLayout = ({ children, fullScreen = false }) => {
       <div className="lg:ml-72 flex-1 flex flex-col min-w-0">
         {!fullScreen && <Header />}
 
-        <main className={`flex-1 ${!fullScreen ? 'pb-24 lg:pb-6' : ''}`}>
-          {children}
-        </main>
+        <main className={`flex-1 ${!fullScreen ? 'pb-24 lg:pb-6' : ''}`}>{children}</main>
 
-        {!fullScreen && <Suspense fallback={null}><BottomNavigation /></Suspense>}
+        {!fullScreen && (
+          <Suspense fallback={null}>
+            <BottomNavigation />
+          </Suspense>
+        )}
       </div>
     </div>
   );

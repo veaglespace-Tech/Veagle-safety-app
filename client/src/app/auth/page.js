@@ -46,6 +46,7 @@ function UserAuthForm() {
 
   useEffect(() => {
     setMounted(true);
+    generateCaptcha();
     if (searchParams && searchParams.get('mode') === 'register') {
       setIsLogin(false);
     } else {
@@ -80,6 +81,17 @@ function UserAuthForm() {
   // OTP State
   const [otpCode, setOtpCode] = useState('');
 
+  // Captcha State
+  const [captchaNum1, setCaptchaNum1] = useState(0);
+  const [captchaNum2, setCaptchaNum2] = useState(0);
+  const [userCaptcha, setUserCaptcha] = useState('');
+
+  const generateCaptcha = () => {
+    setCaptchaNum1(Math.floor(Math.random() * 10) + 1);
+    setCaptchaNum2(Math.floor(Math.random() * 10) + 1);
+    setUserCaptcha('');
+  };
+
   const {
     token,
     user,
@@ -102,12 +114,10 @@ function UserAuthForm() {
 
   useEffect(() => {
     if (wasOtpModalOpened && !showOtpModal) {
-      // Case 1: New user pending payment (registrationToken from verify)
       if (registrationToken) {
         router.push('/pricing');
         return;
       }
-      // Case 2: Existing DB user verified
       if (user && token) {
         if (user.role === 'ORGANIZATION') {
           router.push('/organization');
@@ -119,6 +129,10 @@ function UserAuthForm() {
         }
         if (user.role === 'SUPER_ADMIN') {
           router.push('/admin');
+          return;
+        }
+        if (user.subscriptionStatus !== 'ACTIVE') {
+          router.push('/pricing');
           return;
         }
         router.push('/dashboard');
@@ -135,6 +149,8 @@ function UserAuthForm() {
         router.push('/organization');
       } else if (user.role === 'PARENT') {
         router.push('/parent');
+      } else if (user.subscriptionStatus !== 'ACTIVE') {
+        router.push('/pricing');
       } else {
         router.push('/dashboard');
       }
@@ -156,11 +172,18 @@ function UserAuthForm() {
         setValidationError('Email and Password are required.');
         return false;
       }
+      if (parseInt(userCaptcha) !== captchaNum1 + captchaNum2) {
+        setValidationError('Incorrect verification calculation.');
+        generateCaptcha();
+        return false;
+      }
       return true;
     }
 
     if (!fullName.trim() || !email.trim() || !phone.trim() || !password) {
-      setValidationError('Please fill in all required fields: Full Name, Email, Mobile Number, and Password.');
+      setValidationError(
+        'Please fill in all required fields: Full Name, Email, Mobile Number, and Password.'
+      );
       return false;
     }
 
@@ -178,7 +201,9 @@ function UserAuthForm() {
     const phoneRegex = /^[6-9]\d{9}$/;
     const cleanPhone = phone.replace(/\D/g, '');
     if (!phoneRegex.test(cleanPhone)) {
-      setValidationError('Please enter a valid 10-digit mobile number starting with 6, 7, 8, or 9.');
+      setValidationError(
+        'Please enter a valid 10-digit mobile number starting with 6, 7, 8, or 9.'
+      );
       return false;
     }
 
@@ -213,9 +238,12 @@ function UserAuthForm() {
           pincode: selectedRole === 'USER' ? pincode.trim() : '411001',
           emergencyContactName: selectedRole === 'USER' ? emergencyContactName.trim() : 'N/A',
           emergencyContactRelation: selectedRole === 'USER' ? emergencyContactRelation : 'N/A',
-          emergencyContactPhone: selectedRole === 'USER' ? emergencyContactPhone.replace(/\D/g, '') : '9999999999',
+          emergencyContactPhone:
+            selectedRole === 'USER' ? emergencyContactPhone.replace(/\D/g, '') : '9999999999',
           parentEmail: selectedRole === 'USER' ? parentEmail.trim() : '',
           password,
+          partnerReferralCode: searchParams?.get('ref') || '',
+          orgReferralCode: searchParams?.get('ref') || '',
         })
       );
     }
@@ -235,7 +263,9 @@ function UserAuthForm() {
       setValidationError('');
       alert(res.data.message || 'Password reset link sent! Check your inbox.');
     } catch (err) {
-      setValidationError(err.response?.data?.error || 'Failed to send reset link. Please try again.');
+      setValidationError(
+        err.response?.data?.error || 'Failed to send reset link. Please try again.'
+      );
     } finally {
       setIsSendingReset(false);
     }
@@ -247,17 +277,32 @@ function UserAuthForm() {
       setValidationError('Please enter full 6-digit OTP code.');
       return;
     }
-    const currentPendingToken = pendingToken || (typeof window !== 'undefined' ? localStorage.getItem('tichi_pending_token') : null);
-    dispatch(verifyEmailOtp({ email: pendingVerificationEmail || email, otp: otpCode, pendingToken: currentPendingToken }));
+    const currentPendingToken =
+      pendingToken ||
+      (typeof window !== 'undefined' ? localStorage.getItem('tichi_pending_token') : null);
+    dispatch(
+      verifyEmailOtp({
+        email: pendingVerificationEmail || email,
+        otp: otpCode,
+        pendingToken: currentPendingToken,
+      })
+    );
   };
 
   const handleResendOtp = () => {
-    const currentPendingToken = pendingToken || (typeof window !== 'undefined' ? localStorage.getItem('tichi_pending_token') : null);
-    dispatch(resendOtpCode({ email: pendingVerificationEmail || email, pendingToken: currentPendingToken }));
+    const currentPendingToken =
+      pendingToken ||
+      (typeof window !== 'undefined' ? localStorage.getItem('tichi_pending_token') : null);
+    dispatch(
+      resendOtpCode({ email: pendingVerificationEmail || email, pendingToken: currentPendingToken })
+    );
   };
 
   return (
-    <div suppressHydrationWarning className="min-h-screen bg-[#FFF0F3] text-[#2A0826] font-sans relative overflow-hidden flex flex-col">
+    <div
+      suppressHydrationWarning
+      className="min-h-screen bg-[#FFF0F3] text-[#2A0826] font-sans relative overflow-hidden flex flex-col"
+    >
       <PublicNavbar />
 
       {/* BACKGROUND AMBIENT GLOW MESHES */}
@@ -266,7 +311,6 @@ function UserAuthForm() {
 
       <div className="flex-1 flex items-center justify-center px-4 py-10 sm:py-16 relative z-10">
         <div className="w-full max-w-2xl bg-white/95 backdrop-blur-2xl border border-[#FFCCE1]/70 rounded-[36px] p-8 sm:p-12 space-y-8 shadow-[0_20px_50px_rgba(255,92,138,0.12)] transition-all duration-500 relative overflow-hidden">
-          
           {/* TOP DECORATIVE ACCENT STRIP */}
           <div className="absolute top-0 left-0 right-0 h-1.5 bg-gradient-to-r from-[#FF5C8A] via-[#FF2A6D] to-[#E01A4F]" />
 
@@ -280,24 +324,29 @@ function UserAuthForm() {
             </div>
 
             <div className="inline-flex items-center space-x-2 bg-[#FFF0F3] border border-[#FFCCE1]/80 px-4 py-1.5 rounded-full text-[11px] font-black text-[#FF2A6D] uppercase tracking-widest shadow-xs">
-              {isForgotMode 
-                ? <ShieldCheck className="w-3.5 h-3.5 text-[#FF5C8A]" />
-                : isLogin
-                  ? <Lock className="w-3.5 h-3.5 text-[#FF5C8A]" />
-                  : <UserPlus className="w-3.5 h-3.5 text-[#FF5C8A]" />
-              }
+              {isForgotMode ? (
+                <ShieldCheck className="w-3.5 h-3.5 text-[#FF5C8A]" />
+              ) : isLogin ? (
+                <Lock className="w-3.5 h-3.5 text-[#FF5C8A]" />
+              ) : (
+                <UserPlus className="w-3.5 h-3.5 text-[#FF5C8A]" />
+              )}
               <span>24/7 Encrypted Sakhi Protection</span>
             </div>
 
             <h1 className="text-2xl sm:text-3xl font-black text-[#2A0826] tracking-tight">
-              {isForgotMode ? 'Password Recovery' : isLogin ? 'Welcome Back to Sakhi' : 'Create Safety Account'}
+              {isForgotMode
+                ? 'Password Recovery'
+                : isLogin
+                  ? 'Welcome Back to Sakhi'
+                  : 'Create Safety Account'}
             </h1>
             <p className="text-xs sm:text-sm font-semibold text-[#684E67] max-w-lg mx-auto leading-relaxed">
               {isForgotMode
                 ? 'Enter your registered email address and we will send you a 1-hour password reset link.'
                 : isLogin
-                ? 'Sign in to access your live emergency protection dashboard & guardian safety network.'
-                : 'Create your account & unlock instant 365-day women emergency safety dispatch.'}
+                  ? 'Sign in to access your live emergency protection dashboard & guardian safety network.'
+                  : 'Create your account & unlock instant 365-day women emergency safety dispatch.'}
             </p>
           </div>
 
@@ -350,7 +399,9 @@ function UserAuthForm() {
           {isForgotMode ? (
             <form onSubmit={handleForgotPassword} className="space-y-4 text-xs">
               <div>
-                <label className="block text-[#684E67] font-extrabold mb-1">Registered Email Address *</label>
+                <label className="block text-[#684E67] font-extrabold mb-1">
+                  Registered Email Address *
+                </label>
                 <div className="relative">
                   <Mail className="w-4 h-4 text-[#684E67] absolute left-3.5 top-1/2 -translate-y-1/2" />
                   <input
@@ -383,7 +434,6 @@ function UserAuthForm() {
             </form>
           ) : (
             <form onSubmit={handleSubmit} className="space-y-4 text-xs">
-              
               {!isLogin ? (
                 <div className="space-y-4">
                   {/* ROLE SELECTION SWITCHER */}
@@ -434,7 +484,11 @@ function UserAuthForm() {
                   {/* FULL NAME */}
                   <div>
                     <label className="block text-[#684E67] font-extrabold mb-1">
-                      {selectedRole === 'ORGANIZATION' ? 'Organization / Institution Name *' : selectedRole === 'PARENT' ? 'Parent Full Name *' : 'Full Name *'}
+                      {selectedRole === 'ORGANIZATION'
+                        ? 'Organization / Institution Name *'
+                        : selectedRole === 'PARENT'
+                          ? 'Parent Full Name *'
+                          : 'Full Name *'}
                     </label>
                     <div className="relative">
                       {selectedRole === 'ORGANIZATION' ? (
@@ -445,7 +499,13 @@ function UserAuthForm() {
                       <input
                         type="text"
                         required
-                        placeholder={selectedRole === 'ORGANIZATION' ? 'e.g. St. Marys Academy / Apex Corp' : selectedRole === 'PARENT' ? 'e.g. Rajesh Sharma' : 'e.g. Priya Sharma'}
+                        placeholder={
+                          selectedRole === 'ORGANIZATION'
+                            ? 'e.g. St. Marys Academy / Apex Corp'
+                            : selectedRole === 'PARENT'
+                              ? 'e.g. Rajesh Sharma'
+                              : 'e.g. Priya Sharma'
+                        }
                         value={fullName}
                         onChange={(e) => setFullName(e.target.value)}
                         className="w-full pl-10 pr-4 py-3 bg-[#FFF0F3] border-1.5 border-[#FFCCE1] rounded-xl text-[#2A0826] font-bold focus:border-[#FF2A6D] focus:bg-white transition-all outline-none"
@@ -456,7 +516,9 @@ function UserAuthForm() {
                   {/* EMAIL & MOBILE */}
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                     <div>
-                      <label className="block text-[#684E67] font-extrabold mb-1">Email Address *</label>
+                      <label className="block text-[#684E67] font-extrabold mb-1">
+                        Email Address *
+                      </label>
                       <div className="relative">
                         <Mail className="w-4 h-4 text-[#684E67] absolute left-3.5 top-1/2 -translate-y-1/2" />
                         <input
@@ -471,7 +533,9 @@ function UserAuthForm() {
                     </div>
 
                     <div>
-                      <label className="block text-[#684E67] font-extrabold mb-1">Mobile Number *</label>
+                      <label className="block text-[#684E67] font-extrabold mb-1">
+                        Mobile Number *
+                      </label>
                       <div className="relative">
                         <Phone className="w-4 h-4 text-[#684E67] absolute left-3.5 top-1/2 -translate-y-1/2" />
                         <input
@@ -515,16 +579,22 @@ function UserAuthForm() {
                     <>
                       {/* BLOOD GROUP */}
                       <div>
-                        <label className="block text-[#684E67] font-extrabold mb-1">Blood Group *</label>
+                        <label className="block text-[#684E67] font-extrabold mb-1">
+                          Blood Group *
+                        </label>
                         <select
                           required
                           value={bloodGroup}
                           onChange={(e) => setBloodGroup(e.target.value)}
                           className="w-full px-4 py-3 bg-[#FFF0F3] border-1.5 border-[#FFCCE1] rounded-xl text-[#2A0826] font-bold focus:border-[#FF2A6D] focus:bg-white transition-all outline-none"
                         >
-                          <option value="" disabled>Select Blood Group</option>
+                          <option value="" disabled>
+                            Select Blood Group
+                          </option>
                           {['A+', 'A-', 'B+', 'B-', 'AB+', 'AB-', 'O+', 'O-'].map((bg) => (
-                            <option key={bg} value={bg}>{bg}</option>
+                            <option key={bg} value={bg}>
+                              {bg}
+                            </option>
                           ))}
                         </select>
                       </div>
@@ -532,7 +602,9 @@ function UserAuthForm() {
                       {/* ADDRESS & CITY */}
                       <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                         <div>
-                          <label className="block text-[#684E67] font-extrabold mb-1">Full Address *</label>
+                          <label className="block text-[#684E67] font-extrabold mb-1">
+                            Full Address *
+                          </label>
                           <div className="relative">
                             <MapPin className="w-4 h-4 text-[#684E67] absolute left-3.5 top-1/2 -translate-y-1/2" />
                             <input
@@ -565,7 +637,9 @@ function UserAuthForm() {
                       {/* STATE & PINCODE */}
                       <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                         <div>
-                          <label className="block text-[#684E67] font-extrabold mb-1">State *</label>
+                          <label className="block text-[#684E67] font-extrabold mb-1">
+                            State *
+                          </label>
                           <div className="relative">
                             <Map className="w-4 h-4 text-[#684E67] absolute left-3.5 top-1/2 -translate-y-1/2" />
                             <input
@@ -580,7 +654,9 @@ function UserAuthForm() {
                         </div>
 
                         <div>
-                          <label className="block text-[#684E67] font-extrabold mb-1">Pincode *</label>
+                          <label className="block text-[#684E67] font-extrabold mb-1">
+                            Pincode *
+                          </label>
                           <input
                             type="text"
                             required
@@ -596,7 +672,9 @@ function UserAuthForm() {
                       {/* EMERGENCY GUARDIAN CONTACT */}
                       <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                         <div>
-                          <label className="block text-[#684E67] font-extrabold mb-1">Guardian Name *</label>
+                          <label className="block text-[#684E67] font-extrabold mb-1">
+                            Guardian Name *
+                          </label>
                           <div className="relative">
                             <Users className="w-4 h-4 text-[#684E67] absolute left-3.5 top-1/2 -translate-y-1/2" />
                             <input
@@ -611,7 +689,9 @@ function UserAuthForm() {
                         </div>
 
                         <div>
-                          <label className="block text-[#684E67] font-extrabold mb-1">Relationship *</label>
+                          <label className="block text-[#684E67] font-extrabold mb-1">
+                            Relationship *
+                          </label>
                           <select
                             value={emergencyContactRelation}
                             onChange={(e) => setEmergencyContactRelation(e.target.value)}
@@ -628,7 +708,9 @@ function UserAuthForm() {
                         </div>
 
                         <div>
-                          <label className="block text-[#684E67] font-extrabold mb-1">Mobile Number *</label>
+                          <label className="block text-[#684E67] font-extrabold mb-1">
+                            Mobile Number *
+                          </label>
                           <div className="relative">
                             <Phone className="w-4 h-4 text-[#684E67] absolute left-3.5 top-1/2 -translate-y-1/2" />
                             <input
@@ -637,33 +719,37 @@ function UserAuthForm() {
                               maxLength={10}
                               placeholder="10-digit number"
                               value={emergencyContactPhone}
-                          onChange={(e) => setEmergencyContactPhone(e.target.value.replace(/\D/g, ''))}
-                          className="w-full pl-10 pr-3 py-3 bg-[#FFF0F3] border-1.5 border-[#FFCCE1] rounded-xl text-[#2A0826] font-mono font-bold focus:border-[#FF2A6D] focus:bg-white transition-all outline-none text-xs"
-                        />
+                              onChange={(e) =>
+                                setEmergencyContactPhone(e.target.value.replace(/\D/g, ''))
+                              }
+                              className="w-full pl-10 pr-3 py-3 bg-[#FFF0F3] border-1.5 border-[#FFCCE1] rounded-xl text-[#2A0826] font-mono font-bold focus:border-[#FF2A6D] focus:bg-white transition-all outline-none text-xs"
+                            />
+                          </div>
+                        </div>
                       </div>
-                    </div>
-                  </div>
 
-                  {/* PARENT EMAIL ALERT FIELD */}
-                  <div>
-                    <label className="block text-[#684E67] font-extrabold mb-1">Parent Email Address (For Emergency SOS Mail Alerts)</label>
-                    <div className="relative">
-                      <Mail className="w-4 h-4 text-[#684E67] absolute left-3.5 top-1/2 -translate-y-1/2" />
-                      <input
-                        type="email"
-                        placeholder="parent.email@example.com"
-                        value={parentEmail}
-                        onChange={(e) => setParentEmail(e.target.value)}
-                        className="w-full pl-10 pr-4 py-3 bg-[#FFF0F3] border-1.5 border-[#FFCCE1] rounded-xl text-[#2A0826] font-bold focus:border-[#FF2A6D] focus:bg-white transition-all outline-none text-xs"
-                      />
-                    </div>
-                    <p className="text-[10px] text-[#684E67] font-semibold mt-1">
-                      💡 Emergency SOS emails will automatically be dispatched to this Parent email along with admin alerts.
-                    </p>
-                  </div>
+                      {/* PARENT EMAIL ALERT FIELD */}
+                      <div>
+                        <label className="block text-[#684E67] font-extrabold mb-1">
+                          Parent Email Address (For Emergency SOS Mail Alerts)
+                        </label>
+                        <div className="relative">
+                          <Mail className="w-4 h-4 text-[#684E67] absolute left-3.5 top-1/2 -translate-y-1/2" />
+                          <input
+                            type="email"
+                            placeholder="parent.email@example.com"
+                            value={parentEmail}
+                            onChange={(e) => setParentEmail(e.target.value)}
+                            className="w-full pl-10 pr-4 py-3 bg-[#FFF0F3] border-1.5 border-[#FFCCE1] rounded-xl text-[#2A0826] font-bold focus:border-[#FF2A6D] focus:bg-white transition-all outline-none text-xs"
+                          />
+                        </div>
+                        <p className="text-[10px] text-[#684E67] font-semibold mt-1">
+                          💡 Emergency SOS emails will automatically be dispatched to this Parent
+                          email along with admin alerts.
+                        </p>
+                      </div>
                     </>
                   )}
-
                 </div>
               ) : (
                 /* LOGIN FORM - SINGLE UNIFIED SIGN IN FORM */
@@ -688,8 +774,8 @@ function UserAuthForm() {
                   <div>
                     <div className="flex justify-between items-center mb-1">
                       <label className="block text-[#684E67] font-extrabold">Password *</label>
-                      <button 
-                        type="button" 
+                      <button
+                        type="button"
                         onClick={() => setIsForgotMode(true)}
                         className="text-[10px] font-black text-[#FF2A6D] hover:underline"
                       >
@@ -715,6 +801,23 @@ function UserAuthForm() {
                       </button>
                     </div>
                   </div>
+
+                  {/* CAPTCHA */}
+                  <div>
+                    <label className="block text-[#684E67] font-extrabold mb-1">
+                      Verification: What is {captchaNum1} + {captchaNum2}? *
+                    </label>
+                    <div className="relative">
+                      <input
+                        type="number"
+                        required
+                        placeholder="Answer"
+                        value={userCaptcha}
+                        onChange={(e) => setUserCaptcha(e.target.value)}
+                        className="w-full px-4 py-3 bg-[#FFF0F3] border-1.5 border-[#FFCCE1] rounded-xl text-[#2A0826] font-bold focus:border-[#FF2A6D] focus:bg-white transition-all outline-none"
+                      />
+                    </div>
+                  </div>
                 </div>
               )}
 
@@ -726,11 +829,11 @@ function UserAuthForm() {
               >
                 <Zap className="w-4 h-4 text-white animate-pulse" />
                 <span>
-                  {(mounted && isLoading)
+                  {mounted && isLoading
                     ? 'PROCESSING...'
                     : isLogin
                       ? selectedRole === 'ORGANIZATION'
-                        ? 'SIGN IN TO ORGANIZATION HQ'
+                        ? 'SIGN IN TO ORGANIZATION'
                         : selectedRole === 'PARENT'
                           ? 'SIGN IN TO PARENT PORTAL'
                           : 'SIGN IN TO DASHBOARD'
@@ -738,10 +841,8 @@ function UserAuthForm() {
                 </span>
                 <ArrowRight className="w-4 h-4 text-white" />
               </button>
-
             </form>
           )}
-
         </div>
       </div>
 
@@ -749,14 +850,17 @@ function UserAuthForm() {
       {showOtpModal && (
         <div className="fixed inset-0 z-50 bg-[#2A0826]/70 backdrop-blur-md flex items-center justify-center p-4">
           <div className="w-full max-w-md bg-white rounded-3xl p-8 space-y-5 border-2 border-[#FF2A6D] shadow-[0_20px_60px_rgba(255,42,109,0.35)] animate-fade-up relative">
-            
             <div className="text-center space-y-2">
               <div className="w-14 h-14 rounded-2xl bg-[#FFF0F3] text-[#FF2A6D] flex items-center justify-center mx-auto border border-[#FFCCE1]">
                 <Mail className="w-7 h-7" />
               </div>
               <h3 className="text-xl font-black text-[#2A0826]">Verify Email Address</h3>
               <p className="text-xs text-[#684E67] font-bold">
-                Enter the 6-digit OTP code sent to <span className="font-mono text-[#FF2A6D] font-black">{pendingVerificationEmail || email}</span>.
+                Enter the 6-digit OTP code sent to{' '}
+                <span className="font-mono text-[#FF2A6D] font-black">
+                  {pendingVerificationEmail || email}
+                </span>
+                .
               </p>
             </div>
 
@@ -797,15 +901,20 @@ function UserAuthForm() {
             </form>
 
             <div className="pt-2 flex justify-between text-xs font-extrabold">
-              <button onClick={handleResendOtp} className="text-[#FF2A6D] hover:underline cursor-pointer">
+              <button
+                onClick={handleResendOtp}
+                className="text-[#FF2A6D] hover:underline cursor-pointer"
+              >
                 Resend OTP Code
               </button>
 
-              <button onClick={() => dispatch(setShowOtpModal(false))} className="text-[#684E67] hover:text-[#2A0826] cursor-pointer">
+              <button
+                onClick={() => dispatch(setShowOtpModal(false))}
+                className="text-[#684E67] hover:text-[#2A0826] cursor-pointer"
+              >
                 Cancel
               </button>
             </div>
-
           </div>
         </div>
       )}
@@ -817,7 +926,13 @@ function UserAuthForm() {
 
 export default function UserAuthPage() {
   return (
-    <Suspense fallback={<div className="min-h-screen bg-[#FFF0F3] flex items-center justify-center font-black text-[#FF2A6D]">Loading Sakhi Suraksha Auth...</div>}>
+    <Suspense
+      fallback={
+        <div className="min-h-screen bg-[#FFF0F3] flex items-center justify-center font-black text-[#FF2A6D]">
+          Loading Sakhi Suraksha Auth...
+        </div>
+      }
+    >
       <UserAuthForm />
     </Suspense>
   );

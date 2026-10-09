@@ -19,19 +19,35 @@ export default function UserOnboardingWelcomePage() {
         <div>
           <h1 className="font-extrabold text-2xl text-plum">Welcome to Veagle Safety</h1>
           <p className="text-xs text-tichi-muted mt-1 leading-relaxed">
-            Your personal safety network is ready. Follow these 3 simple steps to get 100% protected:
+            Your personal safety network is ready. Follow these 3 simple steps to get 100%
+            protected:
           </p>
         </div>
 
         <div className="space-y-3 text-left">
           {[
-            { icon: MapPin, title: '1. Grant GPS Permission', desc: 'Allows instant location broadcasting during emergency SOS.' },
-            { icon: Users, title: '2. Add 2+ Trusted Contacts', desc: 'Friends/family who receive live tracking links via SMS/Email.' },
-            { icon: PhoneCall, title: '3. Enable Silent SOS Button', desc: 'Discreet triple-click or hold trigger for quick distress alert.' },
+            {
+              icon: MapPin,
+              title: '1. Grant GPS Permission',
+              desc: 'Allows instant location broadcasting during emergency SOS.',
+            },
+            {
+              icon: Users,
+              title: '2. Add 2+ Trusted Contacts',
+              desc: 'Friends/family who receive live tracking links via SMS/Email.',
+            },
+            {
+              icon: PhoneCall,
+              title: '3. Enable Silent SOS Button',
+              desc: 'Discreet triple-click or hold trigger for quick distress alert.',
+            },
           ].map((item, i) => {
             const Icon = item.icon;
             return (
-              <div key={i} className="flex items-start space-x-3 p-3 rounded-xl bg-blush-subtle border border-blush-border">
+              <div
+                key={i}
+                className="flex items-start space-x-3 p-3 rounded-xl bg-blush-subtle border border-blush-border"
+              >
                 <Icon className="w-5 h-5 text-plum shrink-0 mt-0.5" />
                 <div>
                   <h3 className="font-bold text-xs text-plum">{item.title}</h3>

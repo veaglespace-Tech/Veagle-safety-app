@@ -76,7 +76,10 @@ if (typeof window !== 'undefined') {
 
   window.addEventListener('touchstart', unlockAudioOnInteraction, { capture: true, passive: true });
   window.addEventListener('click', unlockAudioOnInteraction, { capture: true, passive: true });
-  window.addEventListener('pointerdown', unlockAudioOnInteraction, { capture: true, passive: true });
+  window.addEventListener('pointerdown', unlockAudioOnInteraction, {
+    capture: true,
+    passive: true,
+  });
 }
 
 /**

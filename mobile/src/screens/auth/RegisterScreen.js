@@ -48,6 +48,7 @@ export default function RegisterScreen({ navigation }) {
   const [emergencyContactPhone, setEmergencyContactPhone] = useState('');
   const [emergencyContactRelation, setEmergencyContactRelation] = useState('Parent');
   const [parentEmail, setParentEmail] = useState('');
+  const [referralCode, setReferralCode] = useState('');
 
   const handleRegister = async () => {
     if (!fullName || !email || !phone || !password) {
@@ -60,6 +61,8 @@ export default function RegisterScreen({ navigation }) {
       bloodGroup, address, city, state, pincode,
       emergencyContactName, emergencyContactRelation,
       emergencyContactPhone, parentEmail,
+      partnerReferralCode: referralCode,
+      orgReferralCode: referralCode,
     };
     const result = await dispatch(registerUser(payload));
     if (registerUser.fulfilled.match(result)) {
@@ -95,6 +98,7 @@ export default function RegisterScreen({ navigation }) {
               <InputField label="Full Name *" icon="person-outline" value={fullName} onChangeText={setFullName} placeholder="e.g. Priya Sharma" />
               <InputField label="Email Address *" icon="mail-outline" value={email} onChangeText={setEmail} placeholder="priya@example.com" keyboardType="email-address" />
               <InputField label="Mobile Number *" icon="call-outline" value={phone} onChangeText={setPhone} placeholder="+91 98765 43210" keyboardType="phone-pad" />
+              <InputField label="Referral / Org Code (Optional)" icon="gift-outline" value={referralCode} onChangeText={setReferralCode} placeholder="Enter Code" />
               
               <View style={styles.fieldWrap}>
                 <Text style={styles.label}>Password *</Text>

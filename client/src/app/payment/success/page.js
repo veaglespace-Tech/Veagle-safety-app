@@ -52,7 +52,6 @@ function SuccessContent() {
 
       <div className="flex-1 flex items-center justify-center px-4 py-10 relative z-10">
         <div className="w-full max-w-lg bg-white/95 backdrop-blur-2xl rounded-[40px] p-6 sm:p-10 border-2 border-[#FFCCE1] shadow-[0_25px_60px_rgba(42,8,38,0.12)] space-y-6 text-center animate-fade-up relative overflow-hidden">
-          
           {/* TOP AMBIENT ACCENT BAR */}
           <div className="bg-gradient-to-r from-[#FF5C8A] via-[#FF2A6D] to-emerald-500 h-2.5 w-full absolute top-0 left-0 right-0" />
 
@@ -70,19 +69,19 @@ function SuccessContent() {
               <Sparkles className="w-4 h-4 text-emerald-600 animate-pulse" />
               <span>PAYMENT SUCCESSFUL & PROTECTION ACTIVE</span>
             </div>
-            
+
             <h1 className="text-2xl sm:text-3xl font-black text-[#2A0826] tracking-tight">
               Thank You for Registering!
             </h1>
-            
+
             <p className="text-xs text-[#684E67] font-bold leading-relaxed max-w-md mx-auto">
-              Your PayU transaction has been completed and your 365-day safety protection is now fully activated in the system.
+              Your PayU transaction has been completed and your 365-day safety protection is now
+              fully activated in the system.
             </p>
           </div>
 
           {/* ULTRA-MODERN RECEIPT / TRANSACTION CARD */}
           <div className="bg-gradient-to-br from-[#FFF0F3]/80 via-white to-[#FFF0F3]/80 p-5 sm:p-6 rounded-3xl border-2 border-[#FFCCE1] text-xs font-extrabold space-y-3 text-left shadow-xs">
-            
             <div className="flex items-center justify-between gap-2 pb-2.5 border-b border-[#FFCCE1]">
               <span className="text-[#684E67] font-bold">Transaction ID:</span>
               <button
@@ -91,8 +90,14 @@ function SuccessContent() {
                 className="inline-flex items-center space-x-1.5 font-mono text-[#FF2A6D] bg-white px-3 py-1 rounded-xl border border-[#FFCCE1] hover:border-[#FF2A6D] transition-all cursor-pointer group shrink-0"
                 title="Copy Transaction ID"
               >
-                <span className="font-black text-[11px] sm:text-xs truncate max-w-[170px] sm:max-w-[220px]">{txnid}</span>
-                {copied ? <Check className="w-3.5 h-3.5 text-emerald-600" /> : <Copy className="w-3.5 h-3.5 text-[#FF2A6D] group-hover:scale-110" />}
+                <span className="font-black text-[11px] sm:text-xs truncate max-w-[170px] sm:max-w-[220px]">
+                  {txnid}
+                </span>
+                {copied ? (
+                  <Check className="w-3.5 h-3.5 text-emerald-600" />
+                ) : (
+                  <Copy className="w-3.5 h-3.5 text-[#FF2A6D] group-hover:scale-110" />
+                )}
               </button>
             </div>
 
@@ -103,7 +108,9 @@ function SuccessContent() {
 
             <div className="flex justify-between items-center py-1">
               <span className="text-[#684E67] font-bold">Amount Paid (Inc. GST):</span>
-              <span className="font-mono text-[#FF2A6D] font-black text-base sm:text-lg">₹{amount}</span>
+              <span className="font-mono text-[#FF2A6D] font-black text-base sm:text-lg">
+                ₹{amount}
+              </span>
             </div>
 
             <div className="flex justify-between items-center border-t border-[#FFCCE1] pt-3">
@@ -141,10 +148,9 @@ function SuccessContent() {
               <ArrowRight className="w-4 h-4" />
             </button>
           </div>
-
         </div>
       </div>
-      
+
       <Footer />
     </div>
   );
@@ -152,7 +158,13 @@ function SuccessContent() {
 
 export default function PaymentSuccessPage() {
   return (
-    <Suspense fallback={<div className="min-h-screen bg-[#FFF0F3] flex items-center justify-center font-bold text-[#FF2A6D]">Loading Success Page...</div>}>
+    <Suspense
+      fallback={
+        <div className="min-h-screen bg-[#FFF0F3] flex items-center justify-center font-bold text-[#FF2A6D]">
+          Loading Success Page...
+        </div>
+      }
+    >
       <SuccessContent />
     </Suspense>
   );

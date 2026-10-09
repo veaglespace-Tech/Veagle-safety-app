@@ -2,7 +2,14 @@
 
 import React, { useRef, useState } from 'react';
 
-export const MagneticButton = ({ children, className = '', style = {}, onClick, pullStrength = 0.35, ...props }) => {
+export const MagneticButton = ({
+  children,
+  className = '',
+  style = {},
+  onClick,
+  pullStrength = 0.35,
+  ...props
+}) => {
   const buttonRef = useRef(null);
   const [position, setPosition] = useState({ x: 0, y: 0 });
   const [isHovered, setIsHovered] = useState(false);
@@ -26,7 +33,11 @@ export const MagneticButton = ({ children, className = '', style = {}, onClick, 
     setPosition({ x: 0, y: 0 });
   };
 
-  const isHiddenByTailwind = className && (className.includes('hidden') || className.includes('md:hidden') || className.includes('lg:hidden'));
+  const isHiddenByTailwind =
+    className &&
+    (className.includes('hidden') ||
+      className.includes('md:hidden') ||
+      className.includes('lg:hidden'));
 
   return (
     <div

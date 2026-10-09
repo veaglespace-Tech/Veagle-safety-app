@@ -71,3 +71,9 @@ self.addEventListener('notificationclick', (event) => {
     })
   );
 });
+
+// Basic fetch handler for PWA requirements (bypass for live tracking)
+self.addEventListener('fetch', (event) => {
+  // Pass everything to network so live tracking and real-time updates aren't broken by aggressive caching
+  event.respondWith(fetch(event.request));
+});

@@ -19,4 +19,9 @@ export const organizationApi = {
     const response = await apiClient.delete(`/organization/members/${membershipId}`);
     return response.data;
   },
+
+  getSettings: async () => {
+    const response = await apiClient.get('/organization/settings');
+    return response.data;
+  },
 };

@@ -12,7 +12,7 @@ export const getAdminOverview = asyncHandler(async (req, res) => {
     where: { status: 'ACTIVE' },
     include: {
       user: { select: { id: true, fullName: true, email: true, phone: true, profilePhoto: true } },
-      locations: { orderBy: { recordedAt: 'desc' }, take: 1 },
+      locations: { orderBy: { recordedAt: 'desc' }, take: 500 },
       alerts: true,
     },
     orderBy: { startedAt: 'desc' },
@@ -41,7 +41,9 @@ export const getAdminOverview = asyncHandler(async (req, res) => {
   });
 
   const gstSetting = await prisma.systemSetting.findUnique({ where: { key: 'GST_PERCENTAGE' } });
-  const currentGstPercentage = gstSetting ? parseFloat(gstSetting.value) : 18.0;
+  const currentGstPercentage = (gstSetting && gstSetting.value !== undefined && gstSetting.value !== null && !isNaN(parseFloat(gstSetting.value)))
+    ? parseFloat(gstSetting.value)
+    : 18.0;
 
   return res.json({
     metrics: {
@@ -469,6 +471,11 @@ export const deleteContactAdmin = asyncHandler(async (req, res) => {
  * Manage Subscription Plans (Get All Plans)
  */
 export const getPlans = asyncHandler(async (req, res) => {
+  const gstSetting = await prisma.systemSetting.findUnique({ where: { key: 'GST_PERCENTAGE' } });
+  const globalGst = (gstSetting && gstSetting.value !== undefined && gstSetting.value !== null && !isNaN(parseFloat(gstSetting.value)))
+    ? parseFloat(gstSetting.value)
+    : 18.0;
+
   let plans = await prisma.plan.findMany({ orderBy: { basePrice: 'asc' } });
 
   // If no plans exist, create default 24 INR + GST plan
@@ -481,13 +488,14 @@ export const getPlans = asyncHandler(async (req, res) => {
       'Direct 112 & 1091 Helpline Access',
       '24/7 Active Safety Command Support'
     ];
+    const defaultTotal = parseFloat((24.0 + (24.0 * globalGst) / 100).toFixed(2));
     const defaultPlan = await prisma.plan.create({
       data: {
         name: 'Sakhi Suraksha 365 Yearly Protection Plan',
         description: 'Complete 365-Day 24/7 Unlimited SOS Emergency Broadcast, Live GPS Map Sharing, 5 Trusted Contacts Network, and Command Dispatch',
         basePrice: 24.0,
-        gstPercentage: 18.0,
-        totalPrice: 28.32,
+        gstPercentage: globalGst,
+        totalPrice: defaultTotal,
         durationDays: 365,
         features: JSON.stringify(defaultFeatures),
         isActive: true,
@@ -505,8 +513,14 @@ export const getPlans = asyncHandler(async (req, res) => {
         parsedFeatures = p.features.split('\n').map((f) => f.trim()).filter(Boolean);
       }
     }
+    const base = parseFloat(p.basePrice || 0);
+    const planGst = base === 0 ? 0 : (p.gstPercentage !== undefined && p.gstPercentage !== null && !isNaN(parseFloat(p.gstPercentage)) ? parseFloat(p.gstPercentage) : globalGst);
+    const total = base === 0 ? 0 : parseFloat((base + (base * planGst) / 100).toFixed(2));
     return {
       ...p,
+      basePrice: base,
+      gstPercentage: planGst,
+      totalPrice: total,
       features: Array.isArray(parsedFeatures) ? parsedFeatures : []
     };
   });
@@ -524,8 +538,17 @@ export const createOrUpdatePlan = asyncHandler(async (req, res) => {
     return res.status(400).json({ error: 'Plan name and basePrice are required' });
   }
 
+  const gstSetting = await prisma.systemSetting.findUnique({ where: { key: 'GST_PERCENTAGE' } });
+  const globalGst = (gstSetting && gstSetting.value !== undefined && gstSetting.value !== null && !isNaN(parseFloat(gstSetting.value)))
+    ? parseFloat(gstSetting.value)
+    : 18.0;
+
   const base = parseFloat(basePrice) || 0;
-  const gst = base === 0 ? 0 : (gstPercentage !== undefined ? parseFloat(gstPercentage) : 18.0);
+  const gst = base === 0
+    ? 0
+    : (gstPercentage !== undefined && gstPercentage !== null && !isNaN(parseFloat(gstPercentage)))
+      ? parseFloat(gstPercentage)
+      : globalGst;
   const total = base === 0 ? 0 : parseFloat((base + (base * gst) / 100).toFixed(2));
   const duration = parseInt(durationDays, 10) || 30;
 
@@ -587,7 +610,9 @@ export const createOrUpdatePlan = asyncHandler(async (req, res) => {
  */
 export const getGstSettings = asyncHandler(async (req, res) => {
   const setting = await prisma.systemSetting.findUnique({ where: { key: 'GST_PERCENTAGE' } });
-  const gstPercentage = setting ? parseFloat(setting.value) : 18.0;
+  const gstPercentage = (setting && setting.value !== undefined && setting.value !== null && !isNaN(parseFloat(setting.value)))
+    ? parseFloat(setting.value)
+    : 18.0;
 
   return res.json({ gstPercentage });
 });
@@ -602,7 +627,8 @@ export const updateGstSettings = asyncHandler(async (req, res) => {
     return res.status(400).json({ error: 'Valid gstPercentage number is required' });
   }
 
-  const gstValue = parseFloat(gstPercentage).toString();
+  const parsedGst = parseFloat(gstPercentage);
+  const gstValue = parsedGst.toString();
 
   const setting = await prisma.systemSetting.upsert({
     where: { key: 'GST_PERCENTAGE' },
@@ -610,8 +636,24 @@ export const updateGstSettings = asyncHandler(async (req, res) => {
     create: { key: 'GST_PERCENTAGE', value: gstValue },
   });
 
+  // Automatically update all existing subscription plans with the new global GST percentage
+  // and recalculate each plan's totalPrice!
+  const allPlans = await prisma.plan.findMany();
+  for (const p of allPlans) {
+    const base = parseFloat(p.basePrice || 0);
+    const newGst = base === 0 ? 0 : parsedGst;
+    const newTotal = base === 0 ? 0 : parseFloat((base + (base * newGst) / 100).toFixed(2));
+    await prisma.plan.update({
+      where: { id: p.id },
+      data: {
+        gstPercentage: newGst,
+        totalPrice: newTotal,
+      },
+    });
+  }
+
   return res.json({
-    message: 'Global GST percentage updated successfully',
+    message: 'Global GST percentage updated successfully and applied to all plans',
     gstPercentage: parseFloat(setting.value),
   });
 });

@@ -36,19 +36,38 @@ const PRIMARY_LINES = [
 ];
 
 const SECONDARY_LINES = [
-  { title: 'Ambulance & Medical', number: '108', icon: HeartPulse, desc: 'Emergency medical & trauma response' },
+  {
+    title: 'Ambulance & Medical',
+    number: '108',
+    icon: HeartPulse,
+    desc: 'Emergency medical & trauma response',
+  },
   { title: 'Police Direct', number: '100', icon: Phone, desc: 'Local police dispatch center' },
-  { title: 'Child Helpline', number: '1098', icon: MessageSquare, desc: 'Child protection & trafficking prevention' },
-  { title: 'Cyber Crime', number: '1930', icon: Globe, desc: 'Online harassment, fraud & stalking' },
+  {
+    title: 'Child Helpline',
+    number: '1098',
+    icon: MessageSquare,
+    desc: 'Child protection & trafficking prevention',
+  },
+  {
+    title: 'Cyber Crime',
+    number: '1930',
+    icon: Globe,
+    desc: 'Online harassment, fraud & stalking',
+  },
 ];
 
 export default function EmergencyHelpServicesPage() {
   return (
     <AppLayout>
-      <div className="max-w-xl mx-auto px-4 pt-5 pb-4 space-y-5 lg:max-w-2xl">
-        <div className="animate-fade-up">
-          <h1 className="text-xl font-extrabold text-tichi-text tracking-tight">Emergency Contacts</h1>
-          <p className="text-xs text-tichi-muted mt-0.5">Single-tap direct dialing to all national emergency services</p>
+      <div className="max-w-xl mx-auto px-4 pt-5 pb-4 space-y-5 lg:max-w-4xl xl:max-w-5xl">
+        <div className="flex items-center justify-between animate-fade-up">
+          <h1 className="text-xl font-extrabold text-tichi-text tracking-tight">
+            Emergency Contacts
+          </h1>
+          <p className="text-xs text-tichi-muted mt-0.5">
+            Single-tap direct dialing to all national emergency services
+          </p>
         </div>
 
         <div className="space-y-3 fade-up-1">
@@ -67,15 +86,23 @@ export default function EmergencyHelpServicesPage() {
                   <div>
                     <div className="flex items-center space-x-2">
                       <h3 className="font-extrabold text-sm">{item.title}</h3>
-                      <span className="text-[9px] font-black tracking-widest bg-white/20 px-2 py-0.5 rounded-full">{item.badge}</span>
+                      <span className="text-[9px] font-black tracking-widest bg-white/20 px-2 py-0.5 rounded-full">
+                        {item.badge}
+                      </span>
                     </div>
-                    <p className="text-xs opacity-75 mt-0.5 max-w-[220px] leading-relaxed">{item.desc}</p>
+                    <p className="text-xs opacity-75 mt-0.5 max-w-[220px] leading-relaxed">
+                      {item.desc}
+                    </p>
                   </div>
                 </div>
 
                 <div className="text-right shrink-0 ml-4">
-                  <span className="text-3xl font-black tracking-wider block leading-none">{item.number}</span>
-                  <span className="text-[10px] uppercase font-bold tracking-widest opacity-80 mt-1 block">TAP TO CALL</span>
+                  <span className="text-3xl font-black tracking-wider block leading-none">
+                    {item.number}
+                  </span>
+                  <span className="text-[10px] uppercase font-bold tracking-widest opacity-80 mt-1 block">
+                    TAP TO CALL
+                  </span>
                 </div>
               </a>
             );
@@ -84,7 +111,9 @@ export default function EmergencyHelpServicesPage() {
 
         <div className="flex items-center space-x-3 fade-up-2">
           <div className="flex-1 h-px bg-blush-border"></div>
-          <span className="text-[10px] font-bold text-tichi-muted uppercase tracking-widest">More Services</span>
+          <span className="text-[10px] font-bold text-tichi-muted uppercase tracking-widest">
+            More Services
+          </span>
           <div className="flex-1 h-px bg-blush-border"></div>
         </div>
 
@@ -121,7 +150,9 @@ export default function EmergencyHelpServicesPage() {
         <div className="fade-up-3 bg-blush-subtle border border-blush-border rounded-card p-4 flex items-center justify-between">
           <div>
             <h4 className="font-bold text-sm text-tichi-text">National Crime Records Bureau</h4>
-            <p className="text-xs text-tichi-muted mt-0.5">File online reports for cybercrime, missing persons & more</p>
+            <p className="text-xs text-tichi-muted mt-0.5">
+              File online reports for cybercrime, missing persons & more
+            </p>
           </div>
           <a
             href="https://cybercrime.gov.in"

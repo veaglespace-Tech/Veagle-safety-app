@@ -6,6 +6,7 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useSelector } from 'react-redux';
+import { LinearGradient } from 'expo-linear-gradient';
 import { journeyApi } from '../../api/journeyApi';
 import { checkinApi } from '../../api/checkinApi';
 import { COLORS } from '../../theme/colors';
@@ -145,7 +146,7 @@ export default function JourneyScreen() {
 
         {/* TAB 1 — TRACK JOURNEY */}
         {activeTab === 'JOURNEY' && (
-          <View style={styles.card}>
+          <LinearGradient colors={['#FFFFFF', '#FFF0F3', '#FFFFFF']} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={styles.card}>
             {journey ? (
               <View style={{ gap: 16 }}>
                 <View style={styles.activeHeader}>
@@ -174,9 +175,11 @@ export default function JourneyScreen() {
                   </View>
                 </View>
 
-                <TouchableOpacity style={styles.successBtn} onPress={handleCompleteJourney} activeOpacity={0.85}>
-                  <Ionicons name="shield-checkmark" size={20} color="#fff" />
-                  <Text style={styles.successBtnText}>I'VE ARRIVED SAFELY</Text>
+                <TouchableOpacity onPress={handleCompleteJourney} activeOpacity={0.85}>
+                  <LinearGradient colors={['#34D399', '#10B981']} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={styles.successBtn}>
+                    <Ionicons name="shield-checkmark" size={20} color="#fff" />
+                    <Text style={styles.successBtnText}>I'VE ARRIVED SAFELY</Text>
+                  </LinearGradient>
                 </TouchableOpacity>
               </View>
             ) : (
@@ -234,26 +237,32 @@ export default function JourneyScreen() {
                 </View>
 
                 <TouchableOpacity
-                  style={[styles.primaryBtn, (loading || !destination) && styles.primaryBtnDisabled]}
                   onPress={handleStartJourney}
                   disabled={loading || !destination}
                   activeOpacity={0.85}
                 >
-                  {loading ? <ActivityIndicator color="#fff" size="small" /> : (
-                    <>
-                      <Ionicons name="navigate" size={18} color="#fff" />
-                      <Text style={styles.primaryBtnText}>START JOURNEY ({minutes || '30'} MINS)</Text>
-                    </>
-                  )}
+                  <LinearGradient 
+                    colors={['#FF5C8A', '#FF2A6D']} 
+                    start={{ x: 0, y: 0 }} 
+                    end={{ x: 1, y: 1 }} 
+                    style={[styles.primaryBtn, (loading || !destination) && styles.primaryBtnDisabled]}
+                  >
+                    {loading ? <ActivityIndicator color="#fff" size="small" /> : (
+                      <>
+                        <Ionicons name="navigate" size={18} color="#fff" />
+                        <Text style={styles.primaryBtnText}>START JOURNEY ({minutes || '30'} MINS)</Text>
+                      </>
+                    )}
+                  </LinearGradient>
                 </TouchableOpacity>
               </View>
             )}
-          </View>
+          </LinearGradient>
         )}
 
         {/* TAB 2 — CHECK ON ME */}
         {activeTab === 'CHECKIN' && (
-          <View style={styles.card}>
+          <LinearGradient colors={['#FFFFFF', '#FFF0F3', '#FFFFFF']} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={styles.card}>
             {checkin ? (
               <View style={{ gap: 16, alignItems: 'center' }}>
                 <View style={styles.checkinIconWrap}>
@@ -267,9 +276,11 @@ export default function JourneyScreen() {
                 <View style={styles.infoBox}>
                   <Text style={styles.infoText}>If you don't respond by the scheduled time, your trusted contacts will be automatically notified.</Text>
                 </View>
-                <TouchableOpacity style={styles.successBtn} onPress={handleConfirmSafe} activeOpacity={0.85}>
-                  <Ionicons name="shield-checkmark" size={20} color="#fff" />
-                  <Text style={styles.successBtnText}>YES, I'M SAFE NOW</Text>
+                <TouchableOpacity onPress={handleConfirmSafe} activeOpacity={0.85}>
+                  <LinearGradient colors={['#34D399', '#10B981']} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={styles.successBtn}>
+                    <Ionicons name="shield-checkmark" size={20} color="#fff" />
+                    <Text style={styles.successBtnText}>YES, I'M SAFE NOW</Text>
+                  </LinearGradient>
                 </TouchableOpacity>
               </View>
             ) : (
@@ -313,21 +324,27 @@ export default function JourneyScreen() {
                 </View>
 
                 <TouchableOpacity
-                  style={[styles.primaryBtn, loading && styles.primaryBtnDisabled]}
                   onPress={handleStartCheckin}
                   disabled={loading}
                   activeOpacity={0.85}
                 >
-                  {loading ? <ActivityIndicator color="#fff" size="small" /> : (
-                    <>
-                      <Ionicons name="time" size={18} color="#fff" />
-                      <Text style={styles.primaryBtnText}>START SAFETY CHECK ({checkinInterval || '15'} MINS)</Text>
-                    </>
-                  )}
+                  <LinearGradient 
+                    colors={['#FF5C8A', '#FF2A6D']} 
+                    start={{ x: 0, y: 0 }} 
+                    end={{ x: 1, y: 1 }} 
+                    style={[styles.primaryBtn, loading && styles.primaryBtnDisabled]}
+                  >
+                    {loading ? <ActivityIndicator color="#fff" size="small" /> : (
+                      <>
+                        <Ionicons name="time" size={18} color="#fff" />
+                        <Text style={styles.primaryBtnText}>START SAFETY CHECK ({checkinInterval || '15'} MINS)</Text>
+                      </>
+                    )}
+                  </LinearGradient>
                 </TouchableOpacity>
               </View>
             )}
-          </View>
+          </LinearGradient>
         )}
 
         {/* INFO NOTE */}

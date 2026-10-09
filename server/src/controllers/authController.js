@@ -28,6 +28,8 @@ export const register = asyncHandler(async (req, res) => {
     emergencyContactPhone,
     parentEmail,
     medicalNotes,
+    partnerReferralCode,
+    orgReferralCode,
   } = req.body;
 
   const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -129,6 +131,26 @@ export const register = asyncHandler(async (req, res) => {
   const otp = Math.floor(100000 + Math.random() * 900000).toString();
   const otpExpires = new Date(Date.now() + 10 * 60 * 1000); // 10 minutes
 
+  let referredByPartnerId = null;
+  if (partnerReferralCode) {
+    const partner = await prisma.referralPartner.findUnique({
+      where: { partnerReferralCode }
+    });
+    if (partner && partner.isActive) {
+      referredByPartnerId = partner.id;
+    }
+  }
+
+  let organizationId = null;
+  if (orgReferralCode) {
+    const orgUser = await prisma.user.findUnique({
+      where: { orgReferralCode }
+    });
+    if (orgUser && orgUser.role === 'ORGANIZATION') {
+      organizationId = orgUser.id;
+    }
+  }
+
   let user;
   try {
     user = await prisma.user.create({
@@ -153,6 +175,8 @@ export const register = asyncHandler(async (req, res) => {
         emailOtp: assignedRole === 'USER' ? otp : null,
         emailOtpExpiresAt: assignedRole === 'USER' ? otpExpires : null,
         subscriptionStatus: assignedRole === 'SUPER_ADMIN' ? 'ACTIVE' : 'INACTIVE',
+        referredByPartnerId,
+        organizationId,
       },
     });
   } catch (dbErr) {
@@ -253,7 +277,8 @@ export const verifyEmail = asyncHandler(async (req, res) => {
   // Case 1: Check existing DB user (for resend OTP / existing users)
   const existingUser = email ? await prisma.user.findUnique({ where: { email } }) : null;
   if (existingUser) {
-    if (existingUser.isEmailVerified) {
+    // Skip OTP check only if email is verified AND the user is NOT a SUPER_ADMIN logging in
+    if (existingUser.isEmailVerified && existingUser.role !== 'SUPER_ADMIN' && !existingUser.emailOtp) {
       const token = jwt.sign(
         { id: existingUser.id, userId: existingUser.id, role: existingUser.role, email: existingUser.email },
         config.jwt.secret,
@@ -273,7 +298,7 @@ export const verifyEmail = asyncHandler(async (req, res) => {
       });
     }
 
-    if (existingUser.emailOtp !== otp) {
+    if (!existingUser.emailOtp || existingUser.emailOtp !== otp) {
       return res.status(400).json({ error: 'Invalid OTP code. Please check your email and try again.' });
     }
 
@@ -434,7 +459,7 @@ export const resendOtp = asyncHandler(async (req, res) => {
  * Login User / SuperAdmin
  */
 export const login = asyncHandler(async (req, res) => {
-  const { email, password, isAdminLogin } = req.body;
+  const { email, password } = req.body;
 
   const inputStr = email?.trim() || '';
   const cleanPhone = inputStr.replace(/\D/g, '');
@@ -457,15 +482,29 @@ export const login = asyncHandler(async (req, res) => {
     return res.status(401).json({ error: 'Invalid email or password' });
   }
 
-  // SuperAdmin Dedicated URL Access Control Enforcement
-  if (isAdminLogin) {
-    if (user.role !== 'SUPER_ADMIN') {
-      return res.status(403).json({ error: 'Access denied. SuperAdmin privileges required.' });
+  // SuperAdmin Login with OTP
+  if (user.role === 'SUPER_ADMIN') {
+    const newOtp = Math.floor(100000 + Math.random() * 900000).toString();
+    const otpExpires = new Date(Date.now() + 10 * 60 * 1000);
+
+    await prisma.user.update({
+      where: { id: user.id },
+      data: { emailOtp: newOtp, emailOtpExpiresAt: otpExpires },
+    });
+
+    console.log(`🔑 [SUPER_ADMIN OTP] Email: ${user.email} | OTP: ${newOtp}`);
+
+    try {
+      await sendEmailVerificationOtp({ recipientEmail: user.email, userName: user.fullName, otp: newOtp });
+    } catch (e) {
+      console.warn('[Admin Login OTP Email Notice]', e.message);
     }
-  } else {
-    if (user.role === 'SUPER_ADMIN') {
-      return res.status(403).json({ error: 'SuperAdmin access is restricted. Please use the dedicated admin login URL.' });
-    }
+
+    return res.status(200).json({
+      message: 'OTP sent for Admin Verification.',
+      requiresVerification: true,
+      email: user.email,
+    });
   }
 
   if (!user.isEmailVerified && user.role === 'USER') {
@@ -899,3 +938,33 @@ export const resetPassword = asyncHandler(async (req, res) => {
   });
 });
 
+/**
+ * Public Stats
+ */
+export const getPublicStats = asyncHandler(async (req, res) => {
+  const userCount = await prisma.user.count({
+    where: {
+      role: 'USER',
+    },
+  });
+
+  const settings = await prisma.systemSetting.findMany({
+    where: {
+      key: { in: ['FAKE_BASE_COUNT', 'TARGET_MISSION_COUNT'] },
+    },
+  });
+
+  let fakeBaseCount = 3472;
+  let targetMissionCount = '1 Cr+';
+
+  settings.forEach((s) => {
+    if (s.key === 'FAKE_BASE_COUNT') fakeBaseCount = parseInt(s.value, 10) || 3472;
+    if (s.key === 'TARGET_MISSION_COUNT') targetMissionCount = s.value || '1 Cr+';
+  });
+
+  return res.status(200).json({
+    registeredUsers: userCount,
+    fakeBaseCount,
+    targetMissionCount,
+  });
+});

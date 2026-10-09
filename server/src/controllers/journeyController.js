@@ -37,6 +37,15 @@ export const completeJourney = async (req, res) => {
   try {
     const { journeyId } = req.body;
 
+    // IDOR FIX: Verify journey belongs to the user and is active
+    const existingJourney = await prisma.journey.findFirst({
+      where: { id: journeyId, userId: req.user?.id }
+    });
+
+    if (!existingJourney) {
+      return res.status(404).json({ error: 'Journey not found or unauthorized' });
+    }
+
     const journey = await prisma.journey.update({
       where: { id: journeyId },
       data: {

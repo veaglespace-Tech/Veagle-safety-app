@@ -2,7 +2,13 @@
  * Helper to trigger immediate WhatsApp emergency navigation when SOS is activated.
  * Launches WhatsApp without unloading the main web app tab, ensuring the siren audio continues playing.
  */
-export const openWhatsAppSosEmergency = ({ latitude, longitude, publicShareToken, emergencyContactPhone, userName } = {}) => {
+export const openWhatsAppSosEmergency = ({
+  latitude,
+  longitude,
+  publicShareToken,
+  emergencyContactPhone,
+  userName,
+} = {}) => {
   if (typeof window === 'undefined') return;
 
   let phone = emergencyContactPhone;
@@ -19,13 +25,15 @@ export const openWhatsAppSosEmergency = ({ latitude, longitude, publicShareToken
     } catch (e) {}
   }
 
-  const lat = latitude || 18.5204;
-  const lng = longitude || 73.8567;
+  const lat = latitude;
+  const lng = longitude;
   const mapLink = `https://www.google.com/maps?q=${lat},${lng}`;
-  const trackingLink = publicShareToken ? `${window.location.origin}/live-track/${publicShareToken}` : mapLink;
+  const trackingLink = publicShareToken
+    ? `${window.location.origin}/live-track/${publicShareToken}`
+    : mapLink;
   const nameStr = name ? `${name}` : 'Sakhi Member';
 
-  const messageText = 
+  const messageText =
     `🚨 EMERGENCY SOS ALERT! 🚨\n\n` +
     `I (${nameStr}) am in danger and need IMMEDIATE help!\n\n` +
     `📍 My Live GPS Location:\n${mapLink}\n\n` +
@@ -53,7 +61,9 @@ export const openWhatsAppSosEmergency = ({ latitude, longitude, publicShareToken
     iframe.src = whatsappDeepLink;
     document.body.appendChild(iframe);
     setTimeout(() => {
-      try { document.body.removeChild(iframe); } catch (e) {}
+      try {
+        document.body.removeChild(iframe);
+      } catch (e) {}
     }, 2000);
   } catch (e) {}
 
@@ -61,4 +71,11 @@ export const openWhatsAppSosEmergency = ({ latitude, longitude, publicShareToken
   try {
     window.open(whatsappUrl, '_blank', 'noopener,noreferrer');
   } catch (e) {}
+
+  // 3. Open Phone Dialer with 112 (Emergency Police)
+  setTimeout(() => {
+    try {
+      window.location.href = 'tel:112';
+    } catch (e) {}
+  }, 1000); // 1-second delay so WhatsApp registers first
 };

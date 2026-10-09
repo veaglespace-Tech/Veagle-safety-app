@@ -7,11 +7,7 @@ export const TypewriterText = ({
 }) => {
   const displayText = text || (Array.isArray(words) ? words[0] : words);
 
-  return (
-    <span className={`inline-block font-black text-rose ${className}`}>
-      {displayText}
-    </span>
-  );
+  return <span className={`inline-block font-black text-rose ${className}`}>{displayText}</span>;
 };
 
 export default TypewriterText;

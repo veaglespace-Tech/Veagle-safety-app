@@ -24,7 +24,7 @@ export default {
           soft: '#FFF0F5', // Soft Blush
           muted: '#684E67', // High-Contrast Muted Slate Text
         },
-        // 3. HIGHLIGHT - Antique Imperial Gold (Badges & Super Admin HQ)
+        // 3. HIGHLIGHT - Antique Imperial Gold (Badges & Super Admin)
         gold: {
           DEFAULT: '#E6A100',
           dark: '#C48800',

@@ -11,7 +11,7 @@ import { COLORS } from '../../theme/colors';
 
 export default function OTPScreen({ navigation, route }) {
   const dispatch = useDispatch();
-  const { isLoading, error, pendingVerificationEmail } = useSelector((state) => state.auth);
+  const { isLoading, error, pendingVerificationEmail, pendingToken } = useSelector((state) => state.auth);
   const { email: routeEmail } = route.params || {};
   const displayEmail = pendingVerificationEmail || routeEmail || '';
 
@@ -48,7 +48,7 @@ export default function OTPScreen({ navigation, route }) {
     }
     Keyboard.dismiss();
     dispatch(clearAuthMessages());
-    const result = await dispatch(verifyEmailOtp({ email: displayEmail, otp: code }));
+    const result = await dispatch(verifyEmailOtp({ email: displayEmail, otp: code, pendingToken }));
     if (verifyEmailOtp.fulfilled.match(result)) {
       // AppNavigator will handle routing based on token/registrationToken
     }
@@ -56,7 +56,7 @@ export default function OTPScreen({ navigation, route }) {
 
   const handleResend = async () => {
     if (resendCooldown > 0) return;
-    await dispatch(resendOtpCode({ email: displayEmail }));
+    await dispatch(resendOtpCode({ email: displayEmail, pendingToken }));
     setResendCooldown(60);
     setOtp(['', '', '', '', '', '']);
     inputs.current[0]?.focus();

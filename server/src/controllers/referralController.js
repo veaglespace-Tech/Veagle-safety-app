@@ -8,9 +8,11 @@ const generateReferralCode = () => {
 
 export const createPartner = async (req, res) => {
   try {
-    const { name, email, mobile, partnerReferralCode, isActive } = req.body;
+    const { name, partnerName, email, mobile, partnerReferralCode, discountPercentage, isActive } = req.body;
 
-    if (!name || !email) {
+    const finalName = name || partnerName;
+
+    if (!finalName || !email) {
       return res.status(400).json({ success: false, message: 'Name and email are required.' });
     }
 
@@ -48,13 +50,24 @@ export const createPartner = async (req, res) => {
 
     const newPartner = await prisma.referralPartner.create({
       data: {
-        name,
+        name: finalName,
         email,
         mobile,
         partnerReferralCode: finalCode,
         isActive: isActive !== undefined ? isActive : true,
       },
     });
+
+    if (discountPercentage) {
+      await prisma.coupon.create({
+        data: {
+          code: finalCode,
+          discountType: 'PERCENTAGE',
+          discountValue: parseFloat(discountPercentage),
+          isActive: isActive !== undefined ? isActive : true,
+        }
+      });
+    }
 
     res.status(201).json({ success: true, partner: newPartner });
   } catch (error) {
@@ -74,7 +87,20 @@ export const getAllPartners = async (req, res) => {
       orderBy: { createdAt: 'desc' },
     });
 
-    res.status(200).json({ success: true, partners });
+    const partnerCodes = partners.map(p => p.partnerReferralCode);
+    const coupons = await prisma.coupon.findMany({
+      where: { code: { in: partnerCodes } }
+    });
+
+    const partnersWithDiscount = partners.map(p => {
+      const coupon = coupons.find(c => c.code === p.partnerReferralCode);
+      return {
+        ...p,
+        discountPercentage: coupon ? coupon.discountValue : null
+      };
+    });
+
+    res.status(200).json({ success: true, partners: partnersWithDiscount });
   } catch (error) {
     console.error('Error fetching partners:', error);
     res.status(500).json({ success: false, message: 'Failed to fetch partners.' });
@@ -107,7 +133,17 @@ export const getPartnerById = async (req, res) => {
       return res.status(404).json({ success: false, message: 'Partner not found.' });
     }
 
-    res.status(200).json({ success: true, partner });
+    const coupon = await prisma.coupon.findUnique({
+      where: { code: partner.partnerReferralCode }
+    });
+
+    res.status(200).json({ 
+      success: true, 
+      partner: {
+        ...partner,
+        discountPercentage: coupon ? coupon.discountValue : null
+      }
+    });
   } catch (error) {
     console.error('Error fetching partner:', error);
     res.status(500).json({ success: false, message: 'Failed to fetch partner.' });
@@ -117,9 +153,15 @@ export const getPartnerById = async (req, res) => {
 export const updatePartner = async (req, res) => {
   try {
     const { id } = req.params;
-    const { partnerName, email, partnerReferralCode, discountPercentage, isActive } = req.body;
+    const { partnerName, name, email, partnerReferralCode, discountPercentage, isActive } = req.body;
 
     const partnerId = parseInt(id);
+    const finalName = partnerName || name;
+
+    const oldPartner = await prisma.referralPartner.findUnique({ where: { id: partnerId } });
+    if (!oldPartner) {
+      return res.status(404).json({ success: false, message: 'Partner not found.' });
+    }
 
     // Check if updating email or code to an existing one
     if (email || partnerReferralCode) {
@@ -140,13 +182,35 @@ export const updatePartner = async (req, res) => {
     const partner = await prisma.referralPartner.update({
       where: { id: partnerId },
       data: { 
-        ...(partnerName && { partnerName }),
+        ...(finalName && { name: finalName }),
         ...(email && { email }),
         ...(partnerReferralCode && { partnerReferralCode }),
-        ...(discountPercentage !== undefined && { discountPercentage: parseFloat(discountPercentage) }),
         ...(isActive !== undefined && { isActive })
       },
     });
+
+    const oldCode = oldPartner.partnerReferralCode;
+    const existingCoupon = await prisma.coupon.findUnique({ where: { code: oldCode } });
+
+    if (existingCoupon) {
+      await prisma.coupon.update({
+        where: { code: oldCode },
+        data: {
+          ...(partnerReferralCode && { code: partnerReferralCode }),
+          ...(discountPercentage !== undefined && discountPercentage !== '' && { discountValue: parseFloat(discountPercentage) }),
+          ...(isActive !== undefined && { isActive })
+        }
+      });
+    } else if (discountPercentage !== undefined && discountPercentage !== '') {
+      await prisma.coupon.create({
+        data: {
+          code: partnerReferralCode || oldCode,
+          discountType: 'PERCENTAGE',
+          discountValue: parseFloat(discountPercentage),
+          isActive: isActive !== undefined ? isActive : true,
+        }
+      });
+    }
 
     res.status(200).json({ success: true, partner });
   } catch (error) {

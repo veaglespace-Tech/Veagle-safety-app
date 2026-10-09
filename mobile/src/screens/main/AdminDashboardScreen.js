@@ -61,7 +61,7 @@ export default function AdminDashboardScreen({ navigation }) {
           >
             <Ionicons name="pulse" size={16} color={activeTab === 'monitor' ? '#FFF' : COLORS.textMuted} />
             <Text style={[styles.tabText, activeTab === 'monitor' && styles.tabTextActive]}>
-              1. LIVE SAFETY MONITOR
+              Live Monitor
             </Text>
           </TouchableOpacity>
           <TouchableOpacity 
@@ -70,7 +70,7 @@ export default function AdminDashboardScreen({ navigation }) {
           >
             <Ionicons name="people" size={16} color={activeTab === 'members' ? '#FFF' : COLORS.textMuted} />
             <Text style={[styles.tabText, activeTab === 'members' && styles.tabTextActive]}>
-              2. MEMBER DIRECTORY ({stats.totalMembers})
+              Directory ({stats.totalMembers})
             </Text>
           </TouchableOpacity>
         </Animated.View>
@@ -124,6 +124,6 @@ const styles = StyleSheet.create({
   tabContainer: { flexDirection: 'row', backgroundColor: '#FFF', padding: 6, borderRadius: 16, borderWidth: 1, borderColor: COLORS.primaryBorder, gap: 4 },
   tabBtn: { flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', paddingVertical: 12, borderRadius: 12, gap: 6 },
   tabBtnActive: { backgroundColor: COLORS.primary, shadowColor: COLORS.primary, shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.2, shadowRadius: 8 },
-  tabText: { fontSize: 10, fontWeight: '800', color: COLORS.textMuted, letterSpacing: 0.5 },
+  tabText: { fontSize: 12, fontWeight: '800', color: COLORS.textMuted, letterSpacing: 0.5 },
   tabTextActive: { color: '#FFF' },
 });

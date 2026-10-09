@@ -6,12 +6,39 @@ import { AppLayout } from '../../../../components/layout/AppLayout.js';
 import { AdminHeaderNav } from '../../../../components/admin/AdminHeaderNav.js';
 import { api } from '../../../../utils/api.js';
 import {
-  ArrowLeft, Users, ShieldCheck, Lock, Unlock, Crown, Edit3, Trash2,
-  PhoneCall, Mail, MapPin, AlertOctagon, Plus, CheckCircle2,
-  X, RefreshCw, Sparkles, Camera, Upload, UserPlus
+  ArrowLeft,
+  Users,
+  ShieldCheck,
+  Lock,
+  Unlock,
+  Crown,
+  Edit3,
+  Trash2,
+  PhoneCall,
+  Mail,
+  MapPin,
+  AlertOctagon,
+  Plus,
+  CheckCircle2,
+  X,
+  RefreshCw,
+  Sparkles,
+  Camera,
+  Upload,
+  UserPlus,
 } from 'lucide-react';
+import { CustomSelect } from '../../../../components/ui/CustomSelect.js';
 
-const RELATIONSHIPS = ['Sister', 'Mother', 'Father', 'Brother', 'Friend', 'Spouse', 'Guardian', 'Colleague'];
+const RELATIONSHIPS = [
+  'Sister',
+  'Mother',
+  'Father',
+  'Brother',
+  'Friend',
+  'Spouse',
+  'Guardian',
+  'Colleague',
+];
 
 export default function AdminUserDetailPage() {
   const params = useParams();
@@ -196,11 +223,14 @@ export default function AdminUserDetailPage() {
       setIsSubmitting(true);
       const payload = {
         planId: selectedPlanId ? parseInt(selectedPlanId, 10) : undefined,
-        durationDays: selectedPlanId ? undefined : (parseInt(customDays, 10) || 365),
+        durationDays: selectedPlanId ? undefined : parseInt(customDays, 10) || 365,
       };
 
       const res = await api.post(`/admin/users/${userId}/grant-subscription`, payload);
-      showToast('success', res.data.message || 'Plan assigned successfully (Free Admin Grant - ₹0)');
+      showToast(
+        'success',
+        res.data.message || 'Plan assigned successfully (Free Admin Grant - ₹0)'
+      );
       setIsPlanModalOpen(false);
       fetchUserDetails();
     } catch (err) {
@@ -292,7 +322,9 @@ export default function AdminUserDetailPage() {
 
   const isBlocked = userData.safetyStatus === 'BLOCKED';
   const isActiveSub = userData.subscriptionStatus === 'ACTIVE';
-  const expiresAt = userData.subscriptionExpiresAt ? new Date(userData.subscriptionExpiresAt) : null;
+  const expiresAt = userData.subscriptionExpiresAt
+    ? new Date(userData.subscriptionExpiresAt)
+    : null;
   const isExpired = expiresAt ? expiresAt < new Date() : true;
 
   let daysRemaining = 0;
@@ -304,7 +336,6 @@ export default function AdminUserDetailPage() {
   return (
     <AppLayout>
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-8 space-y-8">
-        
         {/* TOP BACK BUTTON & NAVIGATION */}
         <div className="flex items-center justify-between">
           <button
@@ -319,39 +350,46 @@ export default function AdminUserDetailPage() {
           <span className="text-xs font-bold text-gray-500">Member ID #{userData.id}</span>
         </div>
 
-        <AdminHeaderNav
-          metrics={{ totalUsers: 1 }}
-          toast={toast}
-          activeTabOverride="users"
-        />
+        <AdminHeaderNav metrics={{ totalUsers: 1 }} toast={toast} activeTabOverride="users" />
 
         {/* MEMBER PROFILE HEADER CARD */}
-        <div className="bg-white rounded-[36px] border-2 border-[#FFCCE1] p-6 sm:p-8 shadow-xl relative overflow-hidden space-y-6 animate-fade-up">
+        <div className="bg-white rounded-[36px] border-2 border-[#FFCCE1] p-5 sm:p-8 shadow-xl relative overflow-hidden space-y-6 animate-fade-up">
           <div className="absolute top-0 left-0 right-0 h-2 bg-gradient-to-r from-[#FF5C8A] via-[#FF2A6D] to-[#E01A4F]" />
 
-          <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 pt-2">
-            <div className="flex items-center space-x-5">
-              
+          <div className="flex flex-col lg:flex-row items-center lg:items-start justify-between gap-6 pt-2 text-center lg:text-left">
+            <div className="flex flex-col sm:flex-row items-center sm:items-start gap-4 sm:gap-5 w-full lg:w-auto">
               {/* PROFILE PHOTO AVATAR WITH PREVIEW & FALLBACK */}
-              <div className="relative w-20 h-20 rounded-3xl bg-gradient-to-br from-[#FF5C8A] to-[#FF2A6D] text-white flex items-center justify-center text-2xl font-black shadow-lg shadow-[#FF2A6D]/30 border-2 border-white shrink-0 overflow-hidden">
+              <div className="relative w-20 h-20 sm:w-22 sm:h-22 rounded-3xl bg-gradient-to-br from-[#FF5C8A] to-[#FF2A6D] text-white flex items-center justify-center text-2xl font-black shadow-lg shadow-[#FF2A6D]/30 border-2 border-white shrink-0 overflow-hidden mx-auto sm:mx-0">
                 {userData.profilePhoto ? (
                   <img
                     src={userData.profilePhoto}
                     alt={userData.fullName}
                     className="w-full h-full object-cover"
                   />
+                ) : userData.fullName ? (
+                  userData.fullName.charAt(0).toUpperCase()
                 ) : (
-                  userData.fullName ? userData.fullName.charAt(0).toUpperCase() : 'U'
+                  'U'
                 )}
               </div>
 
-              <div className="space-y-1.5">
-                <div className="flex items-center space-x-2 flex-wrap gap-y-1">
-                  <h2 className="text-xl sm:text-2xl font-black text-[#2A0826] tracking-tight">{userData.fullName}</h2>
+              <div className="space-y-2 text-center sm:text-left w-full">
+                <div className="flex flex-wrap items-center justify-center sm:justify-start gap-2">
+                  <h2 className="text-xl sm:text-2xl font-black text-[#2A0826] tracking-tight">
+                    {userData.fullName}
+                  </h2>
                   {userData.role === 'SUPER_ADMIN' ? (
                     <span className="inline-flex items-center space-x-1 text-[10px] font-black bg-amber-100 text-amber-900 border border-amber-300 px-3 py-0.5 rounded-full uppercase">
                       <Crown className="w-3.5 h-3.5 text-amber-600" />
-                      <span>SUPERADMIN HQ</span>
+                      <span>SUPERADMIN</span>
+                    </span>
+                  ) : userData.role === 'ORGANIZATION' ? (
+                    <span className="inline-flex items-center space-x-1 text-[10px] font-black bg-purple-100 text-purple-900 border border-purple-300 px-3 py-0.5 rounded-full uppercase">
+                      <span>ORGANIZATION HQ</span>
+                    </span>
+                  ) : userData.role === 'PARENT' ? (
+                    <span className="inline-flex items-center space-x-1 text-[10px] font-black bg-teal-100 text-teal-900 border border-teal-300 px-3 py-0.5 rounded-full uppercase">
+                      <span>PARENT GUARDIAN</span>
                     </span>
                   ) : (
                     <span className="text-[10px] font-black bg-purple-50 text-purple-700 border border-purple-200 px-3 py-0.5 rounded-full uppercase">
@@ -364,41 +402,43 @@ export default function AdminUserDetailPage() {
                       ACCOUNT BLOCKED
                     </span>
                   ) : (
-                    <span className={`text-[10px] font-black px-3 py-0.5 rounded-full uppercase ${
-                      isActiveSub && !isExpired
-                        ? 'bg-emerald-50 text-emerald-600 border border-emerald-300'
-                        : 'bg-rose-50 text-rose-600 border border-rose-300'
-                    }`}>
+                    <span
+                      className={`text-[10px] font-black px-3 py-0.5 rounded-full uppercase ${
+                        isActiveSub && !isExpired
+                          ? 'bg-emerald-50 text-emerald-600 border border-emerald-300'
+                          : 'bg-rose-50 text-rose-600 border border-rose-300'
+                      }`}
+                    >
                       {isActiveSub && !isExpired ? 'ACTIVE PROTECTION' : 'PLAN EXPIRED'}
                     </span>
                   )}
                 </div>
 
-                <p className="text-xs text-[#684E67] font-bold flex items-center space-x-3 flex-wrap">
-                  <span className="flex items-center space-x-1">
-                    <Mail className="w-3.5 h-3.5 text-[#FF2A6D]" />
+                <div className="flex flex-wrap items-center justify-center sm:justify-start gap-x-4 gap-y-1.5 text-xs text-[#684E67] font-bold">
+                  <span className="flex items-center space-x-1.5">
+                    <Mail className="w-3.5 h-3.5 text-[#FF2A6D] shrink-0" />
                     <span>{userData.email}</span>
                   </span>
-                  <span>•</span>
-                  <span className="flex items-center space-x-1">
-                    <PhoneCall className="w-3.5 h-3.5 text-[#FF2A6D]" />
+                  <span className="flex items-center space-x-1.5">
+                    <PhoneCall className="w-3.5 h-3.5 text-[#FF2A6D] shrink-0" />
                     <span>{userData.phone || 'No Phone'}</span>
                   </span>
-                  <span>•</span>
-                  <span className="flex items-center space-x-1">
-                    <MapPin className="w-3.5 h-3.5 text-[#FF2A6D]" />
-                    <span>{userData.city || 'Pune'}, {userData.state || 'Maharashtra'}</span>
+                  <span className="flex items-center space-x-1.5">
+                    <MapPin className="w-3.5 h-3.5 text-[#FF2A6D] shrink-0" />
+                    <span>
+                      {userData.city || 'Pune'}, {userData.state || 'Maharashtra'}
+                    </span>
                   </span>
-                </p>
+                </div>
               </div>
             </div>
 
             {/* QUICK ACTION BUTTONS */}
-            <div className="flex flex-wrap items-center gap-2.5">
+            <div className="flex flex-col sm:flex-row flex-wrap items-stretch sm:items-center justify-center lg:justify-end gap-2.5 w-full lg:w-auto pt-2 lg:pt-0">
               <button
                 type="button"
                 onClick={openEditModal}
-                className="px-4 py-2.5 bg-[#FFF0F3] text-[#FF2A6D] border border-[#FFCCE1] rounded-2xl text-xs font-black hover:bg-[#FF2A6D] hover:text-white transition-all flex items-center space-x-1.5 cursor-pointer shadow-sm"
+                className="px-4 py-2.5 bg-[#FFF0F3] text-[#FF2A6D] border border-[#FFCCE1] rounded-2xl text-xs font-black hover:bg-[#FF2A6D] hover:text-white transition-all flex items-center justify-center space-x-1.5 cursor-pointer shadow-sm w-full sm:w-auto"
               >
                 <Edit3 className="w-4 h-4" />
                 <span>EDIT PROFILE & PHOTO</span>
@@ -407,7 +447,7 @@ export default function AdminUserDetailPage() {
               <button
                 type="button"
                 onClick={() => setIsPlanModalOpen(true)}
-                className="px-4 py-2.5 bg-gradient-to-r from-emerald-500 to-teal-600 text-white rounded-2xl text-xs font-black hover:scale-105 transition-all flex items-center space-x-1.5 cursor-pointer shadow-md shadow-emerald-500/20"
+                className="px-4 py-2.5 bg-gradient-to-r from-emerald-500 to-teal-600 text-white rounded-2xl text-xs font-black hover:scale-105 transition-all flex items-center justify-center space-x-1.5 cursor-pointer shadow-md shadow-emerald-500/20 w-full sm:w-auto"
               >
                 <Sparkles className="w-4 h-4 text-amber-300" />
                 <span>ASSIGN / RENEW PLAN (FREE)</span>
@@ -416,7 +456,7 @@ export default function AdminUserDetailPage() {
               <button
                 type="button"
                 onClick={handleToggleBlock}
-                className={`px-4 py-2.5 rounded-2xl text-xs font-black border transition-all flex items-center space-x-1.5 cursor-pointer shadow-sm ${
+                className={`px-4 py-2.5 rounded-2xl text-xs font-black border transition-all flex items-center justify-center space-x-1.5 cursor-pointer shadow-sm w-full sm:w-auto ${
                   isBlocked
                     ? 'bg-emerald-50 text-emerald-700 border-emerald-300 hover:bg-emerald-600 hover:text-white'
                     : 'bg-rose-50 text-rose-700 border-rose-300 hover:bg-rose-600 hover:text-white'
@@ -431,54 +471,70 @@ export default function AdminUserDetailPage() {
 
         {/* DETAILED SECTIONS GRID */}
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-          
           {/* LEFT 2 COLS: PERSONAL, ADDRESS & SUBSCRIPTION DETAILS */}
           <div className="lg:col-span-2 space-y-8">
-            
             {/* SUBSCRIPTION & PLAN STATUS CARD */}
-            <div className="bg-white p-6 sm:p-8 rounded-[36px] border-2 border-[#FFCCE1] shadow-md space-y-5">
-              <div className="flex items-center justify-between border-b border-[#FFCCE1] pb-4">
+            <div className="bg-white p-5 sm:p-8 rounded-[36px] border-2 border-[#FFCCE1] shadow-md space-y-5">
+              <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 border-b border-[#FFCCE1] pb-4">
                 <div className="flex items-center space-x-3">
-                  <div className="w-10 h-10 rounded-2xl bg-emerald-50 text-emerald-600 border border-emerald-200 flex items-center justify-center">
+                  <div className="w-10 h-10 rounded-2xl bg-emerald-50 text-emerald-600 border border-emerald-200 flex items-center justify-center shrink-0">
                     <ShieldCheck className="w-5 h-5" />
                   </div>
                   <div>
-                    <h3 className="font-black text-lg text-[#2A0826]">Current Subscription & Plan</h3>
-                    <p className="text-xs text-[#684E67] font-bold">Admin can assign or renew any plan for free at 0 cost</p>
+                    <h3 className="font-black text-base sm:text-lg text-[#2A0826]">
+                      Current Subscription & Plan
+                    </h3>
+                    <p className="text-xs text-[#684E67] font-bold">
+                      Admin can assign or renew any plan for free at 0 cost
+                    </p>
                   </div>
                 </div>
 
                 <button
                   type="button"
                   onClick={() => setIsPlanModalOpen(true)}
-                  className="px-4 py-2 bg-emerald-600 text-white rounded-xl text-xs font-black hover:bg-emerald-700 transition-all flex items-center space-x-1 cursor-pointer"
+                  className="px-4 py-2.5 bg-emerald-600 text-white rounded-xl text-xs font-black hover:bg-emerald-700 transition-all flex items-center justify-center space-x-1.5 cursor-pointer w-full sm:w-auto shrink-0 shadow-sm"
                 >
-                  <Plus className="w-3.5 h-3.5" />
+                  <Plus className="w-4 h-4" />
                   <span>UPDATE / RENEW PLAN (FREE)</span>
                 </button>
               </div>
 
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 bg-[#FFF0F3]/60 p-5 rounded-3xl border border-[#FFCCE1]">
                 <div>
-                  <span className="text-[10px] font-black text-[#684E67] uppercase block mb-1">Plan Status</span>
-                  <span className={`inline-block text-xs font-black px-3 py-1 rounded-full uppercase ${
-                    isActiveSub && !isExpired
-                      ? 'bg-emerald-100 text-emerald-800 border border-emerald-300'
-                      : 'bg-rose-100 text-rose-800 border border-rose-300'
-                  }`}>
+                  <span className="text-[10px] font-black text-[#684E67] uppercase block mb-1">
+                    Plan Status
+                  </span>
+                  <span
+                    className={`inline-block text-xs font-black px-3 py-1 rounded-full uppercase ${
+                      isActiveSub && !isExpired
+                        ? 'bg-emerald-100 text-emerald-800 border border-emerald-300'
+                        : 'bg-rose-100 text-rose-800 border border-rose-300'
+                    }`}
+                  >
                     {isActiveSub && !isExpired ? 'ACTIVE' : 'INACTIVE / EXPIRED'}
                   </span>
                 </div>
 
                 <div>
-                  <span className="text-[10px] font-black text-[#684E67] uppercase block mb-1">Validity Expiry Date</span>
+                  <span className="text-[10px] font-black text-[#684E67] uppercase block mb-1">
+                    Validity Expiry Date
+                  </span>
                   <p className="text-xs font-black text-[#2A0826]">
-                    {expiresAt ? expiresAt.toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' }) : 'No Active Plan'}
+                    {expiresAt
+                      ? expiresAt.toLocaleDateString('en-IN', {
+                          day: 'numeric',
+                          month: 'short',
+                          year: 'numeric',
+                        })
+                      : 'No Active Plan'}
                   </p>
                 </div>
 
                 <div>
-                  <span className="text-[10px] font-black text-[#684E67] uppercase block mb-1">Days Remaining</span>
+                  <span className="text-[10px] font-black text-[#684E67] uppercase block mb-1">
+                    Days Remaining
+                  </span>
                   <p className="text-xs font-black text-[#FF2A6D]">
                     {isActiveSub && !isExpired ? `${daysRemaining} Days Left` : '0 Days'}
                   </p>
@@ -488,7 +544,9 @@ export default function AdminUserDetailPage() {
 
             {/* PERSONAL & ADDRESS DETAILS */}
             <div className="bg-white p-6 sm:p-8 rounded-[36px] border-2 border-[#FFCCE1] shadow-md space-y-6">
-              <h3 className="font-black text-lg text-[#2A0826] border-b border-[#FFCCE1] pb-3">Personal Profile & Address Info</h3>
+              <h3 className="font-black text-lg text-[#2A0826] border-b border-[#FFCCE1] pb-3">
+                Personal Profile & Address Info
+              </h3>
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 text-xs">
                 <div className="space-y-1">
@@ -497,36 +555,50 @@ export default function AdminUserDetailPage() {
                 </div>
 
                 <div className="space-y-1">
-                  <span className="font-black text-[#684E67] uppercase text-[10px]">Email Address</span>
+                  <span className="font-black text-[#684E67] uppercase text-[10px]">
+                    Email Address
+                  </span>
                   <p className="font-bold text-[#2A0826] text-sm">{userData.email}</p>
                 </div>
 
                 <div className="space-y-1">
-                  <span className="font-black text-[#684E67] uppercase text-[10px]">Phone Number</span>
+                  <span className="font-black text-[#684E67] uppercase text-[10px]">
+                    Phone Number
+                  </span>
                   <p className="font-bold text-[#2A0826]">{userData.phone || 'Not Specified'}</p>
                 </div>
 
                 <div className="space-y-1">
-                  <span className="font-black text-[#684E67] uppercase text-[10px]">Blood Group</span>
+                  <span className="font-black text-[#684E67] uppercase text-[10px]">
+                    Blood Group
+                  </span>
                   <p className="font-bold text-[#FF2A6D]">{userData.bloodGroup || 'O+'}</p>
                 </div>
 
                 <div className="space-y-1">
-                  <span className="font-black text-[#684E67] uppercase text-[10px]">Street Address</span>
+                  <span className="font-black text-[#684E67] uppercase text-[10px]">
+                    Street Address
+                  </span>
                   <p className="font-bold text-[#2A0826]">{userData.address || 'Not Specified'}</p>
                 </div>
 
                 <div className="space-y-1">
-                  <span className="font-black text-[#684E67] uppercase text-[10px]">City, State, Country & Pincode</span>
+                  <span className="font-black text-[#684E67] uppercase text-[10px]">
+                    City, State, Country & Pincode
+                  </span>
                   <p className="font-bold text-[#2A0826]">
-                    {userData.city || 'Pune'}, {userData.state || 'Maharashtra'}, {userData.country || 'India'} - {userData.pincode || '411001'}
+                    {userData.city || 'Pune'}, {userData.state || 'Maharashtra'},{' '}
+                    {userData.country || 'India'} - {userData.pincode || '411001'}
                   </p>
                 </div>
 
                 <div className="sm:col-span-2 space-y-1">
-                  <span className="font-black text-[#684E67] uppercase text-[10px]">Medical Notes & Allergies</span>
+                  <span className="font-black text-[#684E67] uppercase text-[10px]">
+                    Medical Notes & Allergies
+                  </span>
                   <p className="font-bold text-[#2A0826] bg-[#FFF0F3] p-3 rounded-2xl border border-[#FFCCE1]">
-                    {userData.medicalNotes || 'No special medical conditions or allergies recorded.'}
+                    {userData.medicalNotes ||
+                      'No special medical conditions or allergies recorded.'}
                   </p>
                 </div>
               </div>
@@ -534,7 +606,9 @@ export default function AdminUserDetailPage() {
 
             {/* PAYMENT TRANSACTION HISTORY */}
             <div className="bg-white p-6 sm:p-8 rounded-[36px] border-2 border-[#FFCCE1] shadow-md space-y-4">
-              <h3 className="font-black text-lg text-[#2A0826] border-b border-[#FFCCE1] pb-3">Payment & Grant Audit History</h3>
+              <h3 className="font-black text-lg text-[#2A0826] border-b border-[#FFCCE1] pb-3">
+                Payment & Grant Audit History
+              </h3>
 
               {userData.paymentHistories && userData.paymentHistories.length > 0 ? (
                 <div className="overflow-x-auto">
@@ -553,11 +627,15 @@ export default function AdminUserDetailPage() {
                         <tr key={p.id}>
                           <td className="p-3">
                             <p className="font-mono text-xs text-[#FF2A6D]">{p.txnid}</p>
-                            <p className="text-[10px] text-gray-500 font-bold">{new Date(p.createdAt).toLocaleDateString()}</p>
+                            <p className="text-[10px] text-gray-500 font-bold">
+                              {new Date(p.createdAt).toLocaleDateString()}
+                            </p>
                           </td>
                           <td className="p-3 font-bold">{p.plan?.name || 'Protection Plan'}</td>
                           <td className="p-3 font-mono font-black">₹{p.amount?.toFixed(2)}</td>
-                          <td className="p-3 text-[11px] font-bold text-gray-600">{p.paymentMode || 'ONLINE'}</td>
+                          <td className="p-3 text-[11px] font-bold text-gray-600">
+                            {p.paymentMode || 'ONLINE'}
+                          </td>
                           <td className="p-3 text-right">
                             <span className="text-[10px] font-black px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-600 border border-emerald-300">
                               {p.status}
@@ -569,49 +647,64 @@ export default function AdminUserDetailPage() {
                   </table>
                 </div>
               ) : (
-                <p className="text-xs text-gray-500 font-bold text-center py-4">No payment history recorded for this member.</p>
+                <p className="text-xs text-gray-500 font-bold text-center py-4">
+                  No payment history recorded for this member.
+                </p>
               )}
             </div>
-
           </div>
 
           {/* RIGHT 1 COL: EMERGENCY GUARDIANS & TRUSTED CONTACTS */}
           <div className="space-y-8">
             <div className="bg-white p-6 sm:p-8 rounded-[36px] border-2 border-[#FFCCE1] shadow-md space-y-5">
-              <div className="flex items-center justify-between border-b border-[#FFCCE1] pb-4">
+              {/* STYLISH MODERN HEADER */}
+              <div className="space-y-4 border-b border-[#FFCCE1] pb-4">
                 <div className="flex items-center space-x-3">
-                  <div className="w-10 h-10 rounded-2xl bg-rose-50 text-[#FF2A6D] border border-rose-200 flex items-center justify-center">
+                  <div className="w-11 h-11 rounded-2xl bg-gradient-to-br from-[#FF5C8A] to-[#FF2A6D] text-white flex items-center justify-center shadow-md shadow-[#FF2A6D]/20 shrink-0">
                     <Users className="w-5 h-5" />
                   </div>
                   <div>
                     <h3 className="font-black text-lg text-[#2A0826]">Emergency Guardians</h3>
-                    <p className="text-xs text-[#684E67] font-bold">Trusted contact network</p>
+                    <p className="text-xs text-[#684E67] font-bold">
+                      Trusted contact network ({userData.trustedContacts?.length || 0}/5)
+                    </p>
                   </div>
                 </div>
 
                 <button
                   type="button"
                   onClick={openAddContactModal}
-                  className="px-3 py-1.5 bg-[#FF2A6D] text-white rounded-xl text-xs font-black hover:bg-[#E01A4F] transition-all flex items-center space-x-1 cursor-pointer shadow-xs"
+                  className="w-full py-3 bg-[#FFF0F3] hover:bg-[#FF2A6D] text-[#FF2A6D] hover:text-white border-2 border-dashed border-[#FFCCE1] hover:border-[#FF2A6D] rounded-2xl text-xs font-black transition-all flex items-center justify-center space-x-2 cursor-pointer shadow-xs group"
                 >
-                  <Plus className="w-3.5 h-3.5" />
-                  <span>ADD</span>
+                  <Plus className="w-4 h-4 text-[#FF2A6D] group-hover:text-white transition-colors" />
+                  <span>ADD NEW EMERGENCY GUARDIAN</span>
                 </button>
               </div>
 
               {/* PRIMARY CONTACT */}
               <div className="bg-[#FFF0F3] p-4 rounded-2xl border border-[#FFCCE1] space-y-1">
-                <span className="text-[10px] font-black text-[#FF2A6D] uppercase">Primary Emergency Contact</span>
-                <p className="font-black text-sm text-[#2A0826]">{userData.emergencyContactName || 'Not Specified'}</p>
-                <p className="text-xs font-bold text-[#684E67]">{userData.emergencyContactPhone || 'No Phone'}</p>
+                <span className="text-[10px] font-black text-[#FF2A6D] uppercase">
+                  Primary Emergency Contact
+                </span>
+                <p className="font-black text-sm text-[#2A0826]">
+                  {userData.emergencyContactName || 'Not Specified'}
+                </p>
+                <p className="text-xs font-bold text-[#684E67]">
+                  {userData.emergencyContactPhone || 'No Phone'}
+                </p>
               </div>
 
               {/* TRUSTED CONTACTS LIST WITH EDIT & DELETE */}
               <div className="space-y-3">
-                <span className="text-xs font-black text-[#2A0826] block">Verified Guardian Network ({userData.trustedContacts?.length || 0}/5):</span>
+                <span className="text-xs font-black text-[#2A0826] block">
+                  Verified Guardian Network ({userData.trustedContacts?.length || 0}/5):
+                </span>
                 {userData.trustedContacts && userData.trustedContacts.length > 0 ? (
                   userData.trustedContacts.map((c) => (
-                    <div key={c.id} className="p-3.5 rounded-2xl bg-white border border-[#FFCCE1] space-y-1 shadow-xs hover:border-[#FF5C8A] transition-all">
+                    <div
+                      key={c.id}
+                      className="p-3.5 rounded-2xl bg-white border border-[#FFCCE1] space-y-1 shadow-xs hover:border-[#FF5C8A] transition-all"
+                    >
                       <div className="flex items-center justify-between">
                         <div className="flex items-center space-x-2">
                           <p className="font-black text-xs text-[#2A0826]">{c.name}</p>
@@ -651,19 +744,19 @@ export default function AdminUserDetailPage() {
                     </div>
                   ))
                 ) : (
-                  <p className="text-xs text-gray-400 font-bold italic">No additional trusted contacts added yet.</p>
+                  <p className="text-xs text-gray-400 font-bold italic">
+                    No additional trusted contacts added yet.
+                  </p>
                 )}
               </div>
             </div>
           </div>
-
         </div>
 
         {/* MODAL 1: EDIT PROFILE & PHOTO MODAL */}
         {isEditModalOpen && (
           <div className="fixed inset-0 z-[200] bg-black/60 backdrop-blur-sm flex items-center justify-center p-4">
             <div className="bg-white rounded-[36px] max-w-lg w-full shadow-2xl border-2 border-[#FF2A6D] relative animate-scale-up overflow-hidden flex flex-col max-h-[90vh]">
-              
               {/* STICKY HEADER */}
               <div className="flex items-center justify-between border-b-2 border-[#FFCCE1] p-6 pb-4 bg-white shrink-0">
                 <h3 className="font-black text-lg text-[#2A0826]">Edit Member Profile & Photo</h3>
@@ -677,17 +770,22 @@ export default function AdminUserDetailPage() {
               </div>
 
               {/* INNER SCROLLABLE CONTENT BODY */}
-              <div className="p-6 sm:p-8 overflow-y-auto flex-1 space-y-6">
+              <div className="p-6 sm:p-8 pb-36 overflow-y-auto flex-1 space-y-6">
                 <form onSubmit={handleSaveProfileEdit} className="space-y-4">
-                  
                   {/* CLEAN PROFILE PHOTO UPLOAD CONTROL */}
                   <div className="bg-[#FFF0F3] p-4 rounded-2xl border border-[#FFCCE1] space-y-3">
-                    <label className="block text-xs font-black text-[#2A0826]">Member Profile Photo</label>
-                    
+                    <label className="block text-xs font-black text-[#2A0826]">
+                      Member Profile Photo
+                    </label>
+
                     <div className="flex items-center space-x-4">
                       <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-[#FF5C8A] to-[#FF2A6D] text-white flex items-center justify-center font-black shadow overflow-hidden shrink-0 border-2 border-white">
                         {editForm.profilePhoto ? (
-                          <img src={editForm.profilePhoto} alt="Preview" className="w-full h-full object-cover" />
+                          <img
+                            src={editForm.profilePhoto}
+                            alt="Preview"
+                            className="w-full h-full object-cover"
+                          />
                         ) : (
                           <Camera className="w-6 h-6" />
                         )}
@@ -716,14 +814,18 @@ export default function AdminUserDetailPage() {
                             </button>
                           )}
                         </div>
-                        <p className="text-[10px] text-gray-500 font-bold">Supported: JPG, PNG, WEBP (Max 5MB)</p>
+                        <p className="text-[10px] text-gray-500 font-bold">
+                          Supported: JPG, PNG, WEBP (Max 5MB)
+                        </p>
                       </div>
                     </div>
                   </div>
 
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <div>
-                      <label className="block text-xs font-black text-[#684E67] mb-1">Full Name *</label>
+                      <label className="block text-xs font-black text-[#684E67] mb-1">
+                        Full Name *
+                      </label>
                       <input
                         type="text"
                         required
@@ -734,7 +836,9 @@ export default function AdminUserDetailPage() {
                     </div>
 
                     <div>
-                      <label className="block text-xs font-black text-[#684E67] mb-1">Email Address *</label>
+                      <label className="block text-xs font-black text-[#684E67] mb-1">
+                        Email Address *
+                      </label>
                       <input
                         type="email"
                         required
@@ -745,7 +849,9 @@ export default function AdminUserDetailPage() {
                     </div>
 
                     <div>
-                      <label className="block text-xs font-black text-[#684E67] mb-1">Phone Number *</label>
+                      <label className="block text-xs font-black text-[#684E67] mb-1">
+                        Phone Number *
+                      </label>
                       <input
                         type="text"
                         required
@@ -757,24 +863,35 @@ export default function AdminUserDetailPage() {
 
                     <div>
                       <label className="block text-xs font-black text-[#684E67] mb-1">Role</label>
-                      <select
+                      <CustomSelect
+                        options={[
+                          { value: 'USER', label: 'Standard Sakhi Member' },
+                          { value: 'ORGANIZATION', label: 'Organization HQ' },
+                          { value: 'PARENT', label: 'Parent Guardian' },
+                          { value: 'SUPER_ADMIN', label: 'SuperAdmin Dispatcher' },
+                        ]}
                         value={editForm.role}
                         onChange={(e) => setEditForm({ ...editForm, role: e.target.value })}
-                        className="w-full px-4 py-3 bg-[#FFF0F3] border-1.5 border-[#FFCCE1] rounded-xl text-xs font-black outline-none cursor-pointer"
-                      >
-                        <option value="USER">Standard Sakhi Member</option>
-                        <option value="SUPER_ADMIN">SuperAdmin HQ Dispatcher</option>
-                      </select>
+                      />
                     </div>
 
                     <div>
-                      <label className="block text-xs font-black text-[#684E67] mb-1">Blood Group</label>
-                      <input
-                        type="text"
-                        placeholder="e.g. O+"
-                        value={editForm.bloodGroup}
+                      <label className="block text-xs font-black text-[#684E67] mb-1">
+                        Blood Group
+                      </label>
+                      <CustomSelect
+                        options={[
+                          { value: 'A+', label: 'A+' },
+                          { value: 'A-', label: 'A-' },
+                          { value: 'B+', label: 'B+' },
+                          { value: 'B-', label: 'B-' },
+                          { value: 'AB+', label: 'AB+' },
+                          { value: 'AB-', label: 'AB-' },
+                          { value: 'O+', label: 'O+' },
+                          { value: 'O-', label: 'O-' },
+                        ]}
+                        value={editForm.bloodGroup || 'O+'}
                         onChange={(e) => setEditForm({ ...editForm, bloodGroup: e.target.value })}
-                        className="w-full px-4 py-3 bg-[#FFF0F3] border-1.5 border-[#FFCCE1] rounded-xl text-xs font-bold outline-none"
                       />
                     </div>
 
@@ -789,21 +906,29 @@ export default function AdminUserDetailPage() {
                     </div>
 
                     <div>
-                      <label className="block text-xs font-black text-[#684E67] mb-1">Emergency Contact Name</label>
+                      <label className="block text-xs font-black text-[#684E67] mb-1">
+                        Emergency Contact Name
+                      </label>
                       <input
                         type="text"
                         value={editForm.emergencyContactName}
-                        onChange={(e) => setEditForm({ ...editForm, emergencyContactName: e.target.value })}
+                        onChange={(e) =>
+                          setEditForm({ ...editForm, emergencyContactName: e.target.value })
+                        }
                         className="w-full px-4 py-3 bg-[#FFF0F3] border-1.5 border-[#FFCCE1] rounded-xl text-xs font-bold outline-none"
                       />
                     </div>
 
                     <div>
-                      <label className="block text-xs font-black text-[#684E67] mb-1">Emergency Contact Phone</label>
+                      <label className="block text-xs font-black text-[#684E67] mb-1">
+                        Emergency Contact Phone
+                      </label>
                       <input
                         type="text"
                         value={editForm.emergencyContactPhone}
-                        onChange={(e) => setEditForm({ ...editForm, emergencyContactPhone: e.target.value })}
+                        onChange={(e) =>
+                          setEditForm({ ...editForm, emergencyContactPhone: e.target.value })
+                        }
                         className="w-full px-4 py-3 bg-[#FFF0F3] border-1.5 border-[#FFCCE1] rounded-xl text-xs font-bold outline-none"
                       />
                     </div>
@@ -820,7 +945,9 @@ export default function AdminUserDetailPage() {
                   </div>
 
                   <div>
-                    <label className="block text-xs font-black text-[#684E67] mb-1">Medical Notes & Conditions</label>
+                    <label className="block text-xs font-black text-[#684E67] mb-1">
+                      Medical Notes & Conditions
+                    </label>
                     <textarea
                       rows={2}
                       value={editForm.medicalNotes}
@@ -830,7 +957,9 @@ export default function AdminUserDetailPage() {
                   </div>
 
                   <div>
-                    <label className="block text-xs font-black text-[#684E67] mb-1">New Password (Optional)</label>
+                    <label className="block text-xs font-black text-[#684E67] mb-1">
+                      New Password (Optional)
+                    </label>
                     <input
                       type="password"
                       placeholder="Leave blank to keep existing password"
@@ -859,7 +988,6 @@ export default function AdminUserDetailPage() {
                   </div>
                 </form>
               </div>
-
             </div>
           </div>
         )}
@@ -868,11 +996,14 @@ export default function AdminUserDetailPage() {
         {isPlanModalOpen && (
           <div className="fixed inset-0 z-[200] bg-black/60 backdrop-blur-sm flex items-center justify-center p-4">
             <div className="bg-white rounded-[36px] max-w-md w-full p-6 sm:p-8 space-y-6 shadow-2xl border-2 border-emerald-500 relative animate-scale-up">
-              
               <div className="flex items-center justify-between border-b-2 border-emerald-200 pb-4">
                 <div>
-                  <h3 className="font-black text-lg text-[#2A0826]">Assign / Renew Plan (Free Admin Grant)</h3>
-                  <p className="text-xs text-gray-500 font-bold">Zero cost grant for {userData.fullName}</p>
+                  <h3 className="font-black text-lg text-[#2A0826]">
+                    Assign / Renew Plan (Free Admin Grant)
+                  </h3>
+                  <p className="text-xs text-gray-500 font-bold">
+                    Zero cost grant for {userData.fullName}
+                  </p>
                 </div>
                 <button
                   type="button"
@@ -885,7 +1016,9 @@ export default function AdminUserDetailPage() {
 
               <form onSubmit={handleAssignFreePlan} className="space-y-4">
                 <div>
-                  <label className="block text-xs font-black text-[#684E67] mb-1">Select System Subscription Plan *</label>
+                  <label className="block text-xs font-black text-[#684E67] mb-1">
+                    Select System Subscription Plan *
+                  </label>
                   <select
                     value={selectedPlanId}
                     onChange={(e) => setSelectedPlanId(e.target.value)}
@@ -902,7 +1035,9 @@ export default function AdminUserDetailPage() {
 
                 {!selectedPlanId && (
                   <div>
-                    <label className="block text-xs font-black text-[#684E67] mb-1">Custom Duration (Days) *</label>
+                    <label className="block text-xs font-black text-[#684E67] mb-1">
+                      Custom Duration (Days) *
+                    </label>
                     <input
                       type="number"
                       required
@@ -919,7 +1054,8 @@ export default function AdminUserDetailPage() {
                     <span>Free Admin Upgrade & Renewal</span>
                   </p>
                   <p className="text-[11px] font-bold text-emerald-800">
-                    This will immediately activate the member's protection plan until the new expiry date. No charges or payment gateway will be invoked.
+                    This will immediately activate the member's protection plan until the new expiry
+                    date. No charges or payment gateway will be invoked.
                   </p>
                 </div>
 
@@ -941,7 +1077,6 @@ export default function AdminUserDetailPage() {
                   </button>
                 </div>
               </form>
-
             </div>
           </div>
         )}
@@ -950,7 +1085,6 @@ export default function AdminUserDetailPage() {
         {isContactModalOpen && (
           <div className="fixed inset-0 z-[200] bg-black/60 backdrop-blur-sm flex items-center justify-center p-4">
             <div className="bg-white rounded-[36px] max-w-md w-full p-6 sm:p-8 space-y-6 shadow-2xl border-2 border-[#FF2A6D] relative animate-scale-up">
-              
               <div className="flex items-center justify-between border-b-2 border-[#FFCCE1] pb-4">
                 <div>
                   <h3 className="font-black text-lg text-[#2A0826]">
@@ -969,7 +1103,9 @@ export default function AdminUserDetailPage() {
 
               <form onSubmit={handleSaveAdminContact} className="space-y-4">
                 <div>
-                  <label className="block text-xs font-black text-[#684E67] mb-1">Guardian Full Name *</label>
+                  <label className="block text-xs font-black text-[#684E67] mb-1">
+                    Guardian Full Name *
+                  </label>
                   <input
                     type="text"
                     required
@@ -982,20 +1118,28 @@ export default function AdminUserDetailPage() {
 
                 <div className="grid grid-cols-2 gap-3">
                   <div>
-                    <label className="block text-xs font-black text-[#684E67] mb-1">Relationship *</label>
+                    <label className="block text-xs font-black text-[#684E67] mb-1">
+                      Relationship *
+                    </label>
                     <select
                       value={contactForm.relationship}
-                      onChange={(e) => setContactForm({ ...contactForm, relationship: e.target.value })}
+                      onChange={(e) =>
+                        setContactForm({ ...contactForm, relationship: e.target.value })
+                      }
                       className="w-full px-3.5 py-3 bg-[#FFF0F3] border-1.5 border-[#FFCCE1] rounded-xl text-xs font-black outline-none cursor-pointer"
                     >
                       {RELATIONSHIPS.map((r) => (
-                        <option key={r} value={r}>{r}</option>
+                        <option key={r} value={r}>
+                          {r}
+                        </option>
                       ))}
                     </select>
                   </div>
 
                   <div>
-                    <label className="block text-xs font-black text-[#684E67] mb-1">Mobile Phone *</label>
+                    <label className="block text-xs font-black text-[#684E67] mb-1">
+                      Mobile Phone *
+                    </label>
                     <input
                       type="tel"
                       required
@@ -1008,7 +1152,9 @@ export default function AdminUserDetailPage() {
                 </div>
 
                 <div>
-                  <label className="block text-xs font-black text-[#684E67] mb-1">Email Address (Optional)</label>
+                  <label className="block text-xs font-black text-[#684E67] mb-1">
+                    Email Address (Optional)
+                  </label>
                   <input
                     type="email"
                     placeholder="guardian@example.com"
@@ -1032,15 +1178,17 @@ export default function AdminUserDetailPage() {
                     disabled={isSubmitting}
                     className="px-6 py-3 rounded-full text-xs font-black text-white bg-gradient-to-r from-[#FF5C8A] via-[#FF2A6D] to-[#E01A4F] uppercase tracking-wider shadow cursor-pointer disabled:opacity-50"
                   >
-                    {isSubmitting ? 'SAVING...' : (editingContact ? 'UPDATE GUARDIAN' : 'ADD GUARDIAN NOW')}
+                    {isSubmitting
+                      ? 'SAVING...'
+                      : editingContact
+                        ? 'UPDATE GUARDIAN'
+                        : 'ADD GUARDIAN NOW'}
                   </button>
                 </div>
               </form>
-
             </div>
           </div>
         )}
-
       </div>
     </AppLayout>
   );

@@ -16,7 +16,11 @@ export function usePushNotification() {
     // Only attempt push notification subscription for authenticated users
     if (!token) return;
 
-    if (typeof window === 'undefined' || !('serviceWorker' in navigator) || !('PushManager' in window)) {
+    if (
+      typeof window === 'undefined' ||
+      !('serviceWorker' in navigator) ||
+      !('PushManager' in window)
+    ) {
       return;
     }
 

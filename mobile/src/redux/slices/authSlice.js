@@ -9,7 +9,11 @@ export const registerUser = createAsyncThunk('auth/registerUser', async (payload
     const data = await authApi.register(payload);
     return data;
   } catch (err) {
-    return rejectWithValue(err.response?.data?.error || 'Registration failed');
+    return rejectWithValue({
+      error: err.response?.data?.error || err.response?.data?.message || 'Registration failed',
+      requiresVerification: err.response?.data?.requiresVerification || false,
+      email: err.response?.data?.email || payload?.email,
+    });
   }
 });
 
@@ -21,7 +25,11 @@ export const loginUser = createAsyncThunk('auth/loginUser', async (payload, { re
     }
     return data;
   } catch (err) {
-    return rejectWithValue(err.response?.data?.error || 'Login failed');
+    return rejectWithValue({
+      error: err.response?.data?.error || 'Login failed',
+      requiresVerification: err.response?.data?.requiresVerification || false,
+      email: err.response?.data?.email || payload?.email,
+    });
   }
 });
 
@@ -116,25 +124,34 @@ const authSlice = createSlice({
       })
       .addCase(registerUser.rejected, (state, action) => {
         state.isLoading = false;
-        state.error = action.payload;
+        state.error = action.payload?.error || 'Registration failed';
+        if (action.payload?.requiresVerification) {
+          state.pendingVerificationEmail = action.payload.email;
+          state.showOtpModal = true;
+        }
       })
 
       // Login
       .addCase(loginUser.pending, (state) => { state.isLoading = true; state.error = null; })
       .addCase(loginUser.fulfilled, (state, action) => {
         state.isLoading = false;
+        state.error = null;
         if (action.payload.requiresVerification || action.payload.pendingToken) {
           state.pendingToken = action.payload.pendingToken;
-          state.pendingVerificationEmail = action.meta.arg.email;
+          state.pendingVerificationEmail = action.payload.email || action.meta.arg.email;
           state.showOtpModal = true;
-        } else {
-          state.token = action.payload.token;
-          state.user = action.payload.user;
+          return;
         }
+        state.token = action.payload.token;
+        state.user = action.payload.user;
       })
       .addCase(loginUser.rejected, (state, action) => {
         state.isLoading = false;
-        state.error = action.payload;
+        state.error = action.payload?.error || 'Login failed';
+        if (action.payload?.requiresVerification) {
+          state.pendingVerificationEmail = action.payload.email;
+          state.showOtpModal = true;
+        }
       })
 
       // Verify OTP

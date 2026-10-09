@@ -8,6 +8,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { useDispatch, useSelector } from 'react-redux';
 import { fetchUser, updateProfileSettings, logoutUser } from '../../redux/slices/authSlice';
 import Animated, { FadeInUp, FadeInDown } from 'react-native-reanimated';
+import { LinearGradient } from 'expo-linear-gradient';
 import { COLORS } from '../../theme/colors';
 import { BLOOD_GROUPS, EMERGENCY_RELATIONS } from '../../utils/constants';
 
@@ -94,9 +95,9 @@ export default function ProfileScreen({ navigation }) {
 
         {/* PROFILE HEADER */}
         <Animated.View entering={FadeInDown.duration(500)} style={styles.profileHeader}>
-          <View style={styles.avatarWrap}>
+          <LinearGradient colors={['#FF5C8A', '#FF2A6D']} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={styles.avatarWrap}>
             <Text style={styles.avatarText}>{firstName[0]?.toUpperCase()}</Text>
-          </View>
+          </LinearGradient>
           <View style={{ flex: 1 }}>
             <Text style={styles.profileName}>{user?.fullName || user?.name || 'User'}</Text>
             <Text style={styles.profileEmail}>{user?.email || ''}</Text>
@@ -219,15 +220,21 @@ export default function ProfileScreen({ navigation }) {
         {/* SAVE BUTTON */}
         {isEditing && (
           <TouchableOpacity
-            style={[styles.saveBtn, isLoading && styles.saveBtnDisabled]}
             onPress={handleSave}
             disabled={isLoading}
             activeOpacity={0.85}
           >
-            {isLoading
-              ? <ActivityIndicator color="#fff" size="small" />
-              : <Text style={styles.saveBtnText}>SAVE PROFILE</Text>
-            }
+            <LinearGradient 
+              colors={['#FF5C8A', '#FF2A6D']} 
+              start={{ x: 0, y: 0 }} 
+              end={{ x: 1, y: 1 }} 
+              style={[styles.saveBtn, isLoading && styles.saveBtnDisabled]}
+            >
+              {isLoading
+                ? <ActivityIndicator color="#fff" size="small" />
+                : <Text style={styles.saveBtnText}>SAVE PROFILE</Text>
+              }
+            </LinearGradient>
           </TouchableOpacity>
         )}
 

@@ -8,6 +8,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { useDispatch, useSelector } from 'react-redux';
 import * as Clipboard from 'expo-clipboard';
 import { resolveEmergencySos, toggleAlarm } from '../../redux/slices/sosSlice';
+import { LinearGradient } from 'expo-linear-gradient';
 import { COLORS } from '../../theme/colors';
 
 export default function ActiveSOSScreen({ navigation }) {
@@ -83,7 +84,7 @@ export default function ActiveSOSScreen({ navigation }) {
   return (
     <SafeAreaView style={styles.safe}>
       {/* EMERGENCY TOP BAR */}
-      <View style={styles.topBar}>
+      <LinearGradient colors={['#FF2A6D', '#D91B55']} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={styles.topBar}>
         <View style={styles.topBarLeft}>
           <Ionicons name="warning" size={22} color="#fff" />
           <View>
@@ -101,7 +102,7 @@ export default function ActiveSOSScreen({ navigation }) {
             <Text style={styles.liveText}>LIVE</Text>
           </View>
         </View>
-      </View>
+      </LinearGradient>
 
       <ScrollView contentContainerStyle={styles.scroll} showsVerticalScrollIndicator={false}>
 
@@ -165,16 +166,20 @@ export default function ActiveSOSScreen({ navigation }) {
 
         {/* EMERGENCY ACTIONS */}
         <View style={styles.twoCol}>
-          <TouchableOpacity style={styles.callBtn} onPress={() => Linking.openURL('tel:112')} activeOpacity={0.85}>
-            <Ionicons name="call" size={26} color="#fff" />
-            <Text style={styles.callBtnNum}>CALL 112</Text>
-            <Text style={styles.callBtnSub}>National Emergency</Text>
+          <TouchableOpacity onPress={() => Linking.openURL('tel:112')} activeOpacity={0.85} style={{ flex: 1 }}>
+            <LinearGradient colors={['#FF5C8A', '#FF2A6D']} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={styles.callBtn}>
+              <Ionicons name="call" size={26} color="#fff" />
+              <Text style={styles.callBtnNum}>CALL 112</Text>
+              <Text style={styles.callBtnSub}>National Emergency</Text>
+            </LinearGradient>
           </TouchableOpacity>
 
-          <TouchableOpacity style={styles.contactsBtn} onPress={() => Linking.openURL('tel:1091')} activeOpacity={0.85}>
-            <Ionicons name="people" size={26} color={COLORS.primaryLight} />
-            <Text style={styles.contactsBtnText}>CALL 1091</Text>
-            <Text style={styles.contactsBtnSub}>Women Helpline</Text>
+          <TouchableOpacity onPress={() => Linking.openURL('tel:1091')} activeOpacity={0.85} style={{ flex: 1 }}>
+            <LinearGradient colors={['#3D0C38', '#2A0826']} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={styles.contactsBtn}>
+              <Ionicons name="people" size={26} color={COLORS.primaryLight} />
+              <Text style={styles.contactsBtnText}>CALL 1091</Text>
+              <Text style={styles.contactsBtnSub}>Women Helpline</Text>
+            </LinearGradient>
           </TouchableOpacity>
         </View>
 
@@ -191,12 +196,14 @@ export default function ActiveSOSScreen({ navigation }) {
           </TouchableOpacity>
 
           <TouchableOpacity
-            style={styles.safeBtn}
             onPress={() => setShowConfirmModal(true)}
             activeOpacity={0.85}
+            style={{ flex: 1 }}
           >
-            <Ionicons name="shield-checkmark" size={20} color="#fff" />
-            <Text style={styles.safeBtnText}>I'M SAFE NOW</Text>
+            <LinearGradient colors={['#34D399', '#10B981']} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={styles.safeBtn}>
+              <Ionicons name="shield-checkmark" size={20} color="#fff" />
+              <Text style={styles.safeBtnText}>I'M SAFE NOW</Text>
+            </LinearGradient>
           </TouchableOpacity>
         </View>
 

@@ -6,18 +6,32 @@ import { TrustedContactCard } from '../../components/contacts/TrustedContactCard
 import { UserPlus, Shield, X, CheckCircle, Edit3 } from 'lucide-react';
 
 import { useDispatch, useSelector } from 'react-redux';
-import { fetchContacts, addContact, updateContact, deleteContact } from '../../redux/slices/contactSlice.js';
+import {
+  fetchContacts,
+  addContact,
+  updateContact,
+  deleteContact,
+} from '../../redux/slices/contactSlice.js';
 
 import { CustomSelect } from '../../components/ui/CustomSelect.js';
 
 export const dynamic = 'force-dynamic';
 
-const RELATIONSHIPS = ['Sister', 'Mother', 'Father', 'Brother', 'Friend', 'Spouse', 'Guardian', 'Colleague'];
+const RELATIONSHIPS = [
+  'Sister',
+  'Mother',
+  'Father',
+  'Brother',
+  'Friend',
+  'Spouse',
+  'Guardian',
+  'Colleague',
+];
 
 export default function UserTrustedContactsPage() {
   const dispatch = useDispatch();
   const { contacts = [] } = useSelector((state) => state?.contacts || {});
-  
+
   // MODAL & FORM STATES
   const [showAddModal, setShowAddModal] = useState(false);
   const [editingContact, setEditingContact] = useState(null);
@@ -53,11 +67,32 @@ export default function UserTrustedContactsPage() {
 
   const handleSaveContact = async (e) => {
     e.preventDefault();
-    if (!name || !phone) return;
+    if (!name.trim() || !phone.trim()) {
+      alert('Contact Name and Mobile Number are required.');
+      return;
+    }
+
+    const cleanPhone = phone.replace(/\D/g, '');
+    const phoneRegex = /^[6-9]\d{9}$/;
+    if (!phoneRegex.test(cleanPhone)) {
+      alert('Please enter a valid 10-digit mobile number starting with 6, 7, 8, or 9.');
+      return;
+    }
+
+    if (email && email.trim()) {
+      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+      if (!emailRegex.test(email.trim())) {
+        alert('Please enter a valid email address.');
+        return;
+      }
+    }
+
     setLoading(true);
     try {
       if (editingContact) {
-        await dispatch(updateContact({ id: editingContact.id, name, relationship, phone, email })).unwrap();
+        await dispatch(
+          updateContact({ id: editingContact.id, name, relationship, phone, email })
+        ).unwrap();
       } else {
         await dispatch(addContact({ name, relationship, phone, email })).unwrap();
       }
@@ -71,14 +106,15 @@ export default function UserTrustedContactsPage() {
         setShowAddModal(false);
       }, 1000);
     } catch (err) {
-      alert(err || 'We couldn\'t save this contact right now. Please try again.');
+      alert(err || "We couldn't save this contact right now. Please try again.");
     } finally {
       setLoading(false);
     }
   };
 
   const handleDeleteContact = async (id) => {
-    if (!confirm('Remove this trusted contact? They will no longer receive emergency alerts.')) return;
+    if (!confirm('Remove this trusted contact? They will no longer receive emergency alerts.'))
+      return;
     try {
       await dispatch(deleteContact(id)).unwrap();
     } catch (err) {}
@@ -88,7 +124,7 @@ export default function UserTrustedContactsPage() {
 
   return (
     <AppLayout>
-      <div className="max-w-xl mx-auto px-4 pt-6 pb-4 space-y-6 lg:max-w-2xl">
+      <div className="max-w-xl mx-auto px-4 pt-6 pb-4 space-y-6 lg:max-w-4xl xl:max-w-5xl">
         <div className="flex items-end justify-between animate-fade-up">
           <div>
             <h1 className="text-2xl sm:text-3xl font-black tracking-tight">
@@ -123,7 +159,8 @@ export default function UserTrustedContactsPage() {
               <div>
                 <h3 className="font-black text-base text-[#2A0826]">No Contacts Added</h3>
                 <p className="text-xs sm:text-sm text-[#684E67] font-extrabold mt-1.5 max-w-sm mx-auto leading-relaxed">
-                  Add trusted family members or friends. They'll receive instant emergency emails with your live location link when SOS is activated.
+                  Add trusted family members or friends. They'll receive instant emergency emails
+                  with your live location link when SOS is activated.
                 </p>
               </div>
               <button
@@ -163,7 +200,10 @@ export default function UserTrustedContactsPage() {
           <p className="font-black text-[#2A0826] text-xs flex items-center space-x-1.5">
             <span>🔒 Privacy & Safety</span>
           </p>
-          <p className="leading-relaxed">Emergency alerts are sent only to people you explicitly add here. Location is only shared during active SOS sessions — not in the background.</p>
+          <p className="leading-relaxed">
+            Emergency alerts are sent only to people you explicitly add here. Location is only
+            shared during active SOS sessions — not in the background.
+          </p>
         </div>
       </div>
 
@@ -192,13 +232,17 @@ export default function UserTrustedContactsPage() {
                 <p className="font-black text-base text-[#2A0826]">
                   {editingContact ? 'Contact Details Updated!' : 'Contact Saved!'}
                 </p>
-                <p className="text-xs text-[#684E67] font-bold">They'll receive emergency alerts when SOS is activated.</p>
+                <p className="text-xs text-[#684E67] font-bold">
+                  They'll receive emergency alerts when SOS is activated.
+                </p>
               </div>
             ) : (
               <form onSubmit={handleSaveContact} className="px-6 pb-6 space-y-4">
                 <div className="grid grid-cols-2 gap-3.5">
                   <div className="col-span-2">
-                    <label className="block text-xs font-black uppercase tracking-wider text-[#2A0826] mb-1.5">Full Name *</label>
+                    <label className="block text-xs font-black uppercase tracking-wider text-[#2A0826] mb-1.5">
+                      Full Name *
+                    </label>
                     <input
                       type="text"
                       placeholder="Ananya Sharma"
@@ -210,17 +254,20 @@ export default function UserTrustedContactsPage() {
                   </div>
 
                   <div>
-                    <label className="block text-xs font-black uppercase tracking-wider text-[#2A0826] mb-1.5">Relationship</label>
+                    <label className="block text-xs font-black uppercase tracking-wider text-[#2A0826] mb-1.5">
+                      Relationship
+                    </label>
                     <CustomSelect
                       options={RELATIONSHIPS.map((r) => ({ value: r, label: r }))}
                       value={relationship}
                       onChange={(e) => setRelationship(e.target.value)}
-                      alignRight={true}
                     />
                   </div>
 
                   <div>
-                    <label className="block text-xs font-black uppercase tracking-wider text-[#2A0826] mb-1.5">Mobile Number *</label>
+                    <label className="block text-xs font-black uppercase tracking-wider text-[#2A0826] mb-1.5">
+                      Mobile Number *
+                    </label>
                     <input
                       type="tel"
                       placeholder="+91 98765 43210"
@@ -233,7 +280,10 @@ export default function UserTrustedContactsPage() {
 
                   <div className="col-span-2">
                     <label className="block text-xs font-black uppercase tracking-wider text-[#2A0826] mb-1.5">
-                      Email <span className="text-[#684E67] font-normal normal-case">(For instant SOS alerts & live link)</span>
+                      Email{' '}
+                      <span className="text-[#684E67] font-normal normal-case">
+                        (For instant SOS alerts & live link)
+                      </span>
                     </label>
                     <input
                       type="email"
@@ -250,7 +300,11 @@ export default function UserTrustedContactsPage() {
                   disabled={loading || !name || !phone}
                   className="w-full bg-gradient-to-r from-[#FF5C8A] via-[#FF2A6D] to-[#E01A4F] text-white font-black py-4 rounded-full text-xs uppercase tracking-wider shadow-[0_8px_25px_rgba(255,42,109,0.38)] hover:scale-[1.02] active:scale-95 transition-all disabled:opacity-60 cursor-pointer"
                 >
-                  {loading ? 'SAVING...' : (editingContact ? 'UPDATE TRUSTED CONTACT' : 'SAVE TRUSTED CONTACT')}
+                  {loading
+                    ? 'SAVING...'
+                    : editingContact
+                      ? 'UPDATE TRUSTED CONTACT'
+                      : 'SAVE TRUSTED CONTACT'}
                 </button>
               </form>
             )}

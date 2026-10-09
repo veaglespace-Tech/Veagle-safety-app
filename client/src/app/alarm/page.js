@@ -52,7 +52,10 @@ export default function EmergencyAlarmPage() {
 
   const stopSiren = () => {
     if (intervalRef.current) clearInterval(intervalRef.current);
-    if (oscRef.current) { oscRef.current.stop(); oscRef.current.disconnect(); }
+    if (oscRef.current) {
+      oscRef.current.stop();
+      oscRef.current.disconnect();
+    }
     if (audioCtxRef.current) audioCtxRef.current.close();
     if ('vibrate' in navigator) navigator.vibrate(0);
     oscRef.current = null;
@@ -67,13 +70,21 @@ export default function EmergencyAlarmPage() {
       <div className="max-w-xl mx-auto px-4 pt-5 pb-4 space-y-5 lg:max-w-2xl">
         <div className="animate-fade-up">
           <h1 className="text-xl font-extrabold text-tichi-text tracking-tight">Emergency Siren</h1>
-          <p className="text-xs text-tichi-muted mt-0.5">Maximum volume loud alarm to deter threats and attract attention</p>
+          <p className="text-xs text-tichi-muted mt-0.5">
+            Maximum volume loud alarm to deter threats and attract attention
+          </p>
         </div>
 
         <div className="bg-white border border-blush-border rounded-2xl shadow-card overflow-hidden animate-fade-up">
-          <div className={`px-5 py-3 border-b border-blush-border flex items-center space-x-2 transition-colors ${isPlaying ? 'bg-tichi-emergency' : 'bg-blush-subtle'}`}>
-            <span className={`w-2.5 h-2.5 rounded-full ${isPlaying ? 'bg-white animate-ping' : 'bg-tichi-muted'}`}></span>
-            <span className={`text-xs font-extrabold uppercase tracking-widest ${isPlaying ? 'text-white' : 'text-tichi-muted'}`}>
+          <div
+            className={`px-5 py-3 border-b border-blush-border flex items-center space-x-2 transition-colors ${isPlaying ? 'bg-tichi-emergency' : 'bg-blush-subtle'}`}
+          >
+            <span
+              className={`w-2.5 h-2.5 rounded-full ${isPlaying ? 'bg-white animate-ping' : 'bg-tichi-muted'}`}
+            ></span>
+            <span
+              className={`text-xs font-extrabold uppercase tracking-widest ${isPlaying ? 'text-white' : 'text-tichi-muted'}`}
+            >
               {isPlaying ? 'ALARM ACTIVE — BROADCASTING' : 'ALARM STANDBY'}
             </span>
           </div>
@@ -116,12 +127,17 @@ export default function EmergencyAlarmPage() {
           <div className="space-y-2.5">
             {[
               { step: '1', text: 'Tap ACTIVATE to start the high-decibel siren alarm immediately' },
-              { step: '2', text: 'Hold the device near you or place it on a surface to maximize volume' },
+              {
+                step: '2',
+                text: 'Hold the device near you or place it on a surface to maximize volume',
+              },
               { step: '3', text: 'The alarm will also trigger your device vibration pattern' },
-              { step: '4', text: 'Tap STOP when you\'re in a safe environment' },
+              { step: '4', text: "Tap STOP when you're in a safe environment" },
             ].map((item) => (
               <div key={item.step} className="flex items-start space-x-3">
-                <span className="w-5 h-5 rounded-full bg-plum-50 text-plum text-[10px] font-extrabold flex items-center justify-center shrink-0 mt-0.5">{item.step}</span>
+                <span className="w-5 h-5 rounded-full bg-plum-50 text-plum text-[10px] font-extrabold flex items-center justify-center shrink-0 mt-0.5">
+                  {item.step}
+                </span>
                 <p className="text-xs text-tichi-muted">{item.text}</p>
               </div>
             ))}
@@ -133,7 +149,8 @@ export default function EmergencyAlarmPage() {
           <div>
             <p className="text-xs font-bold text-amber-800">For Genuine Emergencies Only</p>
             <p className="text-xs text-amber-700 mt-0.5">
-              Use in public or isolated spaces to deter attackers and signal for help. Maximum device volume recommended.
+              Use in public or isolated spaces to deter attackers and signal for help. Maximum
+              device volume recommended.
             </p>
           </div>
         </div>
@@ -141,7 +158,9 @@ export default function EmergencyAlarmPage() {
         <div className="flex items-start space-x-3 bg-plum-50 border border-plum-200 rounded-card p-4 animate-fade-up">
           <Info className="w-4 h-4 text-plum shrink-0 mt-0.5" />
           <p className="text-xs text-plum font-medium">
-            <strong>Pro tip:</strong> Combine with the SOS button on the home screen for full emergency response — the alarm draws attention while SOS notifies your trusted contacts automatically.
+            <strong>Pro tip:</strong> Combine with the SOS button on the home screen for full
+            emergency response — the alarm draws attention while SOS notifies your trusted contacts
+            automatically.
           </p>
         </div>
       </div>

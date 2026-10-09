@@ -84,7 +84,7 @@ export async function seedDatabase() {
     {
       id: 2,
       name: 'Sakhi Suraksha 365 Yearly Protection Plan',
-      description: 'Complete 365-Day 24/7 Unlimited SOS Emergency Broadcast, Live GPS Map Sharing, 5 Trusted Contacts Network, and HQ Command Dispatch',
+      description: 'Complete 365-Day 24/7 Unlimited SOS Emergency Broadcast, Live GPS Map Sharing, 5 Trusted Contacts Network, and Command Dispatch',
       basePrice: 24.0,
       gstPercentage: 18.0,
       totalPrice: 28.32,
