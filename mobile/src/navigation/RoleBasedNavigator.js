@@ -19,7 +19,6 @@ import AlarmScreen from '../screens/main/AlarmScreen';
 
 // Admin Placeholder Screens
 import AdminUsersScreen from '../screens/main/AdminUsersScreen';
-import AdminPlansScreen from '../screens/main/AdminPlansScreen';
 import AdminPaymentsScreen from '../screens/main/AdminPaymentsScreen';
 
 const Tab = createBottomTabNavigator();
@@ -56,7 +55,6 @@ function AdminTabNavigator() {
     <Tab.Navigator screenOptions={(props) => commonScreenOptions({ ...props, TAB_ICONS })}>
       <Tab.Screen name="Home" component={AdminDashboardScreen} />
       <Tab.Screen name="Users" component={AdminUsersScreen} />
-      <Tab.Screen name="Plans" component={AdminPlansScreen} />
       <Tab.Screen name="Payments" component={AdminPaymentsScreen} />
       <Tab.Screen name="Profile" component={ProfileScreen} />
     </Tab.Navigator>

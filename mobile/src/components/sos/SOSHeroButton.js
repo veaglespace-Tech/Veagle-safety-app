@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, Animated, Easing, Vibration, Platform } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, Animated, Easing, Vibration, Platform, Linking, Alert } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import Svg, { Circle, Defs, LinearGradient as SvgLinearGradient, Stop } from 'react-native-svg';
@@ -20,6 +20,33 @@ export default function SOSHeroButton() {
   const [holding, setHolding] = useState(false);
   const [countdown, setCountdown] = useState(2);
   const [isSilent, setIsSilent] = useState(false);
+  
+  const prevActiveSession = useRef(null);
+  useEffect(() => {
+    if (activeSession && !prevActiveSession.current) {
+      // SOS just successfully triggered!
+      
+      const user = store.getState().auth.user;
+      const phoneToCall = user?.emergencyContactPhone || user?.parentPhone; // Fallback if needed
+      
+      if (phoneToCall) {
+        // 1. Open WhatsApp with a pre-filled emergency message
+        const waMsg = encodeURIComponent(`🚨 EMERGENCY! I have triggered an SOS on SakhiSuraksha. My live location is being broadcasted to you now.`);
+        Linking.openURL(`whatsapp://send?text=${waMsg}&phone=${phoneToCall}`).catch(() => console.log('WhatsApp not installed'));
+
+        // 2. Schedule the phone call 2 seconds later so both actions occur
+        setTimeout(() => {
+          Linking.openURL(`tel:${phoneToCall}`).catch(err => console.log('Error opening dialer', err));
+        }, 2000);
+      } else {
+        // If no emergency contact phone is found, dial standard emergency number (112 for India)
+        setTimeout(() => {
+          Linking.openURL(`tel:112`).catch(err => console.log('Error opening dialer', err));
+        }, 500);
+      }
+    }
+    prevActiveSession.current = activeSession;
+  }, [activeSession]);
   
   const holdProgress = useRef(new Animated.Value(0)).current;
   const pulseAnim = useRef(new Animated.Value(1)).current;

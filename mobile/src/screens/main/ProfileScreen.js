@@ -75,7 +75,6 @@ export default function ProfileScreen({ navigation }) {
   };
 
   const firstName = (user?.fullName || user?.name || 'User').split(' ')[0];
-  const subscriptionActive = user?.subscriptionStatus === 'ACTIVE';
 
   const InfoRow = ({ icon, label, value }) => (
     <View style={styles.infoRow}>
@@ -101,12 +100,6 @@ export default function ProfileScreen({ navigation }) {
           <View style={{ flex: 1 }}>
             <Text style={styles.profileName}>{user?.fullName || user?.name || 'User'}</Text>
             <Text style={styles.profileEmail}>{user?.email || ''}</Text>
-            <View style={[styles.subChip, !subscriptionActive && styles.subChipInactive]}>
-              <Ionicons name={subscriptionActive ? 'shield-checkmark' : 'shield-outline'} size={12} color={subscriptionActive ? COLORS.success : COLORS.textMuted} />
-              <Text style={[styles.subChipText, !subscriptionActive && styles.subChipTextInactive]}>
-                {subscriptionActive ? 'Subscription Active' : 'No Active Plan'}
-              </Text>
-            </View>
           </View>
           <TouchableOpacity onPress={() => setIsEditing(!isEditing)} style={styles.editBtn}>
             <Ionicons name={isEditing ? 'close' : 'create-outline'} size={18} color={COLORS.primary} />
@@ -266,11 +259,6 @@ export default function ProfileScreen({ navigation }) {
         {/* QUICK LINKS */}
         <Animated.View entering={FadeInUp.delay(300).duration(500)} style={styles.section}>
           <Text style={styles.sectionTitle}>Account</Text>
-          <TouchableOpacity style={styles.linkRow} onPress={() => navigation.navigate('Subscription')} activeOpacity={0.8}>
-            <Ionicons name="card-outline" size={18} color={COLORS.primary} />
-            <Text style={styles.linkText}>Subscription & Plans</Text>
-            <Ionicons name="chevron-forward" size={16} color={COLORS.textMuted} />
-          </TouchableOpacity>
           <TouchableOpacity style={[styles.linkRow, styles.logoutRow]} onPress={handleLogout} activeOpacity={0.8}>
             <Ionicons name="log-out-outline" size={18} color={COLORS.primary} />
             <Text style={[styles.linkText, { color: COLORS.primary }]}>Logout</Text>

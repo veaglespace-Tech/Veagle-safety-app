@@ -91,23 +91,7 @@ export default function DashboardScreen({ navigation }) {
           </TouchableOpacity>
         )}
 
-        {/* INACTIVE SUBSCRIPTION BANNER */}
-        {user?.subscriptionStatus !== 'ACTIVE' && (
-          <TouchableOpacity onPress={() => navigation.navigate('Subscription')} activeOpacity={0.9}>
-            <LinearGradient colors={['#F59E0B', '#F43F5E', '#FF2A6D']} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={[styles.sosBanner, { borderColor: '#fff', borderWidth: 2 }]}>
-              <View style={styles.sosBannerLeft}>
-                <View style={styles.sosBannerIconWrap}>
-                  <Ionicons name="flash" size={24} color="#FEF3C7" />
-                </View>
-                <View style={{ flex: 1 }}>
-                  <Text style={styles.sosBannerTitle}>PLAN PENDING ACTIVATION</Text>
-                  <Text style={styles.sosBannerSub}>Activate 24/7 Live GPS Guardian Coverage</Text>
-                </View>
-              </View>
-              <Ionicons name="chevron-forward" size={24} color="#fff" />
-            </LinearGradient>
-          </TouchableOpacity>
-        )}
+
 
         {/* ACTIVE JOURNEY BANNER */}
         {activeJourney && !activeSession && (

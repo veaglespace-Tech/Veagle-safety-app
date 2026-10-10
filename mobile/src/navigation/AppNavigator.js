@@ -10,8 +10,14 @@ import RoleBasedNavigator from './RoleBasedNavigator';
 import AuthNavigator from './AuthNavigator';
 import ActiveSOSScreen from '../screens/sos/ActiveSOSScreen';
 import HelplinesScreen from '../screens/helplines/HelplinesScreen';
-import SubscriptionScreen from '../screens/subscription/SubscriptionScreen';
 import SplashScreen from '../screens/auth/SplashScreen';
+import GlobalEmergencyListener from '../components/common/GlobalEmergencyListener';
+import { useLocation } from '../hooks/useLocation';
+
+function LocationManager() {
+  useLocation();
+  return null;
+}
 
 // Admin feature screens
 import AdminCouponsScreen from '../screens/main/AdminCouponsScreen';
@@ -26,8 +32,6 @@ import HelpScreen from '../screens/info/HelpScreen';
 import HelpContactScreen from '../screens/info/HelpContactScreen';
 
 // New Feature Screens
-import CheckoutScreen from '../screens/subscription/CheckoutScreen';
-import PaymentSuccessScreen from '../screens/subscription/PaymentSuccessScreen';
 import GalleryScreen from '../screens/main/GalleryScreen';
 import AdminEnquiriesScreen from '../screens/main/AdminEnquiriesScreen';
 import UserSettingsScreen from '../screens/main/UserSettingsScreen';
@@ -58,9 +62,12 @@ export default function AppNavigator() {
   const isAuthenticated = !!(token && user);
 
   return (
-    <NavigationContainer>
-      <Stack.Navigator screenOptions={{ headerShown: false }}>
-        {!isAuthenticated ? (
+    <>
+      <GlobalEmergencyListener />
+      {isAuthenticated && <LocationManager />}
+      <NavigationContainer>
+        <Stack.Navigator screenOptions={{ headerShown: false }}>
+          {!isAuthenticated ? (
           <Stack.Screen name="Auth" component={AuthNavigator} />
         ) : (
           <>
@@ -71,7 +78,6 @@ export default function AppNavigator() {
               options={{ presentation: 'fullScreenModal', animation: 'slide_from_bottom' }}
             />
             <Stack.Screen name="Helplines" component={HelplinesScreen} />
-            <Stack.Screen name="Subscription" component={SubscriptionScreen} />
             <Stack.Screen name="About" component={AboutScreen} />
             <Stack.Screen name="Privacy" component={PrivacyScreen} />
             <Stack.Screen name="Terms" component={TermsScreen} />
@@ -81,8 +87,6 @@ export default function AppNavigator() {
             <Stack.Screen name="AdminSettings" component={AdminSettingsScreen} options={{ headerShown: true, title: 'Global Settings' }} />
             
             {/* Newly added UI Screens */}
-            <Stack.Screen name="Checkout" component={CheckoutScreen} />
-            <Stack.Screen name="PaymentSuccess" component={PaymentSuccessScreen} />
             <Stack.Screen name="Gallery" component={GalleryScreen} />
             <Stack.Screen name="AdminEnquiries" component={AdminEnquiriesScreen} />
             <Stack.Screen name="UserSettings" component={UserSettingsScreen} />
@@ -91,5 +95,6 @@ export default function AppNavigator() {
         )}
       </Stack.Navigator>
     </NavigationContainer>
+    </>
   );
 }

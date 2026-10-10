@@ -20,6 +20,17 @@ export const registerUser = createAsyncThunk('auth/registerUser', async (payload
 export const loginUser = createAsyncThunk('auth/loginUser', async (payload, { rejectWithValue }) => {
   try {
     const data = await authApi.login(payload);
+    
+    // Block login for regular users/parents without active subscriptions
+    if (data.user) {
+      const userRole = data.user.role?.toUpperCase() || 'USER';
+      if ((userRole === 'USER' || userRole === 'PARENT') && data.user.subscriptionStatus !== 'ACTIVE') {
+        return rejectWithValue({
+          error: 'Your account does not have an active subscription. Please contact your organization or support.'
+        });
+      }
+    }
+
     if (data.token) {
       await AsyncStorage.setItem(TOKEN_KEY, data.token);
     }
@@ -54,9 +65,18 @@ export const resendOtpCode = createAsyncThunk('auth/resendOtpCode', async (paylo
   }
 });
 
-export const fetchUser = createAsyncThunk('auth/fetchUser', async (_, { rejectWithValue }) => {
+export const fetchUser = createAsyncThunk('auth/fetchUser', async (_, { rejectWithValue, dispatch }) => {
   try {
     const data = await authApi.getProfile();
+    const userObj = data.user || data;
+    
+    // Auto-logout if subscription expired
+    const userRole = userObj?.role?.toUpperCase() || 'USER';
+    if ((userRole === 'USER' || userRole === 'PARENT') && userObj?.subscriptionStatus !== 'ACTIVE') {
+      dispatch(logoutUser());
+      return rejectWithValue('Your subscription has expired. Please contact support.');
+    }
+
     return data;
   } catch (err) {
     return rejectWithValue(err.response?.data?.error || 'Failed to fetch profile');
