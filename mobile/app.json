@@ -8,7 +8,7 @@
         "projectId": "1fbff418-6a14-4ad6-870c-9ba1fb381634"
       }
     },
-    "version": "1.0.0",
+    "version": "1.0.1",
     "orientation": "portrait",
     "icon": "./assets/logo_attractive.png",
     "userInterfaceStyle": "light",
@@ -36,7 +36,7 @@
         "backgroundColor": "#FFF0F3"
       },
       "package": "com.veaglesafety.app",
-      "versionCode": 3,
+      "versionCode": 4,
       "permissions": [
         "ACCESS_FINE_LOCATION",
         "ACCESS_COARSE_LOCATION",
