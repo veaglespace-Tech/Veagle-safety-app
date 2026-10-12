@@ -11,6 +11,7 @@ import { resolveEmergencySos, toggleAlarm } from '../../redux/slices/sosSlice';
 import { LinearGradient } from 'expo-linear-gradient';
 import { COLORS } from '../../theme/colors';
 import { playEmergencySiren, stopEmergencySiren } from '../../utils/soundPlayer';
+import LiveSosMap from '../../components/Admin/LiveSosMap';
 
 export default function ActiveSOSScreen({ navigation }) {
   const dispatch = useDispatch();
@@ -135,6 +136,18 @@ export default function ActiveSOSScreen({ navigation }) {
               <Text style={styles.statLabel}>{stat.label}</Text>
             </View>
           ))}
+        </View>
+
+        {/* LIVE SOS GPS MAP */}
+        <View style={{ marginBottom: 16 }}>
+          <LiveSosMap
+            latitude={latitude}
+            longitude={longitude}
+            accuracy={accuracy}
+            victimName={user?.fullName || 'My Location'}
+            isEmergency={true}
+            height={200}
+          />
         </View>
 
         {/* LIVE TRACKING LINK */}

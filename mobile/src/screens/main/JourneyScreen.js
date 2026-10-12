@@ -10,6 +10,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { journeyApi } from '../../api/journeyApi';
 import { checkinApi } from '../../api/checkinApi';
 import { COLORS } from '../../theme/colors';
+import LiveSosMap from '../../components/Admin/LiveSosMap';
 
 export default function JourneyScreen() {
   const { latitude = 18.5204, longitude = 73.8567 } = useSelector((state) => state.location);
@@ -173,6 +174,17 @@ export default function JourneyScreen() {
                       <Text style={styles.routeValue}>{journey.destinationName}</Text>
                     </View>
                   </View>
+                </View>
+
+                {/* LIVE JOURNEY GPS MAP */}
+                <View style={{ marginBottom: 12 }}>
+                  <LiveSosMap
+                    latitude={latitude}
+                    longitude={longitude}
+                    victimName={journey.destinationName ? `Heading to: ${journey.destinationName}` : 'Live Commute'}
+                    isEmergency={false}
+                    height={200}
+                  />
                 </View>
 
                 <TouchableOpacity onPress={handleCompleteJourney} activeOpacity={0.85}>

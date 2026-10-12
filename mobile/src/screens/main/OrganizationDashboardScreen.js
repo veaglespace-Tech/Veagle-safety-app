@@ -1,11 +1,12 @@
 import React, { useEffect, useState } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, ActivityIndicator, Alert, Share } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, ActivityIndicator, Alert, Share, Modal, Linking } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useSelector } from 'react-redux';
 import { LinearGradient } from 'expo-linear-gradient';
 import { organizationApi } from '../../api/organizationApi';
 import { COLORS } from '../../theme/colors';
+import LiveSosMap from '../../components/Admin/LiveSosMap';
 
 export default function OrganizationDashboardScreen({ navigation }) {
   const { user } = useSelector((state) => state.auth);
@@ -13,6 +14,7 @@ export default function OrganizationDashboardScreen({ navigation }) {
   const [settings, setSettings] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
   const [activeTab, setActiveTab] = useState('members');
+  const [trackingMember, setTrackingMember] = useState(null);
 
   useEffect(() => {
     fetchData();
@@ -169,6 +171,24 @@ export default function OrganizationDashboardScreen({ navigation }) {
                         )}
                       </View>
                     </View>
+
+                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                      {m.user?.phone && (
+                        <TouchableOpacity
+                          style={{ padding: 8, backgroundColor: '#DCFCE7', borderRadius: 8 }}
+                          onPress={() => Linking.openURL(`tel:${m.user.phone}`)}
+                        >
+                          <Ionicons name="call" size={14} color="#16A34A" />
+                        </TouchableOpacity>
+                      )}
+                      <TouchableOpacity
+                        style={{ paddingHorizontal: 10, paddingVertical: 8, backgroundColor: '#FF2A6D', borderRadius: 8, flexDirection: 'row', alignItems: 'center', gap: 4 }}
+                        onPress={() => setTrackingMember(m)}
+                      >
+                        <Ionicons name="map" size={13} color="#FFF" />
+                        <Text style={{ color: '#FFF', fontSize: 10, fontWeight: '900' }}>TRACK</Text>
+                      </TouchableOpacity>
+                    </View>
                   </View>
                 ))
               )}
@@ -245,6 +265,59 @@ export default function OrganizationDashboardScreen({ navigation }) {
           )}
         </View>
       </ScrollView>
+
+      {/* LIVE GPS TRACKING MODAL */}
+      <Modal visible={!!trackingMember} transparent animationType="slide">
+        {trackingMember && (
+          <SafeAreaView style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.7)', justifyContent: 'flex-end' }}>
+            <View style={{ backgroundColor: '#FFF', borderTopLeftRadius: 28, borderTopRightRadius: 28, padding: 20, gap: 14 }}>
+              <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', borderBottomWidth: 1.5, borderBottomColor: '#FFCCE1', paddingBottom: 10 }}>
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, flex: 1 }}>
+                  <Ionicons name="navigate-circle" size={22} color="#FF2A6D" />
+                  <Text style={{ fontSize: 15, fontWeight: '900', color: COLORS.textDark }} numberOfLines={1}>
+                    Tracking: {trackingMember.user?.fullName}
+                  </Text>
+                </View>
+                <TouchableOpacity onPress={() => setTrackingMember(null)}>
+                  <Ionicons name="close" size={24} color={COLORS.textDark} />
+                </TouchableOpacity>
+              </View>
+
+              <LiveSosMap
+                latitude={trackingMember.activeSos?.locations?.[0]?.latitude || trackingMember.activeJourney?.currentLat || 18.5204}
+                longitude={trackingMember.activeSos?.locations?.[0]?.longitude || trackingMember.activeJourney?.currentLng || 73.8567}
+                victimName={trackingMember.user?.fullName || 'Member'}
+                isEmergency={!!trackingMember.activeSos}
+                height={300}
+              />
+
+              <View style={{ flexDirection: 'row', gap: 10 }}>
+                {trackingMember.user?.phone && (
+                  <TouchableOpacity
+                    style={{ flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', backgroundColor: '#16A34A', paddingVertical: 12, borderRadius: 14, gap: 6 }}
+                    onPress={() => Linking.openURL(`tel:${trackingMember.user.phone}`)}
+                  >
+                    <Ionicons name="call" size={16} color="#FFF" />
+                    <Text style={{ color: '#FFF', fontSize: 12, fontWeight: '900' }}>CALL MEMBER</Text>
+                  </TouchableOpacity>
+                )}
+                {trackingMember.user?.phone && (
+                  <TouchableOpacity
+                    style={{ flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', backgroundColor: '#25D366', paddingVertical: 12, borderRadius: 14, gap: 6 }}
+                    onPress={() => {
+                      const clean = trackingMember.user.phone.replace(/\D/g, '');
+                      Linking.openURL(`https://wa.me/${clean}`);
+                    }}
+                  >
+                    <Ionicons name="logo-whatsapp" size={16} color="#FFF" />
+                    <Text style={{ color: '#FFF', fontSize: 12, fontWeight: '900' }}>WHATSAPP</Text>
+                  </TouchableOpacity>
+                )}
+              </View>
+            </View>
+          </SafeAreaView>
+        )}
+      </Modal>
     </SafeAreaView>
   );
 }
