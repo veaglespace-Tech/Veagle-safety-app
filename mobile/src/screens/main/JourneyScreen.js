@@ -7,6 +7,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useSelector } from 'react-redux';
 import { LinearGradient } from 'expo-linear-gradient';
+import * as Location from 'expo-location';
 import { journeyApi } from '../../api/journeyApi';
 import { checkinApi } from '../../api/checkinApi';
 import { COLORS } from '../../theme/colors';
@@ -54,10 +55,20 @@ export default function JourneyScreen() {
     }
     setLoading(true);
     try {
+      let curLat = latitude;
+      let curLng = longitude;
+      if (!curLat || !curLng) {
+        const fresh = await Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.Balanced }).catch(() => null);
+        if (fresh?.coords) {
+          curLat = fresh.coords.latitude;
+          curLng = fresh.coords.longitude;
+        }
+      }
+
       const res = await journeyApi.startJourney({
         destinationName: destination,
-        originLat: latitude || 18.5204,
-        originLng: longitude || 73.8567,
+        originLat: curLat || 18.5204,
+        originLng: curLng || 73.8567,
         destLat: 18.5355,
         destLng: 73.8910,
         minutesToArrive: minutes,

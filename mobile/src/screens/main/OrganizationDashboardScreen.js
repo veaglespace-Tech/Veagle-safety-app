@@ -5,6 +5,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { useSelector } from 'react-redux';
 import { LinearGradient } from 'expo-linear-gradient';
 import { organizationApi } from '../../api/organizationApi';
+import { sosApi } from '../../api/sosApi';
 import { COLORS } from '../../theme/colors';
 import LiveSosMap from '../../components/Admin/LiveSosMap';
 
@@ -17,11 +18,49 @@ export default function OrganizationDashboardScreen({ navigation }) {
   const [trackingMember, setTrackingMember] = useState(null);
 
   useEffect(() => {
-    fetchData();
+    fetchData(true);
+    const interval = setInterval(() => {
+      fetchData(false);
+    }, 8000);
+    return () => clearInterval(interval);
   }, []);
 
-  const fetchData = async () => {
+  // Poll high-frequency GPS for actively tracked member
+  useEffect(() => {
+    if (!trackingMember?.activeSos?.id) return;
+    const pollLoc = async () => {
+      try {
+        const data = await sosApi.getSosLocation(trackingMember.activeSos.id);
+        if (data?.location) {
+          const lat = parseFloat(data.location.latitude);
+          const lng = parseFloat(data.location.longitude);
+          if (!isNaN(lat) && !isNaN(lng)) {
+            setTrackingMember((prev) => {
+              if (prev && prev.activeSos && prev.activeSos.id === trackingMember.activeSos.id) {
+                return {
+                  ...prev,
+                  activeSos: {
+                    ...prev.activeSos,
+                    locations: [{ latitude: lat, longitude: lng, accuracy: data.location.accuracy || 15 }],
+                    locationHistory: data.history || [],
+                  },
+                };
+              }
+              return prev;
+            });
+          }
+        }
+      } catch (e) {}
+    };
+
+    pollLoc();
+    const interval = setInterval(pollLoc, 3000);
+    return () => clearInterval(interval);
+  }, [trackingMember?.activeSos?.id]);
+
+  const fetchData = async (showIndicator = true) => {
     try {
+      if (showIndicator) setIsLoading(true);
       const [overviewRes, settingsRes] = await Promise.all([
         organizationApi.getOverview(),
         organizationApi.getSettings()
@@ -31,9 +70,10 @@ export default function OrganizationDashboardScreen({ navigation }) {
     } catch (e) {
       console.log('Org fetch error:', e);
     } finally {
-      setIsLoading(false);
+      if (showIndicator) setIsLoading(false);
     }
   };
+
 
   const handleShare = async () => {
     if (!settings?.orgReferralCode) return;
@@ -286,7 +326,9 @@ export default function OrganizationDashboardScreen({ navigation }) {
               <LiveSosMap
                 latitude={trackingMember.activeSos?.locations?.[0]?.latitude || trackingMember.activeJourney?.currentLat || 18.5204}
                 longitude={trackingMember.activeSos?.locations?.[0]?.longitude || trackingMember.activeJourney?.currentLng || 73.8567}
+                accuracy={trackingMember.activeSos?.locations?.[0]?.accuracy || 15}
                 victimName={trackingMember.user?.fullName || 'Member'}
+                history={trackingMember.activeSos?.locationHistory || trackingMember.activeSos?.locations || []}
                 isEmergency={!!trackingMember.activeSos}
                 height={300}
               />
