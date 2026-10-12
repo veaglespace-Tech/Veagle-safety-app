@@ -158,6 +158,11 @@ export default function ParentDashboardScreen({ navigation }) {
     socket.on('SOS_LOCATION_UPDATE', (data) => {
       if (!data?.sosSessionId || !data?.latitude || !data?.longitude) return;
       const incomingId = parseInt(data.sosSessionId, 10);
+      const newLat = parseFloat(data.latitude);
+      const newLng = parseFloat(data.longitude);
+      const newAcc = data.accuracy ? parseFloat(data.accuracy) : 10;
+
+      // Update in active children list
       setChildrenList((prevList) =>
         prevList.map((item) => {
           if (item.activeSos && parseInt(item.activeSos.id, 10) === incomingId) {
@@ -166,9 +171,9 @@ export default function ParentDashboardScreen({ navigation }) {
               activeSos: {
                 ...item.activeSos,
                 latestLocation: {
-                  latitude: data.latitude,
-                  longitude: data.longitude,
-                  accuracy: data.accuracy || 10,
+                  latitude: newLat,
+                  longitude: newLng,
+                  accuracy: newAcc,
                 },
               },
             };
@@ -176,6 +181,32 @@ export default function ParentDashboardScreen({ navigation }) {
           return item;
         })
       );
+
+      // Update in live modal tracking view
+      setTrackingItem((prev) => {
+        if (prev && prev.activeSos && parseInt(prev.activeSos.id, 10) === incomingId) {
+          const hist = prev.activeSos.locationHistory ? [...prev.activeSos.locationHistory] : [];
+          hist.push({
+            latitude: newLat,
+            longitude: newLng,
+            accuracy: newAcc,
+            recordedAt: data.recordedAt || new Date().toISOString(),
+          });
+          return {
+            ...prev,
+            activeSos: {
+              ...prev.activeSos,
+              latestLocation: {
+                latitude: newLat,
+                longitude: newLng,
+                accuracy: newAcc,
+              },
+              locationHistory: hist,
+            },
+          };
+        }
+        return prev;
+      });
     });
 
     return () => {

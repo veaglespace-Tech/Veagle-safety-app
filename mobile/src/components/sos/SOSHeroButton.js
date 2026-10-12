@@ -4,8 +4,10 @@ import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import Svg, { Circle, Defs, LinearGradient as SvgLinearGradient, Stop } from 'react-native-svg';
 import * as Haptics from 'expo-haptics';
+import * as Location from 'expo-location';
 import { useDispatch, useSelector } from 'react-redux';
 import { startEmergencySos, resolveEmergencySos } from '../../redux/slices/sosSlice';
+import { setLocation } from '../../redux/slices/locationSlice';
 import { store } from '../../redux/store';
 
 import { useNavigation } from '@react-navigation/native';
@@ -128,15 +130,32 @@ export default function SOSHeroButton() {
     ]).start();
   };
 
-  const handleTriggered = () => {
+  const handleTriggered = async () => {
     setHolding(false);
     Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
     Vibration.vibrate([0, 500, 200, 500]);
     Animated.spring(scaleAnim, { toValue: 1, useNativeDriver: true }).start();
     holdProgress.setValue(0);
     
-    const { latitude, longitude, accuracy } = store.getState().location;
+    let { latitude, longitude, accuracy } = store.getState().location;
     
+    // If coordinates are not yet available, query fresh GPS position immediately
+    if (!latitude || !longitude) {
+      try {
+        const fresh = await Location.getCurrentPositionAsync({
+          accuracy: Location.Accuracy.High,
+        }).catch(() => null);
+        if (fresh?.coords) {
+          latitude = fresh.coords.latitude;
+          longitude = fresh.coords.longitude;
+          accuracy = Math.round(fresh.coords.accuracy || 10);
+          dispatch(setLocation({ latitude, longitude, accuracy }));
+        }
+      } catch (e) {
+        console.warn('[SOSHeroButton] Could not get fresh GPS coords:', e?.message);
+      }
+    }
+
     dispatch(startEmergencySos({
       initialLat: latitude || 18.5204,
       initialLng: longitude || 73.8567,
@@ -144,6 +163,7 @@ export default function SOSHeroButton() {
       isSilent
     }));
   };
+
 
   return (
     <View style={styles.container}>

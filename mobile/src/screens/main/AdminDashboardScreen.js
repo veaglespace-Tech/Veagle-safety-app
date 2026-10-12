@@ -172,7 +172,7 @@ export default function AdminDashboardScreen({ navigation }) {
             ...prev,
             latitude: data.latitude,
             longitude: data.longitude,
-            locations: [{ latitude: data.latitude, longitude: data.longitude }],
+            locations: [{ latitude: data.latitude, longitude: data.longitude, accuracy: data.accuracy || 15 }],
             locationHistory: hist,
           };
         }

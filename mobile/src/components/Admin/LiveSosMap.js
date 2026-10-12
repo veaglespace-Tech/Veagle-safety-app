@@ -35,8 +35,10 @@ export default function LiveSosMap({
   const lng = parseFloat(longitude);
   const isValid = !isNaN(lat) && !isNaN(lng) && lat !== 0 && lng !== 0;
 
+  const internalTrailRef = useRef([]);
+
   useEffect(() => {
-    if (isValid && mapRef.current) {
+    if (isValid && mapRef.current && typeof mapRef.current.animateToRegion === 'function') {
       mapRef.current.animateToRegion(
         {
           latitude: lat,
@@ -47,6 +49,13 @@ export default function LiveSosMap({
         1000
       );
     }
+    if (isValid) {
+      const trail = internalTrailRef.current;
+      const last = trail[trail.length - 1];
+      if (!last || last.latitude !== lat || last.longitude !== lng) {
+        internalTrailRef.current = [...trail, { latitude: lat, longitude: lng }].slice(-50);
+      }
+    }
   }, [lat, lng, isValid]);
 
   const openGoogleMaps = () => {
@@ -55,13 +64,15 @@ export default function LiveSosMap({
     Linking.openURL(url).catch(() => {});
   };
 
-  const coordinatesTrail = (history || [])
+  const propTrail = (history || [])
     .filter((pt) => pt && pt.latitude && pt.longitude)
     .map((pt) => ({
       latitude: parseFloat(pt.latitude),
       longitude: parseFloat(pt.longitude),
     }))
     .filter((pt) => !isNaN(pt.latitude) && !isNaN(pt.longitude));
+
+  const coordinatesTrail = propTrail.length > 0 ? propTrail : [...internalTrailRef.current];
 
   // Add current position to trail if not empty
   if (isValid && (!coordinatesTrail.length || coordinatesTrail[coordinatesTrail.length - 1].latitude !== lat)) {
@@ -80,7 +91,17 @@ export default function LiveSosMap({
 
   return (
     <View style={[styles.container, { height }, style]}>
-      {MapView ? (
+      {Platform.OS === 'web' ? (
+        <View style={StyleSheet.absoluteFillObject}>
+          {React.createElement('iframe', {
+            title: `Live Map - ${victimName}`,
+            width: '100%',
+            height: '100%',
+            style: { border: 0, borderRadius: 24 },
+            src: `https://www.openstreetmap.org/export/embed.html?bbox=${lng - 0.005}%2C${lat - 0.005}%2C${lng + 0.005}%2C${lat + 0.005}&layer=mapnik&marker=${lat}%2C${lng}`,
+          })}
+        </View>
+      ) : MapView ? (
         <MapView
           ref={mapRef}
           style={StyleSheet.absoluteFillObject}
@@ -141,6 +162,7 @@ export default function LiveSosMap({
           </Text>
         </View>
       )}
+
 
       {/* OVERLAY BADGE */}
       <View style={styles.badgeOverlay}>

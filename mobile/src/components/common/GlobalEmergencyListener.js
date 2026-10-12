@@ -119,6 +119,25 @@ export default function GlobalEmergencyListener() {
       );
     });
 
+    // 📍 WHEN LIVE LOCATION COORDINATES UPDATE FOR ACTIVE SOS:
+    socket.on('SOS_LOCATION_UPDATE', (data) => {
+      if (!data?.sosSessionId) return;
+      setAlarmData((prev) => {
+        if (!prev) return prev;
+        const currentSosId = prev.sosId || prev.id || prev.sosSessionId;
+        if (currentSosId && parseInt(currentSosId, 10) === parseInt(data.sosSessionId, 10)) {
+          return {
+            ...prev,
+            latitude: data.latitude,
+            longitude: data.longitude,
+            accuracy: data.accuracy || 10,
+          };
+        }
+        return prev;
+      });
+    });
+
+
     return () => {
       socket.disconnect();
       stopEmergencySiren();
