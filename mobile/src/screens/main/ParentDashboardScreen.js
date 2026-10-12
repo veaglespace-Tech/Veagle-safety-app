@@ -20,10 +20,12 @@ import { useSelector, useDispatch } from 'react-redux';
 import { LinearGradient } from 'expo-linear-gradient';
 import { io } from 'socket.io-client';
 import { parentApi } from '../../api/parentApi';
+import { sosApi } from '../../api/sosApi';
 import { API_URL } from '../../utils/constants';
 import { COLORS } from '../../theme/colors';
 import { playEmergencySiren, stopEmergencySiren } from '../../utils/soundPlayer';
 import { toggleSosMute } from '../../redux/slices/sosSlice';
+import LiveSosMap from '../../components/Admin/LiveSosMap';
 
 const { width } = Dimensions.get('window');
 
@@ -34,15 +36,21 @@ export default function ParentDashboardScreen({ navigation }) {
 
   const [isLoading, setIsLoading] = useState(true);
   const [isRefreshing, setIsRefreshing] = useState(false);
-  const [activeTab, setActiveTab] = useState('safety'); // 'safety' | 'children'
-  const [stats, setStats] = useState({ totalChildren: 0, activeSosCount: 0, inTripCount: 0 });
+  const [activeTab, setActiveTab] = useState('safety'); // 'safety' | 'children' | 'history'
+  const [stats, setStats] = useState({ totalChildren: 0, activeSosCount: 0, inTripCount: 0, safeCount: 0 });
   const [childrenList, setChildrenList] = useState([]);
+  const [recentAlerts, setRecentAlerts] = useState([]);
+  const [recentJourneys, setRecentJourneys] = useState([]);
 
   // Modal State for Linking Child
   const [showLinkModal, setShowLinkModal] = useState(false);
   const [linkInput, setLinkInput] = useState('');
   const [relationship, setRelationship] = useState('Parent');
   const [isLinking, setIsLinking] = useState(false);
+
+  // Modal State for Live Map Tracking
+  const [trackingItem, setTrackingItem] = useState(null);
+  const [pingingChildId, setPingingChildId] = useState(null);
 
   const socketRef = useRef(null);
 
@@ -52,8 +60,10 @@ export default function ParentDashboardScreen({ navigation }) {
       if (showIndicator) setIsLoading(true);
       const res = await parentApi.getOverview();
       if (res && res.success) {
-        setStats(res.stats || { totalChildren: 0, activeSosCount: 0, inTripCount: 0 });
+        setStats(res.stats || { totalChildren: 0, activeSosCount: 0, inTripCount: 0, safeCount: 0 });
         setChildrenList(res.children || []);
+        setRecentAlerts(res.recentAlerts || []);
+        setRecentJourneys(res.recentJourneys || []);
       }
     } catch (e) {
       console.log('[ParentDashboard] Fetch error:', e?.message);
@@ -63,15 +73,54 @@ export default function ParentDashboardScreen({ navigation }) {
     }
   }, []);
 
+  // Poll location if actively tracking a child
+  useEffect(() => {
+    if (!trackingItem?.activeSos?.id) return;
+
+    const fetchLocationData = async () => {
+      try {
+        const data = await sosApi.getSosLocation(trackingItem.activeSos.id);
+        if (data && data.location) {
+          const lat = parseFloat(data.location.latitude);
+          const lng = parseFloat(data.location.longitude);
+
+          if (!isNaN(lat) && !isNaN(lng)) {
+            setTrackingItem((prev) => {
+              if (prev && prev.activeSos && prev.activeSos.id === trackingItem.activeSos.id) {
+                return {
+                  ...prev,
+                  activeSos: {
+                    ...prev.activeSos,
+                    latestLocation: {
+                      latitude: lat,
+                      longitude: lng,
+                      accuracy: data.location.accuracy || 10,
+                    },
+                    locationHistory: data.history || [],
+                  },
+                };
+              }
+              return prev;
+            });
+          }
+        }
+      } catch (e) {
+        console.log('[Parent Polling] Location fetch error:', e?.message);
+      }
+    };
+
+    fetchLocationData();
+    const interval = setInterval(fetchLocationData, 3000);
+    return () => clearInterval(interval);
+  }, [trackingItem?.activeSos?.id]);
+
   useEffect(() => {
     fetchData(true);
 
-    // Auto-refresh fallback every 8 seconds (matching web client)
     const interval = setInterval(() => {
       fetchData(false);
     }, 8000);
 
-    // Socket.IO for Real-Time Emergency Alerts
     const serverUrl = API_URL.replace(/\/api\/?$/, '');
     const socket = io(serverUrl, {
       path: '/api/socket.io',
@@ -99,11 +148,13 @@ export default function ParentDashboardScreen({ navigation }) {
     };
 
     socket.on('SOS_ALARM_BROADCAST', handleRealtimeUpdate);
-    socket.on('SOS_ALARM_STOP', handleRealtimeUpdate);
+    socket.on('SOS_ALARM_STOP', () => {
+      handleRealtimeUpdate();
+      setTrackingItem(null);
+    });
     socket.on('SOS_PERIODIC_5MIN_UPDATE', handleRealtimeUpdate);
     socket.on('JOURNEY_STATUS_UPDATE', handleRealtimeUpdate);
 
-    // Real-time location updates for children
     socket.on('SOS_LOCATION_UPDATE', (data) => {
       if (!data?.sosSessionId || !data?.latitude || !data?.longitude) return;
       const incomingId = parseInt(data.sosSessionId, 10);
@@ -129,56 +180,90 @@ export default function ParentDashboardScreen({ navigation }) {
 
     return () => {
       clearInterval(interval);
+      stopEmergencySiren();
       if (socket) socket.disconnect();
     };
   }, [fetchData, user]);
+
+  // Audio Siren Management
+  useEffect(() => {
+    const hasUnmutedSos = childrenList.some(
+      (item) => item.activeSos && !mutedSosIds.includes(String(item.activeSos.id))
+    );
+
+    if (hasUnmutedSos) {
+      playEmergencySiren().catch(() => {});
+    } else {
+      stopEmergencySiren();
+    }
+  }, [childrenList, mutedSosIds]);
 
   const onRefresh = () => {
     setIsRefreshing(true);
     fetchData(false);
   };
 
-  // Link Child API
+  // Handle Child Safety Check-in Ping (New Feature from Web!)
+  const handlePingCheckin = async (childId, childName) => {
+    try {
+      setPingingChildId(childId);
+      const res = await parentApi.pingCheckin(childId);
+      Alert.alert('Ping Dispatched', res.message || `Safety check-in ping dispatched to ${childName}!`);
+    } catch (err) {
+      const msg = err?.response?.data?.error || err.message || 'Failed to dispatch safety ping.';
+      Alert.alert('Notice', msg);
+    } finally {
+      setPingingChildId(null);
+    }
+  };
+
+  // Link Child
   const handleLinkChild = async () => {
-    const inputVal = linkInput.trim();
-    if (!inputVal) {
-      return Alert.alert('Required', 'Please enter your child\'s registered email or 10-digit mobile number.');
+    if (!linkInput.trim()) {
+      Alert.alert('Required', 'Please enter your child\'s registered email or 10-digit mobile number.');
+      return;
     }
 
     try {
       setIsLinking(true);
       const res = await parentApi.linkChild({
-        identifier: inputVal,
-        relationship: relationship.trim(),
+        identifier: linkInput.trim(),
+        relationship,
       });
-      setIsLinking(false);
-      setShowLinkModal(false);
-      setLinkInput('');
-      Alert.alert('Success', res?.message || 'Child linked successfully!');
-      fetchData(false);
+
+      if (res && res.success) {
+        Alert.alert('Child Linked', res.message || 'Child account successfully linked!');
+        setLinkInput('');
+        setShowLinkModal(false);
+        fetchData(false);
+      }
     } catch (e) {
+      const msg = e?.response?.data?.error || e.message || 'Failed to link child account. Please verify mobile/email.';
+      Alert.alert('Linking Error', msg);
+    } finally {
       setIsLinking(false);
-      Alert.alert('Error', e.response?.data?.error || 'Failed to link child. Please verify child email or phone.');
     }
   };
 
-  // Unlink Child API
+  // Unlink Child
   const handleUnlink = (linkId, childName) => {
     Alert.alert(
-      'Unlink Child',
-      `Are you sure you want to unlink ${childName || 'this child'} from your Parent Portal?`,
+      'Unlink Child Account',
+      `Are you sure you want to unlink ${childName}? You will no longer receive emergency alerts for this child.`,
       [
         { text: 'Cancel', style: 'cancel' },
         {
-          text: 'Unlink',
+          text: 'Unlink Account',
           style: 'destructive',
           onPress: async () => {
             try {
-              await parentApi.unlinkChild(linkId);
-              setChildrenList((prev) => prev.filter((c) => c.linkId !== linkId));
-              fetchData(false);
+              const res = await parentApi.unlinkChild(linkId);
+              if (res && res.success) {
+                Alert.alert('Success', `${childName} has been unlinked.`);
+                fetchData(false);
+              }
             } catch (e) {
-              Alert.alert('Error', 'Failed to unlink child');
+              Alert.alert('Error', e?.response?.data?.error || 'Failed to unlink child.');
             }
           },
         },
@@ -186,23 +271,8 @@ export default function ParentDashboardScreen({ navigation }) {
     );
   };
 
-  // Open Maps / Live Track
-  const handleTrackChild = (childItem) => {
-    const activeSos = childItem.activeSos;
-    const activeJourney = childItem.activeJourney;
-
-    if (activeSos?.shareToken) {
-      const url = `https://sakhisuraksha.veaglespace.com/live-track/${activeSos.shareToken}`;
-      Linking.openURL(url).catch(() => {});
-    } else if (activeJourney?.shareToken) {
-      const url = `https://sakhisuraksha.veaglespace.com/live-track/${activeJourney.shareToken}`;
-      Linking.openURL(url).catch(() => {});
-    } else if (activeSos?.latestLocation?.latitude && activeSos?.latestLocation?.longitude) {
-      const gmap = `https://www.google.com/maps/search/?api=1&query=${activeSos.latestLocation.latitude},${activeSos.latestLocation.longitude}`;
-      Linking.openURL(gmap).catch(() => {});
-    } else {
-      Alert.alert('Location Pending', 'Waiting for live GPS coordinates from child\'s device.');
-    }
+  const handleTrackChild = (item) => {
+    setTrackingItem(item);
   };
 
   const handleCallChild = (phone) => {
@@ -232,7 +302,7 @@ export default function ParentDashboardScreen({ navigation }) {
 
   return (
     <SafeAreaView style={styles.safe}>
-      {/* 1. TOP PARENTAL CONTROL HEADER (Matching Client Web) */}
+      {/* 1. TOP PARENTAL CONTROL HEADER */}
       <View style={styles.header}>
         <View style={styles.headerLeft}>
           <LinearGradient
@@ -285,9 +355,15 @@ export default function ParentDashboardScreen({ navigation }) {
           <Text style={styles.statNum}>{stats.inTripCount}</Text>
           <Text style={styles.statLabel}>In Transit</Text>
         </View>
+        <View style={styles.statBox}>
+          <Text style={[styles.statNum, { color: '#059669' }]}>
+            {stats.safeCount !== undefined ? stats.safeCount : Math.max(0, stats.totalChildren - stats.activeSosCount - stats.inTripCount)}
+          </Text>
+          <Text style={styles.statLabel}>Safe & Sound</Text>
+        </View>
       </View>
 
-      {/* 3. DUAL-TAB NAVIGATION BAR */}
+      {/* 3. THREE-TAB NAVIGATION BAR (Matching Client Web) */}
       <View style={styles.tabBar}>
         <TouchableOpacity
           style={[styles.tabBtn, activeTab === 'safety' && styles.tabBtnActive]}
@@ -296,15 +372,15 @@ export default function ParentDashboardScreen({ navigation }) {
         >
           <Ionicons
             name="activity"
-            size={16}
+            size={15}
             color={activeTab === 'safety' ? '#FFF' : COLORS.textMuted}
           />
           <Text style={[styles.tabBtnText, activeTab === 'safety' && styles.tabBtnTextActive]}>
-            Safety Command
+            Safety Monitor
           </Text>
           {stats.activeSosCount > 0 && (
             <View style={styles.tabSosBadge}>
-              <Text style={styles.tabSosBadgeText}>{stats.activeSosCount} SOS</Text>
+              <Text style={styles.tabSosBadgeText}>{stats.activeSosCount}</Text>
             </View>
           )}
         </TouchableOpacity>
@@ -316,11 +392,26 @@ export default function ParentDashboardScreen({ navigation }) {
         >
           <Ionicons
             name="people"
-            size={16}
+            size={15}
             color={activeTab === 'children' ? '#FFF' : COLORS.textMuted}
           />
           <Text style={[styles.tabBtnText, activeTab === 'children' && styles.tabBtnTextActive]}>
-            Family Members ({stats.totalChildren})
+            Children ({stats.totalChildren})
+          </Text>
+        </TouchableOpacity>
+
+        <TouchableOpacity
+          style={[styles.tabBtn, activeTab === 'history' && styles.tabBtnActive]}
+          onPress={() => setActiveTab('history')}
+          activeOpacity={0.85}
+        >
+          <Ionicons
+            name="time"
+            size={15}
+            color={activeTab === 'history' ? '#FFF' : COLORS.textMuted}
+          />
+          <Text style={[styles.tabBtnText, activeTab === 'history' && styles.tabBtnTextActive]}>
+            History
           </Text>
         </TouchableOpacity>
       </View>
@@ -330,7 +421,7 @@ export default function ParentDashboardScreen({ navigation }) {
         showsVerticalScrollIndicator={false}
         refreshControl={<RefreshControl refreshing={isRefreshing} onRefresh={onRefresh} colors={[COLORS.primary]} />}
       >
-        {/* TAB 1: SAFETY COMMAND */}
+        {/* TAB 1: SAFETY MONITOR */}
         {activeTab === 'safety' && (
           <View style={styles.tabContent}>
             {/* EMERGENCY SOS BANNER IF ANY CHILD HAS ACTIVE SOS */}
@@ -378,6 +469,8 @@ export default function ParentDashboardScreen({ navigation }) {
                 const isSos = !!item.activeSos || c?.safetyStatus === 'SOS_ACTIVE';
                 const isTrip = !!item.activeJourney || c?.safetyStatus === 'JOURNEY_ACTIVE';
                 const isMuted = item.activeSos && mutedSosIds.includes(String(item.activeSos.id));
+                const latestLat = item.activeSos?.latestLocation?.latitude || item.lastKnownLocation?.latitude;
+                const latestLng = item.activeSos?.latestLocation?.longitude || item.lastKnownLocation?.longitude;
 
                 return (
                   <View
@@ -401,11 +494,16 @@ export default function ParentDashboardScreen({ navigation }) {
                           </Text>
                         </View>
                         <View>
-                          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
                             <Text style={styles.childCardName}>{c.fullName}</Text>
                             <View style={styles.relChip}>
                               <Text style={styles.relChipText}>{item.relationship || 'Child'}</Text>
                             </View>
+                            {c.bloodGroup && (
+                              <View style={styles.bloodChip}>
+                                <Text style={styles.bloodChipText}>🩸 {c.bloodGroup}</Text>
+                              </View>
+                            )}
                           </View>
                           <Text style={styles.childCardPhone}>{c.phone || c.email}</Text>
                         </View>
@@ -437,38 +535,49 @@ export default function ParentDashboardScreen({ navigation }) {
                       <View style={styles.infoRowItem}>
                         <Ionicons name="location" size={16} color={isSos ? '#FF2A6D' : COLORS.primary} />
                         <View style={{ flex: 1 }}>
-                          <Text style={styles.infoLabel}>GPS TRACKING</Text>
+                          <Text style={styles.infoLabel}>
+                            {isSos ? 'LIVE EMERGENCY GPS' : item.lastKnownLocation ? 'LAST RECORDED LOCATION' : 'GEO SYNC'}
+                          </Text>
                           <Text style={styles.infoVal}>
-                            {item.activeSos?.latestLocation?.latitude
-                              ? `Lat: ${Number(item.activeSos.latestLocation.latitude).toFixed(4)}, Lng: ${Number(item.activeSos.latestLocation.longitude).toFixed(4)}`
+                            {latestLat && latestLng
+                              ? `Lat: ${Number(latestLat).toFixed(4)}, Lng: ${Number(latestLng).toFixed(4)}`
                               : 'Real-Time Geo Sync Active'}
                           </Text>
                         </View>
                       </View>
 
-                      {item.activeJourney ? (
+                      {item.activeJourney && (
                         <View style={styles.infoRowItem}>
                           <Ionicons name="navigate-circle" size={16} color="#10B981" />
                           <View style={{ flex: 1 }}>
-                            <Text style={[styles.infoLabel, { color: '#059669' }]}>ACTIVE TRIP DESTINATION</Text>
-                            <Text style={styles.infoVal} numberOfLines={1}>
-                              {item.activeJourney.destinationName || 'En route to destination'}
+                            <Text style={styles.infoLabel}>ACTIVE JOURNEY DESTINATION</Text>
+                            <Text style={styles.infoVal}>
+                              {item.activeJourney.destinationName || 'Live Tracking Journey'}
                             </Text>
-                          </View>
-                        </View>
-                      ) : (
-                        <View style={styles.infoRowItem}>
-                          <Ionicons name="shield-checkmark" size={16} color="#10B981" />
-                          <View style={{ flex: 1 }}>
-                            <Text style={styles.infoLabel}>TRIP MONITOR</Text>
-                            <Text style={styles.infoVal}>No active journey in progress</Text>
                           </View>
                         </View>
                       )}
                     </View>
 
-                    {/* Action Buttons Row */}
+                    {/* Actions Buttons Row */}
                     <View style={styles.cardActionsRow}>
+                      {/* Check-in Ping Button (New feature from web!) */}
+                      <TouchableOpacity
+                        style={styles.actionBtnPing}
+                        onPress={() => handlePingCheckin(c.id, c.fullName)}
+                        disabled={pingingChildId === c.id}
+                        activeOpacity={0.8}
+                      >
+                        {pingingChildId === c.id ? (
+                          <ActivityIndicator size="small" color="#FFF" />
+                        ) : (
+                          <>
+                            <Ionicons name="radio" size={14} color="#FFF" />
+                            <Text style={styles.actionBtnPingText}>CHECK-IN PING</Text>
+                          </>
+                        )}
+                      </TouchableOpacity>
+
                       <TouchableOpacity
                         style={styles.actionBtnCall}
                         onPress={() => handleCallChild(c.phone)}
@@ -487,14 +596,17 @@ export default function ParentDashboardScreen({ navigation }) {
                         <Text style={styles.actionBtnWaText}>WHATSAPP</Text>
                       </TouchableOpacity>
 
-                      {(isSos || isTrip) && (
+                      {/* Map Tracking Button (Works for SOS, Journey, or Last Known Location) */}
+                      {(isSos || isTrip || latestLat) && (
                         <TouchableOpacity
                           style={styles.actionBtnTrack}
                           onPress={() => handleTrackChild(item)}
                           activeOpacity={0.8}
                         >
                           <Ionicons name="map" size={14} color="#FFF" />
-                          <Text style={styles.actionBtnTrackText}>LIVE TRACK</Text>
+                          <Text style={styles.actionBtnTrackText}>
+                            {isSos ? 'LIVE TRACK' : 'VIEW MAP'}
+                          </Text>
                         </TouchableOpacity>
                       )}
 
@@ -529,7 +641,7 @@ export default function ParentDashboardScreen({ navigation }) {
         {activeTab === 'children' && (
           <View style={styles.tabContent}>
             <View style={styles.tabHeaderCard}>
-              <View>
+              <View style={{ flex: 1 }}>
                 <Text style={styles.tabHeaderTitle}>Linked Child Accounts</Text>
                 <Text style={styles.tabHeaderSub}>Manage safety connections for your family</Text>
               </View>
@@ -538,7 +650,7 @@ export default function ParentDashboardScreen({ navigation }) {
                 onPress={() => setShowLinkModal(true)}
                 activeOpacity={0.85}
               >
-                <Ionicons name="person-add" size={15} color="#FFF" />
+                <Ionicons name="person-add" size={14} color="#FFF" />
                 <Text style={styles.addMemberBtnText}>LINK CHILD</Text>
               </TouchableOpacity>
             </View>
@@ -567,7 +679,7 @@ export default function ParentDashboardScreen({ navigation }) {
                       </View>
                     </View>
                     <Text style={styles.memberSub}>
-                      {item.child.phone} • {item.child.email}
+                      📞 {item.child.phone} • ✉️ {item.child.email}
                     </Text>
                   </View>
 
@@ -581,6 +693,75 @@ export default function ParentDashboardScreen({ navigation }) {
                 </View>
               ))
             )}
+          </View>
+        )}
+
+        {/* TAB 3: ALERTS & TRIP HISTORY (New Feature matching Web client!) */}
+        {activeTab === 'history' && (
+          <View style={styles.tabContent}>
+            {/* RECENT SOS ALERTS */}
+            <View style={styles.historySection}>
+              <View style={styles.historyHeaderRow}>
+                <Ionicons name="warning" size={18} color="#FF2A6D" />
+                <Text style={styles.historySectionTitle}>Recent Emergency SOS Alerts</Text>
+              </View>
+
+              {recentAlerts.length === 0 ? (
+                <View style={styles.emptyHistoryBox}>
+                  <Text style={styles.emptyHistoryText}>No emergency alerts recorded yet. All is safe.</Text>
+                </View>
+              ) : (
+                recentAlerts.map((alt) => (
+                  <View key={alt.id} style={styles.historyItemCard}>
+                    <View style={{ flex: 1 }}>
+                      <Text style={styles.historyItemName}>
+                        SOS #{alt.id} • {alt.user?.fullName || 'Child'}
+                      </Text>
+                      <Text style={styles.historyItemTime}>
+                        {alt.startedAt ? new Date(alt.startedAt).toLocaleString('en-IN') : 'Recent'}
+                      </Text>
+                    </View>
+                    <View style={[styles.historyStatusBadge, alt.status === 'RESOLVED' ? styles.histResolved : styles.histActive]}>
+                      <Text style={[styles.historyStatusText, alt.status === 'RESOLVED' ? { color: '#059669' } : { color: '#FF2A6D' }]}>
+                        {alt.status}
+                      </Text>
+                    </View>
+                  </View>
+                ))
+              )}
+            </View>
+
+            {/* RECENT JOURNEYS */}
+            <View style={styles.historySection}>
+              <View style={styles.historyHeaderRow}>
+                <Ionicons name="navigate" size={18} color="#10B981" />
+                <Text style={styles.historySectionTitle}>Recent Journey & Commute Logs</Text>
+              </View>
+
+              {recentJourneys.length === 0 ? (
+                <View style={styles.emptyHistoryBox}>
+                  <Text style={styles.emptyHistoryText}>No past journeys recorded for linked children.</Text>
+                </View>
+              ) : (
+                recentJourneys.map((j) => (
+                  <View key={j.id} style={styles.historyItemCard}>
+                    <View style={{ flex: 1 }}>
+                      <Text style={styles.historyItemName}>
+                        {j.destinationName || 'Commute Route'} • {j.user?.fullName || 'Child'}
+                      </Text>
+                      <Text style={styles.historyItemTime}>
+                        {j.startedAt ? new Date(j.startedAt).toLocaleString('en-IN') : 'Recent'}
+                      </Text>
+                    </View>
+                    <View style={[styles.historyStatusBadge, styles.histResolved]}>
+                      <Text style={[styles.historyStatusText, { color: '#059669' }]}>
+                        {j.status || 'COMPLETED'}
+                      </Text>
+                    </View>
+                  </View>
+                ))
+              )}
+            </View>
           </View>
         )}
       </ScrollView>
@@ -600,456 +781,542 @@ export default function ParentDashboardScreen({ navigation }) {
                 <Text style={styles.modalTitle}>Link Child Account</Text>
               </View>
               <TouchableOpacity onPress={() => setShowLinkModal(false)}>
-                <Ionicons name="close" size={22} color={COLORS.textMuted} />
+                <Ionicons name="close" size={24} color={COLORS.textDark} />
               </TouchableOpacity>
             </View>
 
             <Text style={styles.modalDesc}>
-              Enter your child's registered mobile number or email address to link them to your parental guardian command.
+              Enter your child's registered mobile number or email address to request access to their real-time safety stream.
             </Text>
 
-            <View style={styles.modalForm}>
-              <Text style={styles.fieldLabel}>Child's Mobile or Email</Text>
+            <View style={styles.inputWrap}>
+              <Text style={styles.inputLabel}>Child Registered Mobile or Email *</Text>
               <TextInput
-                style={styles.inputField}
-                placeholder="e.g. 9876543210 or child@mail.com"
-                placeholderTextColor={COLORS.primaryBorder}
+                style={styles.input}
+                placeholder="e.g. 9876543210 or daughter@gmail.com"
+                placeholderTextColor={COLORS.textMuted}
                 value={linkInput}
                 onChangeText={setLinkInput}
                 autoCapitalize="none"
               />
+            </View>
 
-              <Text style={styles.fieldLabel}>Your Relationship to Child</Text>
-              <View style={styles.relSelectorRow}>
-                {['Mother', 'Father', 'Parent', 'Guardian'].map((r) => (
+            <View style={styles.inputWrap}>
+              <Text style={styles.inputLabel}>Your Relationship</Text>
+              <View style={styles.relSelectionRow}>
+                {['Parent', 'Mother', 'Father', 'Guardian'].map((rel) => (
                   <TouchableOpacity
-                    key={r}
-                    style={[styles.relOption, relationship === r && styles.relOptionActive]}
-                    onPress={() => setRelationship(r)}
+                    key={rel}
+                    style={[styles.relOption, relationship === rel && styles.relOptionActive]}
+                    onPress={() => setRelationship(rel)}
                   >
-                    <Text style={[styles.relOptionText, relationship === r && styles.relOptionTextActive]}>
-                      {r}
+                    <Text style={[styles.relOptionText, relationship === rel && styles.relOptionTextActive]}>
+                      {rel}
                     </Text>
                   </TouchableOpacity>
                 ))}
               </View>
-
-              <TouchableOpacity
-                style={styles.submitLinkBtn}
-                onPress={handleLinkChild}
-                disabled={isLinking}
-                activeOpacity={0.85}
-              >
-                <LinearGradient
-                  colors={['#FF5C8A', '#FF2A6D']}
-                  style={styles.submitLinkGradient}
-                >
-                  {isLinking ? (
-                    <ActivityIndicator color="#FFF" size="small" />
-                  ) : (
-                    <>
-                      <Ionicons name="checkmark-circle" size={18} color="#FFF" />
-                      <Text style={styles.submitLinkText}>LINK CHILD NOW</Text>
-                    </>
-                  )}
-                </LinearGradient>
-              </TouchableOpacity>
             </View>
+
+            <TouchableOpacity
+              style={styles.modalSubmitBtn}
+              onPress={handleLinkChild}
+              disabled={isLinking}
+              activeOpacity={0.85}
+            >
+              {isLinking ? (
+                <ActivityIndicator size="small" color="#FFF" />
+              ) : (
+                <Text style={styles.modalSubmitBtnText}>LINK CHILD NOW</Text>
+              )}
+            </TouchableOpacity>
           </View>
         </View>
+      </Modal>
+
+      {/* 5. FULLSCREEN / MODAL LIVE MAP TRACKING */}
+      <Modal visible={!!trackingItem} transparent animationType="slide">
+        {trackingItem && (
+          <SafeAreaView style={styles.modalOverlay}>
+            <View style={styles.modalCard}>
+              <View style={styles.modalHeader}>
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, flex: 1 }}>
+                  <Ionicons name="navigate-circle" size={22} color="#FF2A6D" />
+                  <Text style={styles.modalTitle} numberOfLines={1}>
+                    Tracking: {trackingItem.child?.fullName || 'Child'}
+                  </Text>
+                </View>
+                <TouchableOpacity onPress={() => setTrackingItem(null)}>
+                  <Ionicons name="close" size={24} color={COLORS.textDark} />
+                </TouchableOpacity>
+              </View>
+
+              {/* LIVE SOS MAP */}
+              <LiveSosMap
+                latitude={
+                  trackingItem.activeSos?.latestLocation?.latitude ||
+                  trackingItem.lastKnownLocation?.latitude ||
+                  18.5204
+                }
+                longitude={
+                  trackingItem.activeSos?.latestLocation?.longitude ||
+                  trackingItem.lastKnownLocation?.longitude ||
+                  73.8567
+                }
+                accuracy={trackingItem.activeSos?.latestLocation?.accuracy || 15}
+                victimName={trackingItem.child?.fullName || 'Child'}
+                history={trackingItem.activeSos?.locationHistory || []}
+                isEmergency={!!trackingItem.activeSos}
+                height={320}
+              />
+
+              <View style={styles.trackingModalActions}>
+                <TouchableOpacity
+                  style={styles.actionBtnCall}
+                  onPress={() => handleCallChild(trackingItem.child?.phone)}
+                >
+                  <Ionicons name="call" size={16} color="#FFF" />
+                  <Text style={styles.actionBtnCallText}>CALL</Text>
+                </TouchableOpacity>
+
+                <TouchableOpacity
+                  style={styles.actionBtnWa}
+                  onPress={() => handleWhatsAppChild(trackingItem.child?.phone, trackingItem.child?.fullName)}
+                >
+                  <Ionicons name="logo-whatsapp" size={16} color="#FFF" />
+                  <Text style={styles.actionBtnWaText}>WHATSAPP</Text>
+                </TouchableOpacity>
+
+                <TouchableOpacity
+                  style={styles.actionBtnPing}
+                  onPress={() => handlePingCheckin(trackingItem.child?.id, trackingItem.child?.fullName)}
+                >
+                  <Ionicons name="radio" size={16} color="#FFF" />
+                  <Text style={styles.actionBtnPingText}>PING</Text>
+                </TouchableOpacity>
+              </View>
+            </View>
+          </SafeAreaView>
+        )}
       </Modal>
     </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
-  safe: { flex: 1, backgroundColor: COLORS.primaryBg },
-  center: { flex: 1, justifyContent: 'center', alignItems: 'center', padding: 20 },
-  loadingText: { marginTop: 12, fontSize: 13, fontWeight: '700', color: COLORS.textMuted },
+  safe: { flex: 1, backgroundColor: '#FFF9FB' },
+  center: { flex: 1, alignItems: 'center', justifyContent: 'center', gap: 12 },
+  loadingText: { fontSize: 13, fontWeight: '800', color: COLORS.textMuted },
 
-  // Header
+  // HEADER
   header: {
+    paddingHorizontal: 16,
+    paddingVertical: 12,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-    backgroundColor: COLORS.surface,
+    backgroundColor: '#FFF',
     borderBottomWidth: 1.5,
-    borderBottomColor: COLORS.primaryBorder,
+    borderBottomColor: '#FFCCE1',
   },
-  headerLeft: { flexDirection: 'row', alignItems: 'center', gap: 12, flex: 1 },
+  headerLeft: { flexDirection: 'row', alignItems: 'center', gap: 10, flex: 1 },
   headerIconCircle: {
-    width: 46,
-    height: 46,
-    borderRadius: 16,
+    width: 40,
+    height: 40,
+    borderRadius: 14,
     alignItems: 'center',
     justifyContent: 'center',
-    shadowColor: COLORS.primary,
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.3,
-    shadowRadius: 8,
-    elevation: 4,
+    shadowColor: '#FF2A6D',
+    shadowOffset: { width: 0, height: 3 },
+    shadowOpacity: 0.25,
+    shadowRadius: 6,
+    elevation: 3,
   },
   headerBadgeRow: { flexDirection: 'row', alignItems: 'center', gap: 6 },
   parentPill: {
-    backgroundColor: COLORS.primary,
-    paddingHorizontal: 8,
+    backgroundColor: '#FFE4EC',
+    paddingHorizontal: 6,
     paddingVertical: 2,
-    borderRadius: 999,
+    borderRadius: 6,
   },
-  parentPillText: { color: '#FFF', fontSize: 9, fontWeight: '900', letterSpacing: 0.5 },
+  parentPillText: { fontSize: 9, fontWeight: '900', color: '#FF2A6D' },
   liveGuardianRow: { flexDirection: 'row', alignItems: 'center', gap: 4 },
-  livePulseDot: { width: 6, height: 6, borderRadius: 3, backgroundColor: '#059669' },
-  liveGuardianText: { fontSize: 11, fontWeight: '700', color: COLORS.textMuted },
-  headerTitle: { fontSize: 17, fontWeight: '900', color: COLORS.textDark, marginTop: 2 },
+  livePulseDot: { width: 6, height: 6, borderRadius: 3, backgroundColor: '#10B981' },
+  liveGuardianText: { fontSize: 10, fontWeight: '700', color: '#059669' },
+  headerTitle: { fontSize: 15, fontWeight: '900', color: COLORS.textDark, marginTop: 2 },
   refreshBtn: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 4,
     backgroundColor: '#FFF0F3',
-    borderWidth: 1.5,
-    borderColor: COLORS.primaryBorder,
     paddingHorizontal: 10,
     paddingVertical: 6,
-    borderRadius: 12,
+    borderRadius: 10,
+    gap: 4,
+    borderWidth: 1,
+    borderColor: '#FFCCE1',
   },
-  refreshBtnText: { color: COLORS.primary, fontSize: 11, fontWeight: '900' },
+  refreshBtnText: { fontSize: 10, fontWeight: '900', color: COLORS.primary },
 
-  // Stats Bar
+  // STATS BAR
   statsBar: {
     flexDirection: 'row',
-    backgroundColor: COLORS.surface,
-    paddingVertical: 10,
-    paddingHorizontal: 16,
-    gap: 10,
-    borderBottomWidth: 1,
-    borderBottomColor: COLORS.primaryBorder,
+    backgroundColor: '#FFF',
+    marginHorizontal: 16,
+    marginTop: 12,
+    borderRadius: 18,
+    padding: 10,
+    borderWidth: 1.5,
+    borderColor: '#FFCCE1',
+    justifyContent: 'space-around',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.03,
+    shadowRadius: 6,
+    elevation: 2,
   },
-  statBox: {
-    flex: 1,
-    backgroundColor: COLORS.primaryBg,
-    borderRadius: 14,
-    paddingVertical: 8,
-    alignItems: 'center',
-    borderWidth: 1,
-    borderColor: COLORS.primaryBorder,
-  },
-  statBoxDanger: {
-    backgroundColor: '#FFF0F3',
-    borderColor: '#FF2A6D',
-  },
+  statBox: { alignItems: 'center', flex: 1 },
+  statBoxDanger: { backgroundColor: '#FFE4EC', borderRadius: 10, paddingVertical: 2 },
   statNum: { fontSize: 18, fontWeight: '900', color: COLORS.textDark },
-  statLabel: { fontSize: 10, fontWeight: '700', color: COLORS.textMuted, marginTop: 1 },
+  statLabel: { fontSize: 9, fontWeight: '800', color: COLORS.textMuted, marginTop: 2 },
 
-  // Dual Tabs
+  // TAB BAR
   tabBar: {
     flexDirection: 'row',
-    padding: 12,
-    backgroundColor: COLORS.surface,
-    gap: 8,
+    backgroundColor: '#FFF',
+    marginHorizontal: 16,
+    marginTop: 10,
+    padding: 4,
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: '#FFCCE1',
+    gap: 4,
   },
   tabBtn: {
     flex: 1,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    gap: 6,
     paddingVertical: 10,
-    borderRadius: 14,
-    backgroundColor: COLORS.primaryBg,
-    borderWidth: 1.5,
-    borderColor: COLORS.primaryBorder,
+    borderRadius: 12,
+    gap: 4,
   },
-  tabBtnActive: {
-    backgroundColor: COLORS.primary,
-    borderColor: COLORS.primary,
-  },
-  tabBtnText: { fontSize: 12, fontWeight: '800', color: COLORS.textMuted },
+  tabBtnActive: { backgroundColor: '#FF2A6D' },
+  tabBtnText: { fontSize: 11, fontWeight: '900', color: COLORS.textMuted },
   tabBtnTextActive: { color: '#FFF' },
   tabSosBadge: {
     backgroundColor: '#FFF',
-    paddingHorizontal: 6,
+    paddingHorizontal: 5,
     paddingVertical: 1,
-    borderRadius: 999,
+    borderRadius: 8,
   },
-  tabSosBadgeText: { color: '#FF2A6D', fontSize: 9, fontWeight: '900' },
+  tabSosBadgeText: { fontSize: 9, fontWeight: '900', color: '#FF2A6D' },
 
-  scroll: { padding: 14, paddingBottom: 40 },
+  scroll: { paddingHorizontal: 16, paddingTop: 12, paddingBottom: 32 },
   tabContent: { gap: 14 },
 
-  // Emergency SOS Banner
+  // SOS ALERT BANNER
   sosAlertBanner: {
     flexDirection: 'row',
     alignItems: 'center',
-    padding: 16,
+    padding: 14,
     borderRadius: 20,
     shadowColor: '#FF2A6D',
-    shadowOffset: { width: 0, height: 6 },
-    shadowOpacity: 0.35,
-    shadowRadius: 10,
-    elevation: 6,
-  },
-  sosAlertTitle: { color: '#FFF', fontSize: 14, fontWeight: '900', letterSpacing: 0.5 },
-  sosAlertSub: { color: '#FFF', fontSize: 11, fontWeight: '700', opacity: 0.95, marginTop: 2 },
-
-  // Child Safety Card
-  childSafetyCard: {
-    backgroundColor: COLORS.surface,
-    borderRadius: 20,
-    borderWidth: 2,
-    padding: 16,
-    gap: 12,
-    shadowColor: COLORS.primary,
     shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.08,
+    shadowOpacity: 0.3,
     shadowRadius: 8,
-    elevation: 3,
+    elevation: 4,
   },
-  childCardSos: { backgroundColor: '#FFF0F3', borderColor: '#FF2A6D' },
-  childCardTrip: { backgroundColor: '#F0FDF4', borderColor: '#10B981' },
-  childCardSafe: { backgroundColor: COLORS.surface, borderColor: COLORS.primaryBorder },
+  sosAlertTitle: { fontSize: 12, fontWeight: '900', color: '#FFF', letterSpacing: 0.5 },
+  sosAlertSub: { fontSize: 10, fontWeight: '700', color: 'rgba(255, 255, 255, 0.9)', marginTop: 2 },
+
+  // EMPTY CARD
+  emptyCard: {
+    backgroundColor: '#FFF',
+    borderRadius: 24,
+    padding: 24,
+    alignItems: 'center',
+    borderWidth: 1.5,
+    borderColor: '#FFCCE1',
+    borderStyle: 'dashed',
+    gap: 8,
+  },
+  emptyTitle: { fontSize: 14, fontWeight: '900', color: COLORS.textDark },
+  emptySub: { fontSize: 11, fontWeight: '600', color: COLORS.textMuted, textAlign: 'center' },
+  primaryActionBtn: { marginTop: 8 },
+  primaryActionGradient: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    borderRadius: 16,
+    gap: 6,
+  },
+  primaryActionText: { color: '#FFF', fontSize: 11, fontWeight: '900', letterSpacing: 0.5 },
+
+  // CHILD SAFETY CARD
+  childSafetyCard: {
+    backgroundColor: '#FFF',
+    borderRadius: 22,
+    padding: 14,
+    borderWidth: 1.5,
+    gap: 12,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 3 },
+    shadowOpacity: 0.04,
+    shadowRadius: 8,
+    elevation: 2,
+  },
+  childCardSos: { borderColor: '#FF2A6D', backgroundColor: '#FFF5F7' },
+  childCardTrip: { borderColor: '#10B981', backgroundColor: '#F0FDF4' },
+  childCardSafe: { borderColor: '#FFCCE1' },
 
   cardTopRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
   cardUserLeft: { flexDirection: 'row', alignItems: 'center', gap: 10, flex: 1 },
   avatarCircle: {
-    width: 44,
-    height: 44,
-    borderRadius: 16,
+    width: 40,
+    height: 40,
+    borderRadius: 20,
     alignItems: 'center',
     justifyContent: 'center',
   },
-  avatarLetter: { color: '#FFF', fontSize: 18, fontWeight: '900' },
-  childCardName: { fontSize: 15, fontWeight: '900', color: COLORS.textDark },
+  avatarLetter: { color: '#FFF', fontSize: 16, fontWeight: '900' },
+  childCardName: { fontSize: 13, fontWeight: '900', color: COLORS.textDark },
   relChip: {
     backgroundColor: '#FFF0F3',
     paddingHorizontal: 6,
-    paddingVertical: 1,
+    paddingVertical: 2,
     borderRadius: 6,
     borderWidth: 1,
-    borderColor: COLORS.primaryBorder,
+    borderColor: '#FFCCE1',
   },
-  relChipText: { color: COLORS.primary, fontSize: 9, fontWeight: '800' },
-  childCardPhone: { fontSize: 11, fontWeight: '600', color: COLORS.textMuted, marginTop: 2 },
+  relChipText: { fontSize: 9, fontWeight: '800', color: COLORS.primary },
+  bloodChip: {
+    backgroundColor: '#FEE2E2',
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    borderRadius: 6,
+  },
+  bloodChipText: { fontSize: 9, fontWeight: '900', color: '#DC2626' },
+  childCardPhone: { fontSize: 10, fontWeight: '700', color: COLORS.textMuted, marginTop: 2 },
 
   badgeSos: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 4,
     backgroundColor: '#FF2A6D',
-    paddingHorizontal: 10,
-    paddingVertical: 5,
-    borderRadius: 999,
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 8,
+    gap: 4,
   },
-  badgeSosText: { color: '#FFF', fontSize: 10, fontWeight: '900' },
+  badgeSosText: { color: '#FFF', fontSize: 9, fontWeight: '900' },
   badgeTrip: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 4,
     backgroundColor: '#10B981',
-    paddingHorizontal: 10,
-    paddingVertical: 5,
-    borderRadius: 999,
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 8,
+    gap: 4,
   },
-  badgeTripText: { color: '#FFF', fontSize: 10, fontWeight: '900' },
+  badgeTripText: { color: '#FFF', fontSize: 9, fontWeight: '900' },
   badgeSafe: {
     flexDirection: 'row',
     alignItems: 'center',
+    backgroundColor: '#DCFCE7',
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 8,
     gap: 4,
-    backgroundColor: '#ECFDF5',
-    paddingHorizontal: 10,
-    paddingVertical: 5,
-    borderRadius: 999,
-    borderWidth: 1,
-    borderColor: '#A7F3D0',
   },
-  badgeSafeText: { color: '#059669', fontSize: 10, fontWeight: '900' },
+  badgeSafeText: { color: '#059669', fontSize: 9, fontWeight: '900' },
 
   cardInfoBox: {
-    backgroundColor: '#FFF',
+    backgroundColor: '#FFF9FB',
     borderRadius: 14,
-    padding: 12,
+    padding: 10,
+    gap: 8,
     borderWidth: 1,
-    borderColor: COLORS.primaryBorder,
-    gap: 10,
+    borderColor: '#FFCCE1',
   },
-  infoRowItem: { flexDirection: 'row', alignItems: 'center', gap: 10 },
-  infoLabel: { fontSize: 9, fontWeight: '900', color: COLORS.primary, letterSpacing: 0.5 },
-  infoVal: { fontSize: 12, fontWeight: '700', color: COLORS.textDark, marginTop: 1 },
+  infoRowItem: { flexDirection: 'row', alignItems: 'center', gap: 8 },
+  infoLabel: { fontSize: 8, fontWeight: '900', color: COLORS.textMuted },
+  infoVal: { fontSize: 11, fontWeight: '800', color: COLORS.textDark },
 
-  cardActionsRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, paddingTop: 4 },
+  cardActionsRow: { flexDirection: 'row', alignItems: 'center', flexWrap: 'wrap', gap: 6 },
+  actionBtnPing: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#9333EA',
+    paddingHorizontal: 10,
+    paddingVertical: 8,
+    borderRadius: 10,
+    gap: 4,
+  },
+  actionBtnPingText: { color: '#FFF', fontSize: 9, fontWeight: '900' },
   actionBtnCall: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 4,
-    backgroundColor: '#059669',
-    paddingHorizontal: 14,
+    backgroundColor: '#16A34A',
+    paddingHorizontal: 10,
     paddingVertical: 8,
     borderRadius: 10,
+    gap: 4,
   },
-  actionBtnCallText: { color: '#FFF', fontSize: 11, fontWeight: '900' },
+  actionBtnCallText: { color: '#FFF', fontSize: 9, fontWeight: '900' },
   actionBtnWa: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 4,
     backgroundColor: '#25D366',
-    paddingHorizontal: 14,
+    paddingHorizontal: 10,
     paddingVertical: 8,
     borderRadius: 10,
+    gap: 4,
   },
-  actionBtnWaText: { color: '#FFF', fontSize: 11, fontWeight: '900' },
+  actionBtnWaText: { color: '#FFF', fontSize: 9, fontWeight: '900' },
   actionBtnTrack: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 4,
     backgroundColor: '#FF2A6D',
-    paddingHorizontal: 14,
+    paddingHorizontal: 10,
     paddingVertical: 8,
     borderRadius: 10,
+    gap: 4,
   },
-  actionBtnTrackText: { color: '#FFF', fontSize: 11, fontWeight: '900' },
+  actionBtnTrackText: { color: '#FFF', fontSize: 9, fontWeight: '900' },
   actionBtnMute: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 4,
-    backgroundColor: '#374151',
-    paddingHorizontal: 12,
+    backgroundColor: '#FF2A6D',
+    paddingHorizontal: 10,
     paddingVertical: 8,
     borderRadius: 10,
+    gap: 4,
   },
-  actionBtnUnmute: {
-    backgroundColor: '#FFF0F3',
-    borderWidth: 1,
-    borderColor: COLORS.primaryBorder,
-  },
-  actionBtnMuteText: { color: '#FFF', fontSize: 11, fontWeight: '900' },
+  actionBtnUnmute: { backgroundColor: '#FFF', borderWidth: 1, borderColor: COLORS.primary },
+  actionBtnMuteText: { color: '#FFF', fontSize: 9, fontWeight: '900' },
 
-  // Tab 2 Management Card
+  // TAB 2: LINKED CHILDREN
   tabHeaderCard: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    backgroundColor: COLORS.surface,
-    padding: 16,
+    backgroundColor: '#FFF',
+    padding: 14,
     borderRadius: 18,
     borderWidth: 1.5,
-    borderColor: COLORS.primaryBorder,
+    borderColor: '#FFCCE1',
   },
-  tabHeaderTitle: { fontSize: 15, fontWeight: '900', color: COLORS.textDark },
-  tabHeaderSub: { fontSize: 11, fontWeight: '600', color: COLORS.textMuted, marginTop: 2 },
+  tabHeaderTitle: { fontSize: 14, fontWeight: '900', color: COLORS.textDark },
+  tabHeaderSub: { fontSize: 10, fontWeight: '700', color: COLORS.textMuted, marginTop: 2 },
   addMemberBtn: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 6,
-    backgroundColor: COLORS.primary,
-    paddingHorizontal: 14,
+    backgroundColor: '#FF2A6D',
+    paddingHorizontal: 12,
     paddingVertical: 8,
     borderRadius: 12,
+    gap: 4,
   },
-  addMemberBtnText: { color: '#FFF', fontSize: 11, fontWeight: '900' },
-
+  addMemberBtnText: { color: '#FFF', fontSize: 10, fontWeight: '900' },
   memberManageCard: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: COLORS.surface,
-    padding: 14,
-    borderRadius: 16,
+    backgroundColor: '#FFF',
+    borderRadius: 18,
+    padding: 12,
     borderWidth: 1.5,
-    borderColor: COLORS.primaryBorder,
-    gap: 12,
-  },
-  memberAvatar: {
-    width: 42,
-    height: 42,
-    borderRadius: 14,
-    backgroundColor: '#FFF0F3',
-    alignItems: 'center',
-    justifyContent: 'center',
-    borderWidth: 1,
-    borderColor: COLORS.primaryBorder,
-  },
-  memberAvatarText: { fontSize: 16, fontWeight: '900', color: COLORS.primary },
-  memberName: { fontSize: 14, fontWeight: '900', color: COLORS.textDark },
-  memberSub: { fontSize: 11, fontWeight: '600', color: COLORS.textMuted, marginTop: 2 },
-  unlinkBtn: { padding: 8, backgroundColor: '#FEF2F2', borderRadius: 10 },
-
-  // Empty State
-  emptyCard: {
-    backgroundColor: COLORS.surface,
-    borderRadius: 20,
-    borderWidth: 1.5,
-    borderColor: COLORS.primaryBorder,
-    borderStyle: 'dashed',
-    padding: 32,
-    alignItems: 'center',
+    borderColor: '#FFCCE1',
     gap: 10,
   },
-  emptyTitle: { fontSize: 16, fontWeight: '900', color: COLORS.textDark },
-  emptySub: { fontSize: 12, fontWeight: '600', color: COLORS.textMuted, textAlign: 'center', lineHeight: 18 },
-  primaryActionBtn: { marginTop: 8, width: '100%', maxWidth: 260 },
-  primaryActionGradient: {
-    flexDirection: 'row',
+  memberAvatar: {
+    width: 38,
+    height: 38,
+    borderRadius: 19,
+    backgroundColor: COLORS.primary,
     alignItems: 'center',
     justifyContent: 'center',
-    gap: 8,
-    paddingVertical: 12,
-    borderRadius: 14,
   },
-  primaryActionText: { color: '#FFF', fontSize: 12, fontWeight: '900', letterSpacing: 0.5 },
+  memberAvatarText: { color: '#FFF', fontSize: 16, fontWeight: '900' },
+  memberName: { fontSize: 13, fontWeight: '900', color: COLORS.textDark },
+  memberSub: { fontSize: 10, fontWeight: '700', color: COLORS.textMuted, marginTop: 2 },
+  unlinkBtn: { padding: 8, backgroundColor: '#FEE2E2', borderRadius: 10 },
 
-  // Modal
-  modalOverlay: {
-    flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.6)',
-    justifyContent: 'flex-end',
+  // TAB 3: HISTORY
+  historySection: {
+    backgroundColor: '#FFF',
+    borderRadius: 20,
+    padding: 14,
+    borderWidth: 1.5,
+    borderColor: '#FFCCE1',
+    gap: 10,
   },
+  historyHeaderRow: { flexDirection: 'row', alignItems: 'center', gap: 6, borderBottomWidth: 1, borderBottomColor: '#FFCCE1', paddingBottom: 8 },
+  historySectionTitle: { fontSize: 13, fontWeight: '900', color: COLORS.textDark },
+  emptyHistoryBox: { paddingVertical: 14, alignItems: 'center' },
+  emptyHistoryText: { fontSize: 11, fontWeight: '600', color: COLORS.textMuted },
+  historyItemCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    padding: 10,
+    backgroundColor: '#FFF0F3',
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: '#FFCCE1',
+  },
+  historyItemName: { fontSize: 11, fontWeight: '800', color: COLORS.textDark },
+  historyItemTime: { fontSize: 9, fontWeight: '600', color: COLORS.textMuted, marginTop: 2 },
+  historyStatusBadge: { paddingHorizontal: 6, paddingVertical: 2, borderRadius: 6 },
+  histResolved: { backgroundColor: '#DCFCE7' },
+  histActive: { backgroundColor: '#FEE2E2' },
+  historyStatusText: { fontSize: 9, fontWeight: '900' },
+
+  // MODAL OVERLAY
+  modalOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.6)', justifyContent: 'flex-end' },
   modalCard: {
-    backgroundColor: COLORS.surface,
+    backgroundColor: '#FFF',
     borderTopLeftRadius: 28,
     borderTopRightRadius: 28,
     padding: 20,
-    gap: 16,
+    gap: 14,
+    maxHeight: '90%',
   },
-  modalHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
-  modalTitle: { fontSize: 17, fontWeight: '900', color: COLORS.textDark },
-  modalDesc: { fontSize: 12, color: COLORS.textMuted, lineHeight: 18 },
-  modalForm: { gap: 12 },
-  fieldLabel: { fontSize: 12, fontWeight: '800', color: COLORS.textDark },
-  inputField: {
-    backgroundColor: COLORS.primaryBg,
-    borderWidth: 1.5,
-    borderColor: COLORS.primaryBorder,
-    borderRadius: 14,
-    paddingHorizontal: 16,
-    height: 48,
-    fontSize: 13,
+  modalHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', borderBottomWidth: 1.5, borderBottomColor: '#FFCCE1', paddingBottom: 10 },
+  modalTitle: { fontSize: 15, fontWeight: '900', color: COLORS.textDark },
+  modalDesc: { fontSize: 11, fontWeight: '600', color: COLORS.textMuted },
+  inputWrap: { gap: 4 },
+  inputLabel: { fontSize: 10, fontWeight: '900', color: COLORS.textMuted },
+  input: {
+    backgroundColor: '#FFF0F3',
+    borderWidth: 1,
+    borderColor: '#FFCCE1',
+    borderRadius: 12,
+    paddingHorizontal: 14,
+    paddingVertical: 10,
+    fontSize: 12,
     fontWeight: '700',
     color: COLORS.textDark,
   },
-  relSelectorRow: { flexDirection: 'row', gap: 8 },
+  relSelectionRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 6 },
   relOption: {
-    flex: 1,
-    paddingVertical: 8,
+    paddingHorizontal: 12,
+    paddingVertical: 6,
     borderRadius: 10,
-    backgroundColor: COLORS.primaryBg,
-    borderWidth: 1,
-    borderColor: COLORS.primaryBorder,
-    alignItems: 'center',
-  },
-  relOptionActive: {
     backgroundColor: '#FFF0F3',
-    borderColor: COLORS.primary,
+    borderWidth: 1,
+    borderColor: '#FFCCE1',
   },
-  relOptionText: { fontSize: 11, fontWeight: '700', color: COLORS.textMuted },
-  relOptionTextActive: { color: COLORS.primary, fontWeight: '900' },
-  submitLinkBtn: { marginTop: 6 },
-  submitLinkGradient: {
-    flexDirection: 'row',
+  relOptionActive: { backgroundColor: '#FF2A6D', borderColor: '#FF2A6D' },
+  relOptionText: { fontSize: 10, fontWeight: '800', color: COLORS.textDark },
+  relOptionTextActive: { color: '#FFF' },
+  modalSubmitBtn: {
+    backgroundColor: '#FF2A6D',
+    paddingVertical: 14,
+    borderRadius: 16,
     alignItems: 'center',
-    justifyContent: 'center',
-    gap: 8,
-    height: 48,
-    borderRadius: 14,
+    marginTop: 6,
   },
-  submitLinkText: { color: '#FFF', fontSize: 13, fontWeight: '900', letterSpacing: 0.5 },
+  modalSubmitBtnText: { color: '#FFF', fontSize: 12, fontWeight: '900', letterSpacing: 0.5 },
+
+  trackingModalActions: { flexDirection: 'row', alignItems: 'center', gap: 8, paddingTop: 4 },
 });

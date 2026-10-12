@@ -90,7 +90,32 @@ export const DesktopSidebar = () => {
     },
   ];
 
-  const parentNavItems = [];
+  const parentNavItems = [
+    {
+      path: '/parent',
+      label: 'Safety Command',
+      icon: Activity,
+      desc: 'Live Monitor & SOS Alert',
+    },
+    {
+      path: '/parent/children',
+      label: 'Linked Children',
+      icon: Users,
+      desc: 'Child Profiles & Link',
+    },
+    {
+      path: '/parent/history',
+      label: 'Safety History',
+      icon: AlertOctagon,
+      desc: 'SOS & Journey Logs',
+    },
+    {
+      path: '/settings',
+      label: 'Guardian Profile',
+      icon: Settings,
+      desc: 'Settings & Alerts',
+    },
+  ];
 
   const orgNavItems = [
     {
@@ -237,17 +262,10 @@ export const DesktopSidebar = () => {
               </div>
             )}
             {isParent && (
-              <Link
-                href="/parent"
-                className={`flex items-center space-x-3 px-4 py-3.5 rounded-2xl text-xs font-black uppercase tracking-wider transition-all border shadow-sm cursor-pointer ${
-                  pathname === '/parent'
-                    ? 'bg-gradient-to-r from-[#FF5C8A] via-[#FF2A6D] to-[#E01A4F] text-white shadow-md border-white'
-                    : 'bg-[#FFF0F3] text-[#FF2A6D] border-[#FFCCE1] hover:bg-[#FF2A6D] hover:text-white'
-                }`}
-              >
-                <ShieldCheck className="w-5 h-5 shrink-0" />
-                <span>CHILD SAFETY GUARDIAN</span>
-              </Link>
+              <div className="flex items-center space-x-2 px-2 pb-1 text-[11px] font-black text-[#FF2A6D] uppercase tracking-wider">
+                <Shield className="w-4 h-4 text-[#FF2A6D]" />
+                <span>Parental Command</span>
+              </div>
             )}
             {isOrganization && (
               <div className="flex items-center space-x-2 px-2 pb-1 text-[11px] font-black text-[#FF2A6D] uppercase tracking-wider">
@@ -258,13 +276,15 @@ export const DesktopSidebar = () => {
 
             {activeNavItems.map((item) => {
               const Icon = item.icon;
-              // For organization tabs, check if the search param matches, otherwise check pathname
+              // For organization / parent tabs, check if the search param matches, otherwise check pathname
               let isActive = pathname === item.path;
               if (isOrganization && item.path.includes('?tab=')) {
                  const tab = item.path.split('?tab=')[1];
                  isActive = searchParams?.get('tab') === tab;
               } else if (isOrganization && item.path === '/organization') {
                  isActive = !searchParams?.get('tab') || searchParams?.get('tab') === 'monitor';
+              } else if (isParent) {
+                 isActive = pathname === item.path;
               }
 
               return (
@@ -305,6 +325,16 @@ export const DesktopSidebar = () => {
 
         {/* FOOTER USER PROFILE AREA */}
         <div className="px-5 py-5 border-t border-[#FFCCE1]/60 bg-white/70 backdrop-blur-md space-y-3">
+          {isParent && (
+            <Link
+              href="/parent/children"
+              className="flex items-center justify-center space-x-2 w-full bg-gradient-to-r from-[#FF5C8A] via-[#FF2A6D] to-[#E01A4F] text-white font-black px-4 py-3 rounded-2xl text-xs shadow-md shadow-[#FF2A6D]/25 hover:shadow-lg hover:shadow-[#FF2A6D]/35 hover:scale-[1.01] active:scale-95 transition-all uppercase tracking-wider border border-white/30"
+            >
+              <Users className="w-4 h-4" />
+              <span>LINK CHILD ACCOUNT</span>
+            </Link>
+          )}
+
           {!isParent && !isOrganization && (
             <Link
               href={
@@ -439,10 +469,24 @@ export const DesktopSidebar = () => {
                       <span>SuperAdmin Command</span>
                     </div>
                   )}
+                  {isParent && (
+                    <div className="flex items-center space-x-2 px-2 pb-1 text-[11px] font-black text-[#FF2A6D] uppercase tracking-wider">
+                      <Shield className="w-4 h-4 text-[#FF2A6D]" />
+                      <span>Parental Command</span>
+                    </div>
+                  )}
 
                   {activeNavItems.map((item) => {
                     const Icon = item.icon;
-                    const isActive = pathname === item.path;
+                    let isActive = pathname === item.path;
+                    if (isOrganization && item.path.includes('?tab=')) {
+                       const tab = item.path.split('?tab=')[1];
+                       isActive = searchParams?.get('tab') === tab;
+                    } else if (isOrganization && item.path === '/organization') {
+                       isActive = !searchParams?.get('tab') || searchParams?.get('tab') === 'monitor';
+                    } else if (isParent) {
+                       isActive = pathname === item.path;
+                    }
 
                     return (
                       <Link

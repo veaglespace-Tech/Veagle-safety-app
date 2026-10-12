@@ -96,6 +96,9 @@ export const verifyEmailOtp = createAsyncThunk(
       if (data.token && typeof window !== 'undefined') {
         localStorage.setItem('tichi_token', data.token);
       }
+      if (data.user && typeof window !== 'undefined') {
+        localStorage.setItem('tichi_user', JSON.stringify(data.user));
+      }
       if (data.registrationToken && typeof window !== 'undefined') {
         localStorage.setItem('tichi_reg_token', data.registrationToken);
       }

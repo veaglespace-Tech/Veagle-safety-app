@@ -201,11 +201,6 @@ function UserAuthForm() {
       return false;
     }
 
-    if (parentEmail && parentEmail.trim() && !emailRegex.test(parentEmail.trim())) {
-      setValidationError('Please enter a valid Parent Email address.');
-      return false;
-    }
-
     const phoneRegex = /^[6-9]\d{9}$/;
     const cleanPhone = phone.replace(/\D/g, '');
     if (!phoneRegex.test(cleanPhone)) {
@@ -215,27 +210,35 @@ function UserAuthForm() {
       return false;
     }
 
-    if (!emergencyContactName.trim()) {
-      setValidationError('Emergency Contact Name is required.');
-      return false;
-    }
-
-    if (!emergencyContactRelation.trim()) {
-      setValidationError('Emergency Contact Relation is required.');
-      return false;
-    }
-
-    const cleanEmergencyPhone = emergencyContactPhone.replace(/\D/g, '');
-    if (!phoneRegex.test(cleanEmergencyPhone)) {
-      setValidationError(
-        'Please enter a valid 10-digit mobile number for Emergency Contact.'
-      );
-      return false;
-    }
-
     if (password.length < 6) {
       setValidationError('Password must be at least 6 characters long.');
       return false;
+    }
+
+    // Role USER specific fields validation
+    if (selectedRole === 'USER') {
+      if (parentEmail && parentEmail.trim() && !emailRegex.test(parentEmail.trim())) {
+        setValidationError('Please enter a valid Parent Email address.');
+        return false;
+      }
+
+      if (!emergencyContactName.trim()) {
+        setValidationError('Emergency Contact Name is required.');
+        return false;
+      }
+
+      if (!emergencyContactRelation.trim()) {
+        setValidationError('Emergency Contact Relation is required.');
+        return false;
+      }
+
+      const cleanEmergencyPhone = emergencyContactPhone.replace(/\D/g, '');
+      if (!phoneRegex.test(cleanEmergencyPhone)) {
+        setValidationError(
+          'Please enter a valid 10-digit mobile number for Emergency Contact.'
+        );
+        return false;
+      }
     }
 
     return true;
@@ -250,27 +253,30 @@ function UserAuthForm() {
     if (isLogin) {
       dispatch(loginUser({ email: email.trim(), password }));
     } else {
-      dispatch(
-        registerUser({
-          fullName: fullName.trim(),
-          email: email.trim(),
-          phone: phone.replace(/\D/g, ''),
-          role: selectedRole,
-          bloodGroup: bloodGroup,
-          address: address.trim(),
-          city: city.trim(),
-          state: state.trim(),
-          country: 'India',
-          pincode: pincode.trim(),
-          emergencyContactName: emergencyContactName.trim(),
-          emergencyContactRelation: emergencyContactRelation,
-          emergencyContactPhone: emergencyContactPhone.replace(/\D/g, ''),
-          parentEmail: parentEmail.trim(),
-          password,
-          partnerReferralCode: searchParams?.get('ref') || '',
-          orgReferralCode: searchParams?.get('ref') || '',
-        })
-      );
+      const payload = {
+        fullName: fullName.trim(),
+        email: email.trim(),
+        phone: phone.replace(/\D/g, ''),
+        role: selectedRole,
+        password,
+        partnerReferralCode: searchParams?.get('ref') || '',
+        orgReferralCode: searchParams?.get('ref') || '',
+      };
+
+      if (selectedRole === 'USER') {
+        payload.bloodGroup = bloodGroup;
+        payload.address = address.trim();
+        payload.city = city.trim();
+        payload.state = state.trim();
+        payload.country = 'India';
+        payload.pincode = pincode.trim();
+        payload.emergencyContactName = emergencyContactName.trim();
+        payload.emergencyContactRelation = emergencyContactRelation;
+        payload.emergencyContactPhone = emergencyContactPhone.replace(/\D/g, '');
+        payload.parentEmail = parentEmail.trim();
+      }
+
+      dispatch(registerUser(payload));
     }
   };
 
@@ -463,15 +469,22 @@ function UserAuthForm() {
               {!isLogin ? (
                 <div className="space-y-4">
                   {/* ROLE SELECTION SWITCHER */}
-                  <div className="space-y-1.5">
-                    <label className="block text-[11px] font-black uppercase text-[#FF2A6D] tracking-wider text-left">
-                      Account Type / Role
-                    </label>
+                  <div className="space-y-2">
+                    <div className="flex items-center justify-between">
+                      <label className="block text-[11px] font-black uppercase text-[#FF2A6D] tracking-wider text-left">
+                        Select Account Type
+                      </label>
+                      <span className="text-[10px] font-bold text-[#684E67]">
+                        {selectedRole === 'USER' && '👩 For Girls & Women'}
+                        {selectedRole === 'PARENT' && '👨‍👩‍👧 For Parents & Guardians'}
+                        {selectedRole === 'ORGANIZATION' && '🏢 For Colleges & Offices'}
+                      </span>
+                    </div>
                     <div className="grid grid-cols-3 gap-2 bg-[#FFF0F3] p-1.5 rounded-2xl border-1.5 border-[#FFCCE1]">
                       <button
                         type="button"
                         onClick={() => setSelectedRole('USER')}
-                        className={`py-2 px-2 text-xs font-black rounded-xl transition-all flex items-center justify-center space-x-1 cursor-pointer ${
+                        className={`py-2 px-2 text-xs font-black rounded-xl transition-all flex items-center justify-center space-x-1.5 cursor-pointer ${
                           selectedRole === 'USER'
                             ? 'bg-gradient-to-r from-[#FF5C8A] to-[#FF2A6D] text-white shadow-sm'
                             : 'text-[#684E67] hover:text-[#FF2A6D]'
@@ -483,7 +496,7 @@ function UserAuthForm() {
                       <button
                         type="button"
                         onClick={() => setSelectedRole('PARENT')}
-                        className={`py-2 px-2 text-xs font-black rounded-xl transition-all flex items-center justify-center space-x-1 cursor-pointer ${
+                        className={`py-2 px-2 text-xs font-black rounded-xl transition-all flex items-center justify-center space-x-1.5 cursor-pointer ${
                           selectedRole === 'PARENT'
                             ? 'bg-gradient-to-r from-[#FF5C8A] to-[#FF2A6D] text-white shadow-sm'
                             : 'text-[#684E67] hover:text-[#FF2A6D]'
@@ -495,7 +508,7 @@ function UserAuthForm() {
                       <button
                         type="button"
                         onClick={() => setSelectedRole('ORGANIZATION')}
-                        className={`py-2 px-2 text-xs font-black rounded-xl transition-all flex items-center justify-center space-x-1 cursor-pointer ${
+                        className={`py-2 px-2 text-xs font-black rounded-xl transition-all flex items-center justify-center space-x-1.5 cursor-pointer ${
                           selectedRole === 'ORGANIZATION'
                             ? 'bg-gradient-to-r from-[#FF5C8A] to-[#FF2A6D] text-white shadow-sm'
                             : 'text-[#684E67] hover:text-[#FF2A6D]'
@@ -504,6 +517,28 @@ function UserAuthForm() {
                         <Building className="w-3.5 h-3.5" />
                         <span className="truncate">Org</span>
                       </button>
+                    </div>
+
+                    {/* HELPER TEXT PER ROLE */}
+                    <div className="bg-[#FFF0F3] p-2.5 rounded-xl border border-[#FFCCE1] text-[11px] font-bold text-[#684E67] flex items-center space-x-2">
+                      <span className="w-2 h-2 rounded-full bg-[#FF2A6D] shrink-0" />
+                      <span>
+                        {selectedRole === 'USER' && (
+                          <>
+                            <strong>Individual Safety Member:</strong> 24/7 Live SOS, Trip Tracking, Guardian Alarms & ₹24 Yearly Protection Plan.
+                          </>
+                        )}
+                        {selectedRole === 'PARENT' && (
+                          <>
+                            <strong>Parent Guardian Portal:</strong> Free portal for parents to monitor daughter/child location & receive instant siren alarms.
+                          </>
+                        )}
+                        {selectedRole === 'ORGANIZATION' && (
+                          <>
+                            <strong>Organization Portal:</strong> Bulk multi-user safety monitoring & referral code management for institutions.
+                          </>
+                        )}
+                      </span>
                     </div>
                   </div>
 

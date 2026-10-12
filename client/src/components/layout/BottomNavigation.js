@@ -15,6 +15,7 @@ import {
   CreditCard,
   User,
   Heart,
+  Clock,
 } from 'lucide-react';
 import { useSelector } from 'react-redux';
 
@@ -49,8 +50,9 @@ export const BottomNavigation = () => {
 
   const parentNavItems = [
     { path: '/parent', label: 'Safety', icon: ShieldCheck },
-    { path: '/parent', label: 'Children', icon: Users },
-    { path: '/profile', label: 'Profile', icon: User },
+    { path: '/parent/children', label: 'Children', icon: Users },
+    { path: '/parent/history', label: 'History', icon: Clock },
+    { path: '/settings', label: 'Profile', icon: User },
   ];
 
   const adminNavItems = [

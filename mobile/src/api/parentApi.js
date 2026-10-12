@@ -13,4 +13,8 @@ export const parentApi = {
     const res = await apiClient.delete(`/parent/children/${linkId}`);
     return res.data;
   },
+  pingCheckin: async (childId) => {
+    const res = await apiClient.post('/parent/ping-checkin', { childId });
+    return res.data;
+  },
 };

@@ -95,6 +95,8 @@ export const getParentOverview = asyncHandler(async (req, res) => {
           fullName: true,
           email: true,
           phone: true,
+          profilePhoto: true,
+          bloodGroup: true,
           safetyStatus: true,
           subscriptionStatus: true,
           sosSessions: {
@@ -124,43 +126,105 @@ export const getParentOverview = asyncHandler(async (req, res) => {
     },
   });
 
-  const childrenList = links
-    .filter((link) => Boolean(link.child))
-    .map((link) => {
-      const c = link.child;
-      const activeSos = c.sosSessions && c.sosSessions.length > 0 ? c.sosSessions[0] : null;
-      const activeJourney = c.journeys && c.journeys.length > 0 ? c.journeys[0] : null;
-      const latestLocation = activeSos?.locations && activeSos.locations.length > 0 ? activeSos.locations[0] : null;
+  const allChildIds = links.filter((l) => Boolean(l.child)).map((l) => l.child.id);
 
-      return {
-        linkId: link.id,
-        relationship: link.relationship,
-        status: link.status,
-        createdAt: link.createdAt,
-        child: {
-          id: c.id,
-          fullName: c.fullName,
-          email: c.email,
-          phone: c.phone,
-          safetyStatus: c.safetyStatus,
-          subscriptionStatus: c.subscriptionStatus,
+  // Fetch recent SOS alerts for linked children
+  const recentAlerts = allChildIds.length > 0
+    ? await prisma.sosSession.findMany({
+        where: { userId: { in: allChildIds } },
+        orderBy: { startedAt: 'desc' },
+        take: 10,
+        include: {
+          user: {
+            select: { id: true, fullName: true, phone: true },
+          },
+          locations: {
+            orderBy: { recordedAt: 'desc' },
+            take: 1,
+          },
         },
-        activeSos: activeSos
-          ? {
-              id: activeSos.id,
-              startedAt: activeSos.startedAt,
-              shareToken: activeSos.shareToken,
-              latestLocation,
-              locations: activeSos.locations || [],
+      })
+    : [];
+
+  // Fetch recent journeys for linked children
+  const recentJourneys = allChildIds.length > 0
+    ? await prisma.journey.findMany({
+        where: { userId: { in: allChildIds } },
+        orderBy: { startedAt: 'desc' },
+        take: 10,
+        include: {
+          user: {
+            select: { id: true, fullName: true, phone: true },
+          },
+        },
+      })
+    : [];
+
+  // Fetch latest location fallback for children who do not have an active SOS
+  const childrenList = await Promise.all(
+    links
+      .filter((link) => Boolean(link.child))
+      .map(async (link) => {
+        const c = link.child;
+        const activeSos = c.sosSessions && c.sosSessions.length > 0 ? c.sosSessions[0] : null;
+        const activeJourney = c.journeys && c.journeys.length > 0 ? c.journeys[0] : null;
+        const latestLocation = activeSos?.locations && activeSos.locations.length > 0 ? activeSos.locations[0] : null;
+
+        let lastKnownLocation = latestLocation;
+        if (!lastKnownLocation) {
+          // Check last recorded location from previous SOS
+          const pastSosLocation = await prisma.sosLocation.findFirst({
+            where: { sosSession: { userId: c.id } },
+            orderBy: { recordedAt: 'desc' },
+          });
+          if (pastSosLocation) {
+            lastKnownLocation = pastSosLocation;
+          } else {
+            // Check past journey location
+            const pastJourneyLoc = await prisma.journeyLocation.findFirst({
+              where: { journey: { userId: c.id } },
+              orderBy: { recordedAt: 'desc' },
+            });
+            if (pastJourneyLoc) {
+              lastKnownLocation = pastJourneyLoc;
             }
-          : null,
-        activeJourney,
-      };
-    });
+          }
+        }
+
+        return {
+          linkId: link.id,
+          relationship: link.relationship,
+          status: link.status,
+          createdAt: link.createdAt,
+          child: {
+            id: c.id,
+            fullName: c.fullName,
+            email: c.email,
+            phone: c.phone,
+            profilePhoto: c.profilePhoto,
+            bloodGroup: c.bloodGroup,
+            safetyStatus: c.safetyStatus,
+            subscriptionStatus: c.subscriptionStatus,
+          },
+          activeSos: activeSos
+            ? {
+                id: activeSos.id,
+                startedAt: activeSos.startedAt,
+                shareToken: activeSos.shareToken,
+                latestLocation,
+                locations: activeSos.locations || [],
+              }
+            : null,
+          activeJourney,
+          lastKnownLocation,
+        };
+      })
+  );
 
   const totalChildren = childrenList.length;
   const activeSosCount = childrenList.filter((c) => c.activeSos || c.child.safetyStatus === 'SOS_ACTIVE').length;
   const inTripCount = childrenList.filter((c) => c.activeJourney || c.child.safetyStatus === 'JOURNEY_ACTIVE').length;
+  const safeCount = childrenList.filter((c) => !c.activeSos && !c.activeJourney && c.child.safetyStatus === 'SAFE').length;
 
   res.status(200).json({
     success: true,
@@ -168,8 +232,11 @@ export const getParentOverview = asyncHandler(async (req, res) => {
       totalChildren,
       activeSosCount,
       inTripCount,
+      safeCount,
     },
     children: childrenList,
+    recentAlerts,
+    recentJourneys,
   });
 });
 
@@ -272,5 +339,53 @@ export const unlinkChild = asyncHandler(async (req, res) => {
   res.status(200).json({
     success: true,
     message: 'Child unlinked from Parent Portal successfully.',
+  });
+});
+
+/**
+ * Send Safety Check-in Ping to Child
+ */
+export const pingChildCheckin = asyncHandler(async (req, res) => {
+  const parentId = req.user.id;
+  const { childId } = req.body;
+
+  if (!childId) {
+    return res.status(400).json({ error: 'Child ID is required' });
+  }
+
+  const link = await prisma.parentChildLink.findFirst({
+    where: { parentId, childId: Number(childId) },
+    include: { parent: true, child: true },
+  });
+
+  if (!link) {
+    return res.status(404).json({ error: 'Linked child record not found.' });
+  }
+
+  try {
+    const { getIO } = await import('../socket.js');
+    const io = getIO();
+    if (io) {
+      const parentName = link.parent.fullName || 'Parent';
+      const cleanPhone = link.child.phone ? link.child.phone.replace(/\D/g, '') : '';
+      const payload = {
+        title: 'Safety Check-in Request',
+        message: `${parentName} requested a quick safety check-in. Please tap to confirm you are safe.`,
+        parentId: link.parent.id,
+        parentName,
+        childId: link.child.id,
+        timestamp: new Date().toISOString(),
+      };
+      if (link.child.email) io.to(`user:${link.child.email.trim().toLowerCase()}`).emit('PARENT_CHECKIN_PING', payload);
+      if (cleanPhone) io.to(`user:${cleanPhone}`).emit('PARENT_CHECKIN_PING', payload);
+      io.to(`user:${link.child.id}`).emit('PARENT_CHECKIN_PING', payload);
+    }
+  } catch (socketErr) {
+    console.warn('[Parent Ping Socket Notice]:', socketErr.message);
+  }
+
+  res.status(200).json({
+    success: true,
+    message: `Safety check-in ping sent to ${link.child.fullName}!`,
   });
 });

@@ -68,39 +68,6 @@ export const register = asyncHandler(async (req, res) => {
 
   const existingUser = await prisma.user.findUnique({ where: { email: cleanEmail } });
   if (existingUser) {
-    if (assignedRole === 'PARENT' || assignedRole === 'ORGANIZATION') {
-      const passwordHash = await bcrypt.hash(password, 10);
-      const updatedUser = await prisma.user.update({
-        where: { id: existingUser.id },
-        data: {
-          fullName,
-          phone,
-          passwordHash,
-          role: assignedRole,
-          isEmailVerified: true,
-        },
-      });
-
-      const token = jwt.sign(
-        { id: updatedUser.id, userId: updatedUser.id, role: updatedUser.role, email: updatedUser.email },
-        config.jwt.secret,
-        { expiresIn: config.jwt.expiresIn }
-      );
-
-      return res.status(200).json({
-        message: `${assignedRole} account logged in successfully`,
-        token,
-        user: {
-          id: updatedUser.id,
-          fullName: updatedUser.fullName,
-          email: updatedUser.email,
-          phone: updatedUser.phone,
-          role: updatedUser.role,
-          subscriptionStatus: updatedUser.subscriptionStatus,
-        },
-      });
-    }
-
     if (existingUser.isEmailVerified) {
       return res.status(409).json({ error: 'An account with this email already exists. Please Sign In instead.' });
     }
@@ -118,11 +85,19 @@ export const register = asyncHandler(async (req, res) => {
       console.warn('[Register Email Notice] Verification email notice:', emailErr.message);
     }
     return res.status(200).json({
-      message: `OTP code sent to ${cleanEmail}. (OTP Code: ${otp})`,
+      message: `Account already initiated. OTP code sent to ${cleanEmail}. (OTP Code: ${otp})`,
       requiresVerification: true,
       email: cleanEmail,
       debugOtp: otp,
     });
+  }
+
+  // Check if verified account already exists with this mobile number
+  const existingPhoneUser = await prisma.user.findFirst({
+    where: { phone: cleanPhone, isEmailVerified: true },
+  });
+  if (existingPhoneUser) {
+    return res.status(409).json({ error: 'An account with this mobile number already exists. Please Sign In instead.' });
   }
 
   const passwordHash = await bcrypt.hash(password, 10);
@@ -151,6 +126,8 @@ export const register = asyncHandler(async (req, res) => {
     }
   }
 
+  const requiresOtpVerification = assignedRole === 'USER' || assignedRole === 'PARENT';
+
   let user;
   try {
     user = await prisma.user.create({
@@ -171,10 +148,10 @@ export const register = asyncHandler(async (req, res) => {
         emergencyContactPhone: emergencyContactPhone || null,
         parentEmail: parentEmail ? parentEmail.trim().toLowerCase() : null,
         medicalNotes: medicalNotes || null,
-        isEmailVerified: assignedRole !== 'USER',
-        emailOtp: assignedRole === 'USER' ? otp : null,
-        emailOtpExpiresAt: assignedRole === 'USER' ? otpExpires : null,
-        subscriptionStatus: assignedRole === 'SUPER_ADMIN' ? 'ACTIVE' : 'INACTIVE',
+        isEmailVerified: !requiresOtpVerification,
+        emailOtp: requiresOtpVerification ? otp : null,
+        emailOtpExpiresAt: requiresOtpVerification ? otpExpires : null,
+        subscriptionStatus: (assignedRole === 'SUPER_ADMIN' || assignedRole === 'PARENT') ? 'ACTIVE' : 'INACTIVE',
         referredByPartnerId,
         organizationId,
       },
@@ -206,7 +183,7 @@ export const register = asyncHandler(async (req, res) => {
   }
 
   try {
-    if (assignedRole === 'USER') {
+    if (requiresOtpVerification) {
       const pendingRegistrationToken = jwt.sign(
         {
           id: user.id,
@@ -215,7 +192,7 @@ export const register = asyncHandler(async (req, res) => {
           email: user.email,
           phone: user.phone,
           parentEmail: user.parentEmail,
-          role: 'USER',
+          role: assignedRole,
           otp,
           otpExpiresAt: otpExpires.getTime(),
           type: 'PENDING_REGISTRATION',
@@ -239,7 +216,7 @@ export const register = asyncHandler(async (req, res) => {
       });
     }
 
-    // Non-USER roles (SuperAdmin, Organization, Parent) get immediate JWT login
+    // Non-USER roles (SuperAdmin, Organization) get immediate JWT login
     const token = jwt.sign(
       { id: user.id, userId: user.id, role: user.role, email: user.email },
       config.jwt.secret,
@@ -306,6 +283,35 @@ export const verifyEmail = asyncHandler(async (req, res) => {
       where: { id: existingUser.id },
       data: { isEmailVerified: true, emailOtp: null, emailOtpExpiresAt: null },
     });
+
+    // If Parent account verified, auto-link any matching child records
+    if (updatedUser.role === 'PARENT') {
+      try {
+        const parentEmailClean = updatedUser.email ? updatedUser.email.trim().toLowerCase() : '';
+        const parentPhoneClean = updatedUser.phone ? updatedUser.phone.replace(/\D/g, '') : '';
+        const phoneLast10 = parentPhoneClean.length >= 10 ? parentPhoneClean.slice(-10) : parentPhoneClean;
+
+        const userConditions = [];
+        if (parentEmailClean) userConditions.push({ parentEmail: parentEmailClean });
+        if (phoneLast10 && phoneLast10.length >= 6) userConditions.push({ emergencyContactPhone: { contains: phoneLast10 } });
+
+        if (userConditions.length > 0) {
+          const matchingKids = await prisma.user.findMany({
+            where: { id: { not: updatedUser.id }, OR: userConditions },
+            select: { id: true },
+          });
+          for (const kid of matchingKids) {
+            await prisma.parentChildLink.upsert({
+              where: { parentId_childId: { parentId: updatedUser.id, childId: kid.id } },
+              update: { status: 'ACTIVE' },
+              create: { parentId: updatedUser.id, childId: kid.id, relationship: 'Child', status: 'ACTIVE' },
+            });
+          }
+        }
+      } catch (autoLinkErr) {
+        console.warn('[Auto-Link Notice on Verify]:', autoLinkErr.message);
+      }
+    }
 
     // Send Welcome Email after successful verification
     try {

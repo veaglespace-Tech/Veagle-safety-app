@@ -118,6 +118,7 @@ router.delete('/organization/members/:userId', authenticateToken, organizationCo
 router.get('/parent/overview', authenticateToken, parentController.getParentOverview);
 router.post('/parent/link-child', authenticateToken, parentController.linkChild);
 router.delete('/parent/children/:linkId', authenticateToken, parentController.unlinkChild);
+router.post('/parent/ping-checkin', authenticateToken, parentController.pingChildCheckin);
 
 // Web Push Notifications
 router.get('/push/vapid-key', pushController.getVapidPublicKey);

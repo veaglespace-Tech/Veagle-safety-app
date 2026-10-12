@@ -110,6 +110,15 @@ export default function GlobalEmergencyListener() {
       dispatch(checkActiveSos());
     });
 
+    // 👨‍👩‍👧 WHEN PARENT SENDS A SAFETY CHECK-IN PING:
+    socket.on('PARENT_CHECKIN_PING', (data) => {
+      Alert.alert(
+        '🛡️ Safety Check-in Request',
+        `${data?.parentName || 'Your Parent'} sent a safety check-in request. Please confirm you are safe.`,
+        [{ text: 'I AM SAFE & OK', style: 'default' }]
+      );
+    });
+
     return () => {
       socket.disconnect();
       stopEmergencySiren();
