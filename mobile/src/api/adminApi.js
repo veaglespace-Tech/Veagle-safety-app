@@ -38,6 +38,22 @@ export const adminApi = {
     const res = await apiClient.get('/admin/users');
     return res.data;
   },
+  createUser: async (payload) => {
+    const res = await apiClient.post('/admin/users/create', payload);
+    return res.data;
+  },
+  updateUser: async (id, payload) => {
+    const res = await apiClient.put(`/admin/users/${id}`, payload);
+    return res.data;
+  },
+  toggleUserBlock: async (id) => {
+    const res = await apiClient.post(`/admin/users/${id}/block`);
+    return res.data;
+  },
+  grantSubscription: async (id, payload) => {
+    const res = await apiClient.post(`/admin/users/${id}/grant-subscription`, payload);
+    return res.data;
+  },
   updateUserRole: async (payload) => {
     const res = await apiClient.put('/admin/user/role', payload);
     return res.data;
