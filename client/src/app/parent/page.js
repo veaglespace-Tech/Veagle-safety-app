@@ -2,7 +2,8 @@
 
 import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { useSelector } from 'react-redux';
+import { useSelector, useDispatch } from 'react-redux';
+import { toggleSosMute } from '../../redux/slices/sosSlice.js';
 import {
   Users,
   ShieldCheck,
@@ -21,6 +22,8 @@ import {
   ArrowUpRight,
   Shield,
   Eye,
+  VolumeX,
+  Volume2
 } from 'lucide-react';
 import { AppLayout } from '../../components/layout/AppLayout.js';
 import { LiveLocationMap } from '../../components/location/DynamicLiveLocationMap.js';
@@ -29,7 +32,9 @@ import { sosApi } from '../../redux/api/sosApi.js';
 
 export default function ParentDashboard() {
   const router = useRouter();
+  const dispatch = useDispatch();
   const { token, user } = useSelector((state) => state?.auth || {});
+  const mutedSosIds = useSelector((state) => state?.sos?.mutedSosIds || []);
   const [mounted, setMounted] = useState(false);
   const [activeTab, setActiveTab] = useState('safety'); // 'safety' | 'children'
 
@@ -50,6 +55,28 @@ export default function ParentDashboard() {
 
   useEffect(() => {
     setMounted(true);
+  }, []);
+
+  const [isSirenActive, setIsSirenActive] = useState(false);
+
+  // Evaluate siren based on active SOS list and muted IDs
+  useEffect(() => {
+    const activeSosChildren = childrenList.filter(item => item.activeSos || item.child.safetyStatus === 'SOS_ACTIVE');
+    const hasUnmutedSos = activeSosChildren.some(item => {
+      const sosId = item.activeSos?.id;
+      return sosId && !mutedSosIds.includes(String(sosId));
+    });
+    
+    // Tell EmergencyAlarmListener whether to keep playing
+    window.dispatchEvent(new CustomEvent('set-siren-state', { detail: { active: hasUnmutedSos && activeSosChildren.length > 0 } }));
+    setIsSirenActive(hasUnmutedSos && activeSosChildren.length > 0);
+  }, [childrenList, mutedSosIds]);
+
+  // Sync actual global siren state (in case muted from popup)
+  useEffect(() => {
+    const handleSirenChange = (e) => setIsSirenActive(e.detail.active);
+    window.addEventListener('siren-status-changed', handleSirenChange);
+    return () => window.removeEventListener('siren-status-changed', handleSirenChange);
   }, []);
 
   // Reliable Polling Fallback & History Fetcher for Live GPS Tracking
@@ -505,6 +532,18 @@ export default function ParentDashboard() {
                       <div className="pt-1 space-y-2">
                         {item.activeSos && (
                           <div className="flex flex-col sm:flex-row gap-2">
+                            <button
+                              type="button"
+                              onClick={() => item.activeSos && dispatch(toggleSosMute(item.activeSos.id))}
+                              className={`flex-shrink-0 px-5 py-3 rounded-2xl text-xs font-black uppercase tracking-wider flex items-center justify-center space-x-2 transition-all border shadow-sm ${
+                                item.activeSos && !mutedSosIds.includes(String(item.activeSos.id))
+                                  ? 'bg-emerald-500 text-white border-emerald-600 hover:bg-emerald-600'
+                                  : 'bg-white text-red-600 border-red-200 hover:bg-rose-50'
+                              }`}
+                            >
+                              {item.activeSos && !mutedSosIds.includes(String(item.activeSos.id)) ? <VolumeX className="w-4 h-4" /> : <Volume2 className="w-4 h-4" />}
+                              <span>{item.activeSos && !mutedSosIds.includes(String(item.activeSos.id)) ? 'MUTE' : 'SIREN'}</span>
+                            </button>
                             <button
                               type="button"
                               onClick={() => setTrackingChild(item)}

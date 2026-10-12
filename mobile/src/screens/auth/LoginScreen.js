@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import {
   View, Text, StyleSheet, TextInput, TouchableOpacity,
-  ScrollView, KeyboardAvoidingView, Platform, Alert, ActivityIndicator, Image,
+  ScrollView, KeyboardAvoidingView, Platform, Alert, ActivityIndicator, Image, Linking,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
@@ -118,11 +118,29 @@ export default function LoginScreen({ navigation }) {
             </TouchableOpacity>
           </View>
 
-          <View style={styles.registerLink}>
-            <Text style={styles.registerText}>Don't have an account? </Text>
-            <TouchableOpacity onPress={() => navigation.navigate('Register')}>
-              <Text style={styles.registerBold}>Create Account</Text>
-            </TouchableOpacity>
+          <View style={styles.contactUpgradeBox}>
+            <Text style={styles.contactUpgradeTitle}>Need an Account or Plan Upgrade?</Text>
+            <Text style={styles.contactUpgradeSub}>
+              Self-registration is disabled. Please contact support to activate your account or upgrade your safety plan.
+            </Text>
+            <View style={styles.contactButtonsRow}>
+              <TouchableOpacity
+                style={styles.contactCallBtn}
+                onPress={() => Linking.openURL('tel:8237999101')}
+                activeOpacity={0.85}
+              >
+                <Ionicons name="call" size={15} color="#fff" />
+                <Text style={styles.contactBtnText}>Call: 8237999101</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={styles.contactWhatsappBtn}
+                onPress={() => Linking.openURL('https://wa.me/918237999101')}
+                activeOpacity={0.85}
+              >
+                <Ionicons name="logo-whatsapp" size={15} color="#fff" />
+                <Text style={styles.contactBtnText}>WhatsApp</Text>
+              </TouchableOpacity>
+            </View>
           </View>
 
         </ScrollView>
@@ -178,7 +196,74 @@ const styles = StyleSheet.create({
   },
   btnDisabled: { opacity: 0.65 },
   loginBtnText: { fontSize: 15, fontWeight: '900', color: '#fff', letterSpacing: 1 },
-  registerLink: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', marginTop: 28 },
-  registerText: { fontSize: 13, fontWeight: '600', color: COLORS.textMuted },
-  registerBold: { fontSize: 13, fontWeight: '800', color: COLORS.primary },
+  contactUpgradeBox: {
+    marginTop: 26,
+    backgroundColor: COLORS.surface,
+    borderWidth: 1.5,
+    borderColor: COLORS.primaryBorder,
+    borderRadius: 20,
+    padding: 16,
+    alignItems: 'center',
+    shadowColor: COLORS.primary,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.08,
+    shadowRadius: 10,
+    elevation: 3,
+  },
+  contactUpgradeTitle: {
+    fontSize: 13,
+    fontWeight: '900',
+    color: COLORS.textDark,
+    textAlign: 'center',
+    marginBottom: 4,
+  },
+  contactUpgradeSub: {
+    fontSize: 11,
+    fontWeight: '600',
+    color: COLORS.textMuted,
+    textAlign: 'center',
+    lineHeight: 16,
+    marginBottom: 12,
+  },
+  contactButtonsRow: {
+    flexDirection: 'row',
+    gap: 10,
+    width: '100%',
+  },
+  contactCallBtn: {
+    flex: 1,
+    backgroundColor: COLORS.primary,
+    borderRadius: 12,
+    paddingVertical: 11,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 6,
+    shadowColor: COLORS.primary,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.25,
+    shadowRadius: 8,
+    elevation: 4,
+  },
+  contactWhatsappBtn: {
+    flex: 1,
+    backgroundColor: '#25D366',
+    borderRadius: 12,
+    paddingVertical: 11,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 6,
+    shadowColor: '#25D366',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.25,
+    shadowRadius: 8,
+    elevation: 4,
+  },
+  contactBtnText: {
+    fontSize: 12,
+    fontWeight: '900',
+    color: '#fff',
+    letterSpacing: 0.3,
+  },
 });

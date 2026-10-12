@@ -26,7 +26,7 @@ export const loginUser = createAsyncThunk('auth/loginUser', async (payload, { re
       const userRole = data.user.role?.toUpperCase() || 'USER';
       if ((userRole === 'USER' || userRole === 'PARENT') && data.user.subscriptionStatus !== 'ACTIVE') {
         return rejectWithValue({
-          error: 'Your account does not have an active subscription. Please contact your organization or support.'
+          error: 'Your account does not have an active subscription. Contact 8237999101 to upgrade plan.'
         });
       }
     }
@@ -74,7 +74,7 @@ export const fetchUser = createAsyncThunk('auth/fetchUser', async (_, { rejectWi
     const userRole = userObj?.role?.toUpperCase() || 'USER';
     if ((userRole === 'USER' || userRole === 'PARENT') && userObj?.subscriptionStatus !== 'ACTIVE') {
       dispatch(logoutUser());
-      return rejectWithValue('Your subscription has expired. Please contact support.');
+      return rejectWithValue('Your subscription has expired. Please contact 8237999101 to upgrade plan.');
     }
 
     return data;

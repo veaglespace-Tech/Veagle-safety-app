@@ -19,15 +19,40 @@ import {
   X,
   Clock,
   ExternalLink,
+  VolumeX,
+  Volume2
 } from 'lucide-react';
 import { useRouter } from 'next/navigation';
+import { useDispatch, useSelector } from 'react-redux';
+import { toggleSosMute } from '../../redux/slices/sosSlice.js';
 
 export default function SuperAdminOverviewPage() {
   const router = useRouter();
+  const dispatch = useDispatch();
+  const mutedSosIds = useSelector((state) => state?.sos?.mutedSosIds || []);
+
   const [mounted, setMounted] = useState(false);
   const [overview, setOverview] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
   const [toast, setToast] = useState(null);
+  const [isSirenActive, setIsSirenActive] = useState(false);
+
+  // Evaluate siren based on active SOS list and muted IDs
+  useEffect(() => {
+    const activeSosList = overview?.activeSos || [];
+    const hasUnmutedSos = activeSosList.some(sos => !mutedSosIds.includes(String(sos.id)));
+    
+    // Tell EmergencyAlarmListener whether to keep playing
+    window.dispatchEvent(new CustomEvent('set-siren-state', { detail: { active: hasUnmutedSos && activeSosList.length > 0 } }));
+    setIsSirenActive(hasUnmutedSos && activeSosList.length > 0);
+  }, [overview?.activeSos, mutedSosIds]);
+
+  // Sync actual global siren state (in case muted from popup)
+  useEffect(() => {
+    const handleSirenChange = (e) => setIsSirenActive(e.detail.active);
+    window.addEventListener('siren-status-changed', handleSirenChange);
+    return () => window.removeEventListener('siren-status-changed', handleSirenChange);
+  }, []);
 
   // LIVE GPS TRACKING MODAL STATE
   const [trackingSos, setTrackingSos] = useState(null);
@@ -99,7 +124,6 @@ export default function SuperAdminOverviewPage() {
         socket = io(SERVER_URL, {
           path: '/api/socket.io',
           transports: ['websocket', 'polling'],
-          reconnectionAttempts: 5,
         });
 
         // Register as admin to join admin-ops room for real-time SOS updates
@@ -314,7 +338,19 @@ export default function SuperAdminOverviewPage() {
                         </p>
                       </div>
 
-                      <div className="flex items-center space-x-3">
+                      <div className="flex flex-wrap items-center gap-3">
+                        <button
+                          type="button"
+                          onClick={() => dispatch(toggleSosMute(sos.id))}
+                          className={`px-4 py-2.5 font-black text-xs rounded-xl shadow-md transition-all flex items-center space-x-1.5 cursor-pointer uppercase tracking-wider ${
+                            !mutedSosIds.includes(String(sos.id))
+                              ? 'bg-emerald-500 text-white hover:bg-emerald-600'
+                              : 'bg-white text-red-600 border border-red-200 hover:bg-rose-50'
+                          }`}
+                        >
+                          {!mutedSosIds.includes(String(sos.id)) ? <VolumeX className="w-4 h-4" /> : <Volume2 className="w-4 h-4" />}
+                          <span>{!mutedSosIds.includes(String(sos.id)) ? 'MUTE SIREN' : 'PLAY SIREN'}</span>
+                        </button>
                         <button
                           type="button"
                           onClick={() => setTrackingSos(sos)}

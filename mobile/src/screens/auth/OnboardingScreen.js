@@ -114,7 +114,7 @@ export default function OnboardingScreen({ navigation }) {
         </TouchableOpacity>
 
         <TouchableOpacity style={styles.loginLink} onPress={() => navigation.navigate('Login')}>
-          <Text style={styles.loginLinkText}>Already have an account? <Text style={styles.loginLinkBold}>Sign In</Text></Text>
+          <Text style={styles.loginLinkText}>Sign In to your Account</Text>
         </TouchableOpacity>
       </View>
     </SafeAreaView>

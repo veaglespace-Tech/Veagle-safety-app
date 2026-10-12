@@ -13,7 +13,7 @@ import * as settingController from '../controllers/settingController.js';
 import * as referralController from '../controllers/referralController.js';
 import * as couponController from '../controllers/couponController.js';
 import * as donationController from '../controllers/donationController.js';
-import { authenticateToken, optionalAuthToken, requireSuperAdmin } from '../middleware/auth.js';
+import { authenticateToken, optionalAuthToken, requireSuperAdmin, requireActiveSubscription } from '../middleware/auth.js';
 import { upload } from '../middleware/upload.js';
 import { validate } from '../middleware/validate.js';
 import { registerSchema, loginSchema, verifyEmailSchema } from '../utils/schemas.js';
@@ -61,28 +61,28 @@ router.post('/donations/payu-failure', donationController.handleDonationFailure)
 router.get('/donations/payu-failure', donationController.handleDonationFailure);
 
 // Contacts
-router.get('/contacts', authenticateToken, contactController.getContacts);
-router.post('/contacts', authenticateToken, contactController.addContact);
-router.put('/contacts/:id', authenticateToken, contactController.updateContact);
-router.delete('/contacts/:id', authenticateToken, contactController.deleteContact);
+router.get('/contacts', authenticateToken, requireActiveSubscription, contactController.getContacts);
+router.post('/contacts', authenticateToken, requireActiveSubscription, contactController.addContact);
+router.put('/contacts/:id', authenticateToken, requireActiveSubscription, contactController.updateContact);
+router.delete('/contacts/:id', authenticateToken, requireActiveSubscription, contactController.deleteContact);
 
 // SOS
-router.post('/sos/start', authenticateToken, sosController.startSos);
-router.post('/sos/location', authenticateToken, sosController.updateSosLocation);
-router.post('/sos/resolve', authenticateToken, sosController.resolveSos);
-router.get('/sos/active', authenticateToken, sosController.getActiveSosSession);
-router.get('/sos/active/:id/location', authenticateToken, sosController.getSosLocation);
+router.post('/sos/start', authenticateToken, requireActiveSubscription, sosController.startSos);
+router.post('/sos/location', authenticateToken, requireActiveSubscription, sosController.updateSosLocation);
+router.post('/sos/resolve', authenticateToken, requireActiveSubscription, sosController.resolveSos);
+router.get('/sos/active', authenticateToken, requireActiveSubscription, sosController.getActiveSosSession);
+router.get('/sos/active/:id/location', authenticateToken, requireActiveSubscription, sosController.getSosLocation);
 router.get('/sos/public-track/:token', sosController.getPublicSosTracking);
 
 // Journey
-router.post('/journey/start', authenticateToken, journeyController.startJourney);
-router.post('/journey/complete', authenticateToken, journeyController.completeJourney);
-router.get('/journey/active', authenticateToken, journeyController.getActiveJourney);
+router.post('/journey/start', authenticateToken, requireActiveSubscription, journeyController.startJourney);
+router.post('/journey/complete', authenticateToken, requireActiveSubscription, journeyController.completeJourney);
+router.get('/journey/active', authenticateToken, requireActiveSubscription, journeyController.getActiveJourney);
 
 // Check-in
-router.post('/checkin/start', authenticateToken, checkinController.startCheckin);
-router.post('/checkin/safe', authenticateToken, checkinController.confirmCheckinSafe);
-router.get('/checkin/active', authenticateToken, checkinController.getActiveCheckin);
+router.post('/checkin/start', authenticateToken, requireActiveSubscription, checkinController.startCheckin);
+router.post('/checkin/safe', authenticateToken, requireActiveSubscription, checkinController.confirmCheckinSafe);
+router.get('/checkin/active', authenticateToken, requireActiveSubscription, checkinController.getActiveCheckin);
 
 // Super Admin Operations Command Portal
 router.get('/admin/overview', authenticateToken, requireSuperAdmin, adminController.getAdminOverview);

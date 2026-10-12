@@ -44,6 +44,7 @@ const sosSlice = createSlice({
     isTriggering: false,
     isResolving: false,
     isAlarmPlaying: false,
+    mutedSosIds: [],
     error: null,
   },
   reducers: {
@@ -52,6 +53,20 @@ const sosSlice = createSlice({
       state.isTriggering = false;
       state.isResolving = false;
       state.error = null;
+    },
+    toggleSosMute: (state, action) => {
+      const id = String(action.payload);
+      if (state.mutedSosIds.includes(id)) {
+        state.mutedSosIds = state.mutedSosIds.filter(x => x !== id);
+      } else {
+        state.mutedSosIds.push(id);
+      }
+    },
+    muteSos: (state, action) => {
+      const id = String(action.payload);
+      if (!state.mutedSosIds.includes(id)) {
+        state.mutedSosIds.push(id);
+      }
     },
     toggleAlarm: (state) => {
       state.isAlarmPlaying = !state.isAlarmPlaying;
@@ -96,5 +111,5 @@ const sosSlice = createSlice({
   },
 });
 
-export const { clearSosState, toggleAlarm, setAlarmState } = sosSlice.actions;
+export const { clearSosState, toggleSosMute, muteSos, toggleAlarm, setAlarmState } = sosSlice.actions;
 export default sosSlice.reducer;

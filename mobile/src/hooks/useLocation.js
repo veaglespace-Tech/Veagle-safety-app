@@ -95,12 +95,16 @@ export function useLocation() {
     };
   }, [dispatch]);
 
-  // Send location updates to server during active SOS
+  // Send location updates to server during active SOS (matching web client 3-second timing)
   const { latitude, longitude, accuracy } = useSelector((state) => state.location);
+  const lastSyncTimeRef = useRef(0);
+  const lastSyncCoordsRef = useRef({ lat: null, lng: null });
+
   useEffect(() => {
     if (!activeSession || !latitude || !longitude) return;
 
-    const interval = setInterval(async () => {
+    // Send immediate initial sync on SOS activation
+    const sendUpdate = async () => {
       try {
         await sosApi.updateSosLocation({
           sosSessionId: activeSession.id,
@@ -108,8 +112,20 @@ export function useLocation() {
           longitude,
           accuracy: accuracy || 10,
         });
-      } catch (e) {}
-    }, 15000);
+        lastSyncTimeRef.current = Date.now();
+        lastSyncCoordsRef.current = { lat: latitude, lng: longitude };
+      } catch (e) {
+        // Silently retry on next tick
+      }
+    };
+
+    // Immediate sync if not sent yet
+    if (Date.now() - lastSyncTimeRef.current > 3000 || lastSyncCoordsRef.current.lat === null) {
+      sendUpdate();
+    }
+
+    // High-frequency 3s interval sync (matches web client useBrowserLocation timing)
+    const interval = setInterval(sendUpdate, 3000);
     return () => clearInterval(interval);
   }, [activeSession, latitude, longitude, accuracy]);
 }

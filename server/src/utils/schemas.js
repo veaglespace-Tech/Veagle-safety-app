@@ -6,9 +6,9 @@ export const registerSchema = z.object({
   phone: z.string().transform(val => val.replace(/\D/g, '')).pipe(z.string().regex(/^[6-9]\d{9}$/, "Please enter a valid 10-digit mobile number starting with 6, 7, 8, or 9")),
   password: z.string().min(6, "Password must be at least 6 characters"),
   role: z.enum(['USER', 'SUPER_ADMIN', 'ORGANIZATION', 'PARENT']).optional().default('USER'),
-  emergencyContactName: z.string().optional(),
-  emergencyContactRelation: z.string().optional(),
-  emergencyContactPhone: z.string().transform(val => val ? val.replace(/\D/g, '') : '').pipe(z.string().regex(/^[6-9]\d{9}$/, "Please enter a valid 10-digit mobile number for Emergency Contact").optional().or(z.literal(''))),
+  emergencyContactName: z.string().min(2, "Emergency Contact Name is required"),
+  emergencyContactRelation: z.string().min(2, "Emergency Contact Relation is required"),
+  emergencyContactPhone: z.string().transform(val => val ? val.replace(/\D/g, '') : '').pipe(z.string().regex(/^[6-9]\d{9}$/, "Please enter a valid 10-digit mobile number for Emergency Contact")),
   parentEmail: z.string().email("Please enter a valid Parent Email address").optional().or(z.literal('')),
   profilePhoto: z.string().url().optional(),
   bloodGroup: z.string().optional(),
@@ -18,6 +18,8 @@ export const registerSchema = z.object({
   country: z.string().optional(),
   pincode: z.string().regex(/^\d{6}$/, "Please enter a valid 6-digit Pincode").optional().or(z.literal('')),
   medicalNotes: z.string().optional(),
+  orgReferralCode: z.string().optional(),
+  partnerReferralCode: z.string().optional(),
 });
 
 export const loginSchema = z.object({

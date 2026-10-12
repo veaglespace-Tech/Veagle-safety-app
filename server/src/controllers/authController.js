@@ -167,8 +167,8 @@ export const register = asyncHandler(async (req, res) => {
         state: state || 'Maharashtra',
         country: country || 'India',
         pincode: pincode || '411001',
-        emergencyContactName: assignedRole === 'USER' ? (emergencyContactName || null) : null,
-        emergencyContactPhone: assignedRole === 'USER' ? (emergencyContactPhone || null) : null,
+        emergencyContactName: emergencyContactName || null,
+        emergencyContactPhone: emergencyContactPhone || null,
         parentEmail: parentEmail ? parentEmail.trim().toLowerCase() : null,
         medicalNotes: medicalNotes || null,
         isEmailVerified: assignedRole !== 'USER',
@@ -187,7 +187,7 @@ export const register = asyncHandler(async (req, res) => {
     return res.status(400).json({ error: dbErr.message || 'Failed to create account. Please try again.' });
   }
 
-  if (assignedRole === 'USER' && emergencyContactName && emergencyContactPhone && emergencyContactName !== 'N/A') {
+  if (emergencyContactName && emergencyContactPhone && emergencyContactName !== 'N/A') {
     try {
       await prisma.trustedContact.create({
         data: {

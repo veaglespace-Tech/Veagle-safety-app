@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import { resolveEmergencySos, toggleAlarm, clearSosState, checkActiveSos } from '../../redux/slices/sosSlice.js';
 import { startEmergencySiren, stopEmergencySiren } from '../../utils/sirenAudio.js';
@@ -32,6 +32,7 @@ export default function ActiveSOSLivePage() {
   const [copied, setCopied] = useState(false);
   const [elapsed, setElapsed] = useState(0);
   const [isResolving, setIsResolving] = useState(false);
+  const [contactsCount, setContactsCount] = useState(0);
   const router = useRouter();
 
   useEffect(() => {
@@ -45,8 +46,10 @@ export default function ActiveSOSLivePage() {
       return;
     }
 
-    // DO NOT auto-start siren audio on active emergency session for the victim.
-    // It is dangerous and could alert an attacker.
+    // Resume siren on page load/refresh if alarm state is active and NOT silent mode
+    if (isAlarmPlaying && !activeSession?.isSilent) {
+      startEmergencySiren();
+    }
 
     const startTime = new Date(activeSession.startedAt).getTime();
     const interval = setInterval(() => {
@@ -65,6 +68,20 @@ export default function ActiveSOSLivePage() {
     if (activeSession) {
       startLocationTracking();
     }
+  }, [activeSession]);
+
+  // Fetch actual contacts count
+  useEffect(() => {
+    const fetchContactsCount = async () => {
+      try {
+        const { api } = await import('../../utils/api.js');
+        const res = await api.get('/contacts');
+        setContactsCount(res.data?.contacts?.length || res.data?.length || 0);
+      } catch (e) {
+        setContactsCount(0);
+      }
+    };
+    if (activeSession) fetchContactsCount();
   }, [activeSession]);
 
   // Listen for admin-initiated SOS resolve via Socket.IO
@@ -201,8 +218,8 @@ export default function ActiveSOSLivePage() {
         <div className="lg:col-span-5 xl:col-span-4 space-y-4">
           <div className="grid grid-cols-3 gap-2.5">
             {[
-              { icon: MapPin, label: 'GPS Accuracy', value: `±${accuracy || '--'}m` },
-              { icon: Users, label: 'Notified', value: '3 Contacts' },
+              { icon: MapPin, label: 'GPS Accuracy', value: `±${accuracy ? Number(accuracy).toFixed(1) : '--'}m` },
+              { icon: Users, label: 'Notified', value: `${contactsCount} Contact${contactsCount !== 1 ? 's' : ''}` },
               { icon: Clock, label: 'Duration', value: formatElapsed(elapsed) },
             ].map((stat) => {
               const Icon = stat.icon;

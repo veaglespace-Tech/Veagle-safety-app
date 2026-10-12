@@ -13,6 +13,7 @@ import Animated, {
 } from 'react-native-reanimated';
 import { LinearGradient } from 'expo-linear-gradient';
 import { COLORS } from '../../theme/colors';
+import { playEmergencySiren, stopEmergencySiren } from '../../utils/soundPlayer';
 
 const { height, width } = Dimensions.get('window');
 
@@ -26,8 +27,7 @@ export default function AlarmScreen() {
 
   const startSiren = () => {
     setIsSirenActive(true);
-    // Vibrate pattern: wait 0, vibrate 500ms, wait 200ms, vibrate 500ms... repeat
-    Vibration.vibrate([0, 500, 200, 500], true); 
+    playEmergencySiren(true);
     
     pulseScale.value = withRepeat(
       withSequence(withTiming(1.5, { duration: 500 }), withTiming(1, { duration: 500 })),
@@ -43,7 +43,7 @@ export default function AlarmScreen() {
 
   const stopSiren = () => {
     setIsSirenActive(false);
-    Vibration.cancel();
+    stopEmergencySiren();
     pulseScale.value = withTiming(1);
     pulseOpacity.value = withTiming(0);
   };
@@ -51,7 +51,7 @@ export default function AlarmScreen() {
   // Cleanup on unmount
   useEffect(() => {
     return () => {
-      Vibration.cancel();
+      stopEmergencySiren();
     };
   }, []);
 

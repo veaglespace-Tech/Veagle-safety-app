@@ -46,7 +46,6 @@ function AdminTabNavigator() {
   const TAB_ICONS = {
     Home: { focused: 'shield', unfocused: 'shield-outline' },
     Users: { focused: 'people', unfocused: 'people-outline' },
-    Plans: { focused: 'options', unfocused: 'options-outline' },
     Payments: { focused: 'card', unfocused: 'card-outline' },
     Profile: { focused: 'person', unfocused: 'person-outline' },
   };

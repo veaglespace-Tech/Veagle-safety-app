@@ -116,7 +116,7 @@ export default function HelpContactScreen({ navigation }) {
           <View style={styles.divider} />
           <View style={styles.faqItem}>
             <Text style={styles.faqQ}>Can I add more than 5 guardians?</Text>
-            <Text style={styles.faqA}>Yes, upgrading to the Sakhi Suraksha 365 plan allows you to add up to 10 guardians.</Text>
+            <Text style={styles.faqA}>Yes, contact 8237999101 to upgrade your plan and increase guardian limits.</Text>
           </View>
         </View>
       </ScrollView>

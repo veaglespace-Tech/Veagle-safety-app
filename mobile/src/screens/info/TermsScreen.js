@@ -30,9 +30,9 @@ export default function TermsScreen({ navigation }) {
             You agree to use the emergency services responsibly. False alarms or misuse of the SOS broadcasting feature may result in the suspension of your account.
           </Text>
 
-          <Text style={styles.heading}>3. Subscription & Billing</Text>
+          <Text style={styles.heading}>3. Subscription & Plan Upgrades</Text>
           <Text style={styles.paragraph}>
-            Certain premium features require an active subscription. You agree to provide current, complete, and accurate purchase and account information for all purchases made via the app.
+            Active safety plans and account memberships are provisioned directly via authorized administration. To renew or upgrade your protection plan, contact 8237999101.
           </Text>
 
           <Text style={styles.heading}>4. Limitation of Liability</Text>

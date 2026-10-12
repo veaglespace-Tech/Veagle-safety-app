@@ -16,11 +16,16 @@ function SuccessContent() {
   const txnid = searchParams.get('txnid') || 'VEAGLE_1785845316092_770';
   const planName = searchParams.get('plan') || 'Sakhi Suraksha 365 Yearly Plan';
   const amount = searchParams.get('amount') || '28.32';
+  const token = searchParams.get('token');
 
   const [countdown, setCountdown] = useState(5);
   const [copied, setCopied] = useState(false);
 
   useEffect(() => {
+    if (token && typeof window !== 'undefined') {
+      localStorage.setItem('tichi_token', token);
+      localStorage.setItem('token', token);
+    }
     dispatch(fetchUser());
 
     const timer = setInterval(() => {
@@ -28,7 +33,7 @@ function SuccessContent() {
     }, 1000);
 
     return () => clearInterval(timer);
-  }, [dispatch]);
+  }, [dispatch, token]);
 
   useEffect(() => {
     if (countdown === 0) {

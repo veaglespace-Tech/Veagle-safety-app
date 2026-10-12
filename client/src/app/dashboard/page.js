@@ -54,6 +54,13 @@ export default function DashboardAppPage() {
     dispatch(fetchContacts());
     dispatch(checkActiveSos());
     fetchActiveJourney();
+
+    const handleRefresh = () => {
+      dispatch(checkActiveSos());
+      fetchActiveJourney();
+    };
+    window.addEventListener('sos-status-changed', handleRefresh);
+    return () => window.removeEventListener('sos-status-changed', handleRefresh);
   }, [dispatch]);
 
   const fetchActiveJourney = async () => {
@@ -137,7 +144,7 @@ export default function DashboardAppPage() {
                     CRITICAL EMERGENCY SOS ACTIVE
                   </p>
                   <p className="text-xs text-white/90 font-bold">
-                    Encrypted GPS stream broadcasting to 5 trusted guardians
+                    Encrypted GPS stream broadcasting to {contacts.length} trusted guardian{contacts.length !== 1 ? 's' : ''}
                   </p>
                 </div>
               </div>
@@ -230,7 +237,7 @@ export default function DashboardAppPage() {
             {/* AMBIENT SHIMMER BADGE */}
             <div className="absolute top-0 right-0 bg-gradient-to-r from-[#FF5C8A] via-[#FF2A6D] to-[#E01A4F] text-white text-[10px] sm:text-[11px] font-black px-5 sm:px-6 py-2 rounded-bl-2xl uppercase tracking-widest shadow-md flex items-center space-x-1.5">
               <ShieldCheck className="w-4 h-4 animate-pulse" />
-              <span>365-DAY PROTECTION ACTIVE</span>
+              <span>{mounted && user?.subscriptionStatus === 'ACTIVE' ? '365-DAY PROTECTION ACTIVE' : 'PROTECTION STANDBY'}</span>
             </div>
 
             {/* HEADER STATUS BAR */}
@@ -273,7 +280,7 @@ export default function DashboardAppPage() {
             <div className="pt-2 pb-3 text-center space-y-3">
               <SOSHeroButton />
               <p className="text-xs text-[#684E67] font-black tracking-widest uppercase">
-                HOLD FOR 3 SECONDS OR DOUBLE-CLICK TO BROADCAST EMERGENCY ALERTS
+                HOLD FOR 3 SECONDS TO BROADCAST EMERGENCY ALERTS
               </p>
             </div>
             {/* 4-GRID QUICK ACTIONS */}

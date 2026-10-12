@@ -21,6 +21,7 @@ export const startSos = async (req, res) => {
         emergencyContactName: true,
         emergencyContactPhone: true,
         parentEmail: true,
+        organization: { select: { email: true, phone: true } },
       },
     });
 
@@ -72,10 +73,7 @@ export const startSos = async (req, res) => {
       include: { parent: true },
     }).catch(() => []);
 
-    const orgMemberships = await prisma.organizationMember.findMany({
-      where: { userId, status: 'ACTIVE' },
-      include: { organization: true },
-    }).catch(() => []);
+    // Organization memberships removed — model does not exist in current schema
 
     const clientBaseUrl = process.env.CLIENT_URL || config.payu?.clientUrl || 'http://localhost:3000';
     const trackingUrl = `${clientBaseUrl}/live-track/${session.shareToken}`;
@@ -88,9 +86,10 @@ export const startSos = async (req, res) => {
     parentLinks.forEach((link) => {
       if (link.parent?.email) recipientEmails.push(link.parent.email.trim().toLowerCase());
     });
-    orgMemberships.forEach((org) => {
-      if (org.organization?.email) recipientEmails.push(org.organization.email.trim().toLowerCase());
-    });
+
+    if (currentUser?.organization?.email) {
+      recipientEmails.push(currentUser.organization.email.trim().toLowerCase());
+    }
 
     // Add all Super Admins to the dispatch list so they are notified
     const superAdmins = await prisma.user.findMany({
@@ -183,16 +182,13 @@ export const startSos = async (req, res) => {
         }
       });
 
-      orgMemberships.forEach((org) => {
-        if (org.organization?.email) targetRooms.add(`user:${org.organization.email.trim().toLowerCase()}`);
-        if (org.organization?.phone) {
-          const cleanO = org.organization.phone.replace(/\D/g, '');
-          if (cleanO) targetRooms.add(`user:${cleanO}`);
-        }
-      });
+
 
       if (currentUser?.parentEmail) {
         targetRooms.add(`user:${currentUser.parentEmail.trim().toLowerCase()}`);
+      }
+      if (currentUser?.organization?.email) {
+        targetRooms.add(`user:${currentUser.organization.email.trim().toLowerCase()}`);
       }
       if (currentUser?.emergencyContactPhone) {
         const cleanEmergencyPhone = currentUser.emergencyContactPhone.replace(/\D/g, '');
@@ -226,9 +222,6 @@ export const startSos = async (req, res) => {
       targetRooms.forEach((roomName) => {
         io.to(roomName).emit('SOS_ALARM_BROADCAST', sosAlarmPayload);
       });
-
-      // Safety Fallback: Also emit globally so no emergency siren alert is missed under any circumstance
-      io.emit('SOS_ALARM_BROADCAST', sosAlarmPayload);
     }
 
     // 5. Send Web Push Notifications to all trusted contacts' devices
@@ -388,9 +381,6 @@ export const updateSosLocation = async (req, res) => {
       targetRooms.forEach((roomName) => {
         io.to(roomName).emit('SOS_LOCATION_UPDATE', payload);
       });
-
-      // 4. Global fallback broadcast — ensures no admin or parent misses a location update
-      io.emit('SOS_LOCATION_UPDATE', payload);
     }
 
     return res.json({ message: 'Location updated', location });

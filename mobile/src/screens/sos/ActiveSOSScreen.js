@@ -10,20 +10,24 @@ import * as Clipboard from 'expo-clipboard';
 import { resolveEmergencySos, toggleAlarm } from '../../redux/slices/sosSlice';
 import { LinearGradient } from 'expo-linear-gradient';
 import { COLORS } from '../../theme/colors';
+import { playEmergencySiren, stopEmergencySiren } from '../../utils/soundPlayer';
 
 export default function ActiveSOSScreen({ navigation }) {
   const dispatch = useDispatch();
   const { activeSession, isAlarmPlaying, isResolving } = useSelector((state) => state.sos);
   const { latitude = 18.5204, longitude = 73.8567, accuracy = 10 } = useSelector((state) => state.location);
   const { user } = useSelector((state) => state.auth);
+  const contactsList = useSelector((state) => state.contacts?.contacts || []);
+  const contactsCount = contactsList.length || (user?.emergencyContactPhone ? 1 : 0);
 
   const [elapsed, setElapsed] = useState(0);
   const [showConfirmModal, setShowConfirmModal] = useState(false);
   const [copied, setCopied] = useState(false);
   const hasOpenedWhatsApp = useRef(false);
 
-    useEffect(() => {
+  useEffect(() => {
     if (!activeSession) {
+      stopEmergencySiren();
       if (navigation.canGoBack()) {
         navigation.goBack();
       } else {
@@ -39,6 +43,7 @@ export default function ActiveSOSScreen({ navigation }) {
     
     return () => {
       clearInterval(interval);
+      stopEmergencySiren();
     };
   }, [activeSession]);
 
@@ -50,7 +55,18 @@ export default function ActiveSOSScreen({ navigation }) {
     return `${m}:${s}`;
   };
 
+  const handleToggleAlarm = () => {
+    if (isAlarmPlaying) {
+      stopEmergencySiren();
+      dispatch(toggleAlarm());
+    } else {
+      playEmergencySiren(true);
+      dispatch(toggleAlarm());
+    }
+  };
+
   const handleMarkSafe = async () => {
+    stopEmergencySiren();
     try {
       await dispatch(resolveEmergencySos(activeSession.id)).unwrap();
       setShowConfirmModal(false);
@@ -109,8 +125,8 @@ export default function ActiveSOSScreen({ navigation }) {
         {/* STATS GRID */}
         <View style={styles.statsGrid}>
           {[
-            { icon: 'location', label: 'GPS Accuracy', value: `±${accuracy || '--'}m` },
-            { icon: 'people', label: 'Notified', value: '3 Contacts' },
+            { icon: 'location', label: 'GPS Accuracy', value: `±${accuracy ? Number(accuracy).toFixed(1) : '--'}m` },
+            { icon: 'people', label: 'Notified', value: `${contactsCount} Contact${contactsCount !== 1 ? 's' : ''}` },
             { icon: 'time', label: 'Duration', value: formatElapsed(elapsed) },
           ].map((stat) => (
             <View key={stat.label} style={styles.statCard}>
@@ -186,7 +202,7 @@ export default function ActiveSOSScreen({ navigation }) {
         <View style={styles.twoCol}>
           <TouchableOpacity
             style={[styles.alarmBtn, isAlarmPlaying && styles.alarmBtnActive]}
-            onPress={() => dispatch(toggleAlarm())}
+            onPress={handleToggleAlarm}
             activeOpacity={0.85}
           >
             <Ionicons name={isAlarmPlaying ? 'volume-mute' : 'volume-high'} size={20} color={isAlarmPlaying ? '#fff' : COLORS.primary} />

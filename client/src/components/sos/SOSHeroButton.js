@@ -3,9 +3,9 @@
 import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { ShieldAlert, VolumeX, Volume2, Radio, Siren, AlertCircle } from 'lucide-react';
 import { useDispatch, useSelector } from 'react-redux';
-import { startEmergencySos } from '../../redux/slices/sosSlice.js';
+import { startEmergencySos, resolveEmergencySos } from '../../redux/slices/sosSlice.js';
 import { openWhatsAppSosEmergency } from '../../utils/whatsappHelper.js';
-import { startEmergencySiren } from '../../utils/sirenAudio.js';
+import { startEmergencySiren, stopEmergencySiren } from '../../utils/sirenAudio.js';
 import { useRouter } from 'next/navigation';
 
 export const SOSHeroButton = ({ onTriggerComplete }) => {
@@ -13,7 +13,7 @@ export const SOSHeroButton = ({ onTriggerComplete }) => {
   const router = useRouter();
   const [holding, setHolding] = useState(false);
   const [progress, setProgress] = useState(0);
-  const [countdown, setCountdown] = useState(2);
+  const [countdown, setCountdown] = useState(3);
   const [isSilent, setIsSilent] = useState(false);
   const progressIntervalRef = useRef(null);
   const startTimeRef = useRef(0);
@@ -23,7 +23,7 @@ export const SOSHeroButton = ({ onTriggerComplete }) => {
   const { activeSession } = useSelector((state) => state?.sos || {});
   const { latitude, longitude } = useSelector((state) => state?.location || {});
 
-  const HOLD_DURATION = 2000;
+  const HOLD_DURATION = 3000;
 
   const clearHoldInterval = useCallback(() => {
     if (progressIntervalRef.current) {
@@ -36,10 +36,6 @@ export const SOSHeroButton = ({ onTriggerComplete }) => {
     // Prevent default to stop context menu, text selection on mobile long press
     if (e) e.preventDefault();
 
-    if (activeSession) {
-      router.push('/active-sos');
-      return;
-    }
 
     // Prevent duplicate start if already holding
     if (holdingRef.current) return;
@@ -48,7 +44,7 @@ export const SOSHeroButton = ({ onTriggerComplete }) => {
     triggeredRef.current = false;
     setHolding(true);
     setProgress(0);
-    setCountdown(2);
+    setCountdown(3);
     startTimeRef.current = Date.now();
 
     if (typeof window !== 'undefined' && 'vibrate' in navigator) {
@@ -78,7 +74,7 @@ export const SOSHeroButton = ({ onTriggerComplete }) => {
     holdingRef.current = false;
     setHolding(false);
     setProgress(0);
-    setCountdown(2);
+    setCountdown(3);
     clearHoldInterval();
   }, [clearHoldInterval]);
 
@@ -92,6 +88,20 @@ export const SOSHeroButton = ({ onTriggerComplete }) => {
     if (typeof window !== 'undefined' && 'vibrate' in navigator) {
       navigator.vibrate([300, 100, 300, 100, 400]);
     }
+
+    if (activeSession) {
+      stopEmergencySiren();
+      try {
+        await dispatch(resolveEmergencySos(activeSession.id)).unwrap();
+      } catch (e) {
+        console.error('Failed to stop SOS:', e);
+        alert('Failed to stop SOS. Please check your connection.');
+      }
+      return;
+    }
+
+    // Victim siren is kept OFF as per requirements to prevent escalating danger.
+    // The siren will only sound on Admin, Organization, and Parent dashboards via Socket broadcast.
 
     if (!('geolocation' in navigator)) {
       alert('Your browser does not support Geolocation. Cannot trigger live tracking SOS.');
@@ -176,7 +186,7 @@ export const SOSHeroButton = ({ onTriggerComplete }) => {
             holding
               ? 'bg-gradient-to-r from-[#FF2A6D] via-[#FF5C8A] to-[#FFD700] opacity-80 scale-125 blur-2xl animate-pulse'
               : activeSession
-                ? 'bg-gradient-to-r from-[#FF2A6D] to-[#E01A4F] opacity-70 blur-2xl animate-ping'
+                ? 'bg-gradient-to-r from-[#FF0000] to-[#CC0000] opacity-80 blur-2xl animate-[ping_1s_ease-in-out_infinite]'
                 : 'bg-gradient-to-r from-[#FF5C8A]/25 via-[#FF2A6D]/20 to-[#FFD166]/25 blur-2xl animate-pulse'
           }`}
         />
@@ -233,7 +243,7 @@ export const SOSHeroButton = ({ onTriggerComplete }) => {
             holding
               ? 'bg-gradient-to-tr from-[#E01A4F] via-[#FF2A6D] to-[#FFD700] text-white scale-110 shadow-[0_0_80px_rgba(255,42,109,0.8)] animate-pulse'
               : activeSession
-                ? 'bg-gradient-to-tr from-[#FF2A6D] via-[#E01A4F] to-[#2A0826] text-white animate-pulse shadow-coral-glow'
+                ? 'bg-gradient-to-r from-[#FF0000] via-[#CC0000] to-[#990000] text-white animate-[pulse_0.6s_ease-in-out_infinite] shadow-[0_0_60px_rgba(255,0,0,0.7),0_0_120px_rgba(255,0,0,0.4)] border-red-300'
                 : 'bg-gradient-to-br from-[#FF5C8A] via-[#FF2A6D] to-[#E01A4F] text-white hover:scale-105 hover:shadow-[0_25px_65px_rgba(255,42,109,0.55)]'
           }`}
         >
@@ -253,7 +263,7 @@ export const SOSHeroButton = ({ onTriggerComplete }) => {
 
             {/* DYNAMIC TEXT COUNTDOWN / SOS */}
             <span className="text-3xl sm:text-4xl font-black tracking-widest text-white drop-shadow-[0_4px_12px_rgba(0,0,0,0.4)]">
-              {holding ? `${countdown}s` : activeSession ? 'ACTIVE' : 'SOS'}
+              {holding ? `${countdown}s` : activeSession ? 'STOP' : 'SOS'}
             </span>
 
             {/* GLASSMORPHISM HOLD INSTRUCTION BADGE */}
@@ -268,7 +278,7 @@ export const SOSHeroButton = ({ onTriggerComplete }) => {
                 className={`w-1.5 h-1.5 rounded-full ${holding ? 'bg-gold animate-ping' : 'bg-emerald-400 animate-pulse'}`}
               />
               <span>
-                {holding ? 'DISPATCHING...' : activeSession ? 'VIEW STATUS' : 'HOLD 2 SECONDS'}
+                {holding ? 'DISPATCHING...' : activeSession ? 'VIEW STATUS' : 'HOLD 3 SECONDS'}
               </span>
             </span>
           </div>
@@ -279,7 +289,7 @@ export const SOSHeroButton = ({ onTriggerComplete }) => {
       <div className="mt-4 flex flex-col items-center space-y-3 z-30">
         <p className="text-xs font-extrabold text-[#684E67] text-center tracking-wide flex items-center space-x-1.5 bg-[#FFF0F3] px-4 py-2 rounded-2xl border border-[#FFCCE1] shadow-xs">
           <Radio className="w-4 h-4 text-[#FF2A6D] animate-pulse" />
-          <span>Press & hold for 2 seconds to broadcast emergency GPS location</span>
+          <span>Press & hold for 3 seconds to broadcast emergency GPS location</span>
         </p>
 
         <button

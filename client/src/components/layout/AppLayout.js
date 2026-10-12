@@ -94,6 +94,37 @@ export const AppLayout = ({ children, fullScreen = false }) => {
       router.push('/admin');
       return;
     }
+    // Check for expired subscription
+    let isSubExpired = false;
+    let currentUser = user;
+    if (!currentUser?.id && typeof window !== 'undefined') {
+      try {
+        currentUser = JSON.parse(localStorage.getItem('tichi_user') || '{}');
+      } catch (e) {}
+    }
+
+    if (currentUser?.role === 'USER') {
+      const expDate = currentUser.subscriptionExpiresAt ? new Date(currentUser.subscriptionExpiresAt) : null;
+      if (
+        currentUser.subscriptionStatus === 'EXPIRED' ||
+        currentUser.subscriptionStatus === 'PENDING' ||
+        (expDate && expDate < new Date())
+      ) {
+        isSubExpired = true;
+      }
+    }
+
+    if (
+      isProtected &&
+      hasAuthToken &&
+      isSubExpired &&
+      !pathname.startsWith('/subscription') &&
+      !pathname.startsWith('/payment') &&
+      !pathname.startsWith('/auth')
+    ) {
+      router.push('/subscription');
+      return;
+    }
   }, [mounted, pathname, hasAuthToken, isProtected, user, router]);
 
   if (mounted && isProtected && !hasAuthToken) {

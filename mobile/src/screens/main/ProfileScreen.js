@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import {
   View, Text, StyleSheet, ScrollView, TouchableOpacity,
-  TextInput, Alert, ActivityIndicator, Switch, Platform,
+  TextInput, Alert, ActivityIndicator, Switch, Platform, Linking,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
@@ -231,6 +231,47 @@ export default function ProfileScreen({ navigation }) {
           </TouchableOpacity>
         )}
 
+        {/* SAFETY PLAN & UPGRADE SECTION */}
+        <Animated.View entering={FadeInUp.delay(230).duration(500)} style={styles.section}>
+          <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
+            <Text style={styles.sectionTitle}>Safety Plan & Upgrade</Text>
+            <View style={[styles.subStatusBadge, user?.subscriptionStatus === 'ACTIVE' ? styles.subActiveBadge : styles.subInactiveBadge]}>
+              <Ionicons 
+                name={user?.subscriptionStatus === 'ACTIVE' ? "shield-checkmark" : "alert-circle"} 
+                size={12} 
+                color={user?.subscriptionStatus === 'ACTIVE' ? COLORS.success : COLORS.warning} 
+              />
+              <Text style={[styles.subStatusText, { color: user?.subscriptionStatus === 'ACTIVE' ? COLORS.success : COLORS.warning }]}>
+                {user?.subscriptionStatus === 'ACTIVE' ? 'Active Protection' : 'Upgrade Needed'}
+              </Text>
+            </View>
+          </View>
+
+          <Text style={styles.planInfoText}>
+            To renew or upgrade your protection plan, add more emergency guardians, or activate premium features, contact our support:
+          </Text>
+
+          <View style={styles.planButtonsRow}>
+            <TouchableOpacity 
+              style={styles.planCallBtn} 
+              onPress={() => Linking.openURL('tel:8237999101')}
+              activeOpacity={0.85}
+            >
+              <Ionicons name="call" size={15} color="#fff" />
+              <Text style={styles.planBtnText}>Call 8237999101</Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity 
+              style={styles.planWhatsappBtn} 
+              onPress={() => Linking.openURL('https://wa.me/918237999101')}
+              activeOpacity={0.85}
+            >
+              <Ionicons name="logo-whatsapp" size={15} color="#fff" />
+              <Text style={styles.planBtnText}>WhatsApp</Text>
+            </TouchableOpacity>
+          </View>
+        </Animated.View>
+
         {/* ABOUT & LEGAL */}
         <Animated.View entering={FadeInUp.delay(250).duration(500)} style={styles.section}>
           <Text style={styles.sectionTitle}>About & Legal</Text>
@@ -312,4 +353,14 @@ const styles = StyleSheet.create({
   linkRow: { flexDirection: 'row', alignItems: 'center', gap: 12, paddingVertical: 12, borderBottomWidth: 1, borderBottomColor: COLORS.primaryBg },
   logoutRow: { borderBottomWidth: 0 },
   linkText: { flex: 1, fontSize: 14, fontWeight: '700', color: COLORS.textDark },
+
+  subStatusBadge: { flexDirection: 'row', alignItems: 'center', gap: 5, paddingHorizontal: 10, paddingVertical: 4, borderRadius: 999, borderWidth: 1 },
+  subActiveBadge: { backgroundColor: '#F0FDF4', borderColor: '#86EFAC' },
+  subInactiveBadge: { backgroundColor: '#FFFBEB', borderColor: '#FDE68A' },
+  subStatusText: { fontSize: 10, fontWeight: '800' },
+  planInfoText: { fontSize: 12, fontWeight: '600', color: COLORS.textMuted, lineHeight: 18, marginTop: 4 },
+  planButtonsRow: { flexDirection: 'row', gap: 10, marginTop: 8 },
+  planCallBtn: { flex: 1, backgroundColor: COLORS.primary, borderRadius: 12, paddingVertical: 12, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6, shadowColor: COLORS.primary, shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.25, shadowRadius: 8, elevation: 4 },
+  planWhatsappBtn: { flex: 1, backgroundColor: '#25D366', borderRadius: 12, paddingVertical: 12, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6, shadowColor: '#25D366', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.25, shadowRadius: 8, elevation: 4 },
+  planBtnText: { fontSize: 12, fontWeight: '900', color: '#fff', letterSpacing: 0.3 },
 });

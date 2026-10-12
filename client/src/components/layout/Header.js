@@ -225,7 +225,11 @@ export const Header = () => {
             type="button"
             onClick={(e) => {
               e.stopPropagation();
-              setMobileMenuOpen((prev) => !prev);
+              if (isLoggedIn && typeof window !== 'undefined') {
+                window.dispatchEvent(new CustomEvent('toggle-admin-drawer'));
+              } else {
+                setMobileMenuOpen((prev) => !prev);
+              }
             }}
             className="md:hidden w-9 h-9 sm:w-10 sm:h-10 rounded-2xl bg-[#FFF0F3] border-1.5 border-[#FFCCE1] flex items-center justify-center text-[#FF5C8A] cursor-pointer hover:bg-[#FF5C8A] hover:text-white active:scale-90 transition-all duration-200 shadow-sm shrink-0"
             aria-label="Toggle navigation menu"

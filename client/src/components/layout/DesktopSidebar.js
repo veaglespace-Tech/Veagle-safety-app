@@ -345,7 +345,7 @@ export const DesktopSidebar = () => {
                   {displayName}
                 </p>
                 <p className="text-[10px] font-bold text-[#FF2A6D] truncate">
-                  {isSuperAdmin ? 'Super Admin' : 'Active Protection'}
+                  {isSuperAdmin ? 'Super Admin' : isOrganization ? 'Organization Admin' : isParent ? 'Parent / Guardian' : 'Active Protection'}
                 </p>
               </div>
             </Link>
@@ -362,27 +362,26 @@ export const DesktopSidebar = () => {
         </div>
       </aside>
 
-      {/* 2. MOBILE SUPERADMIN FLOATING TOGGLE BUTTON & SLIDE-OVER DRAWER */}
+      {/* 2. MOBILE SUPERADMIN FLOATING TOGGLE BUTTON */}
       {isSuperAdmin && (
-        <>
-          {/* MOBILE SUPERADMIN BOTTOM DOCK BAR */}
-          <div className="lg:hidden fixed bottom-0 left-0 right-0 h-16 bg-white/95 backdrop-blur-2xl border-t-2 border-[#FFCCE1] z-[80] flex items-center justify-center shadow-[0_-4px_25px_rgba(42,8,38,0.12)]">
-            <button
-              type="button"
-              onClick={() => setMobileOpen(true)}
-              className="bg-gradient-to-r from-[#2A0826] via-[#4A154B] to-[#2A0826] text-white px-6 py-3 rounded-full shadow-lg border-2 border-amber-400/60 flex items-center space-x-2.5 active:scale-95 transition-all cursor-pointer hover:border-amber-300 font-sans shrink-0 whitespace-nowrap"
-              aria-label="Open SuperAdmin Menu"
-            >
-              <Command className="w-5 h-5 text-amber-300 animate-pulse shrink-0" />
-              <span className="text-xs font-black uppercase tracking-wider text-amber-300">
-                ADMIN MENU
-              </span>
-              <span className="w-2.5 h-2.5 rounded-full bg-[#FF2A6D] animate-ping ml-0.5 shrink-0" />
-            </button>
-          </div>
+        <div className="lg:hidden fixed bottom-0 left-0 right-0 h-16 bg-white/95 backdrop-blur-2xl border-t-2 border-[#FFCCE1] z-[80] flex items-center justify-center shadow-[0_-4px_25px_rgba(42,8,38,0.12)]">
+          <button
+            type="button"
+            onClick={() => setMobileOpen(true)}
+            className="bg-gradient-to-r from-[#2A0826] via-[#4A154B] to-[#2A0826] text-white px-6 py-3 rounded-full shadow-lg border-2 border-amber-400/60 flex items-center space-x-2.5 active:scale-95 transition-all cursor-pointer hover:border-amber-300 font-sans shrink-0 whitespace-nowrap"
+            aria-label="Open SuperAdmin Menu"
+          >
+            <Command className="w-5 h-5 text-amber-300 animate-pulse shrink-0" />
+            <span className="text-xs font-black uppercase tracking-wider text-amber-300">
+              ADMIN MENU
+            </span>
+            <span className="w-2.5 h-2.5 rounded-full bg-[#FF2A6D] animate-ping ml-0.5 shrink-0" />
+          </button>
+        </div>
+      )}
 
-          {/* MOBILE SIDEBAR DRAWER OVERLAY */}
-          {mobileOpen && (
+      {/* 3. MOBILE SIDEBAR DRAWER OVERLAY (FOR ALL USERS) */}
+      {mobileOpen && (
             <div className="lg:hidden fixed inset-0 z-[100] flex font-sans">
               {/* Dark Glass Backdrop */}
               <div
@@ -405,7 +404,11 @@ export const DesktopSidebar = () => {
                         Sakhi Suraksha
                       </h2>
                       <p className="text-[9px] font-black text-[#FF2A6D] tracking-widest uppercase mt-0.5">
-                        SuperAdmin Mobile
+                        {isParent
+                          ? 'Parental Command'
+                          : isOrganization
+                            ? 'Organization Portal'
+                            : '24/7 Safety Command'}
                       </p>
                     </div>
                   </Link>
@@ -421,21 +424,23 @@ export const DesktopSidebar = () => {
                 </div>
 
                 {/* ACTIVE EMERGENCY SOS NOTICE */}
-                {activeSession && (
+                {activeSession && !isParent && !isOrganization && (
                   <div className="mx-4 mt-4 bg-gradient-to-r from-[#FF2A6D] to-[#E01A4F] text-white text-xs font-black p-3.5 rounded-2xl flex items-center space-x-3 shadow-md border border-white/30 animate-pulse">
                     <AlertTriangle className="w-4 h-4 shrink-0 animate-bounce" />
                     <span>SOS ACTIVE — LIVE MAP SHARING</span>
                   </div>
                 )}
 
-                {/* SUPERADMIN TABS NAVIGATION LIST */}
+                {/* DYNAMIC NAVIGATION LIST */}
                 <nav className="flex-1 px-4 py-5 space-y-2.5 overflow-y-auto scrollbar-none">
-                  <div className="flex items-center space-x-2 px-2 pb-1 text-[11px] font-black text-[#FF2A6D] uppercase tracking-wider">
-                    <Command className="w-4 h-4 text-[#FF2A6D]" />
-                    <span>SuperAdmin Command</span>
-                  </div>
+                  {isSuperAdmin && (
+                    <div className="flex items-center space-x-2 px-2 pb-1 text-[11px] font-black text-[#FF2A6D] uppercase tracking-wider">
+                      <Command className="w-4 h-4 text-[#FF2A6D]" />
+                      <span>SuperAdmin Command</span>
+                    </div>
+                  )}
 
-                  {adminNavItems.map((item) => {
+                  {activeNavItems.map((item) => {
                     const Icon = item.icon;
                     const isActive = pathname === item.path;
 
@@ -475,14 +480,24 @@ export const DesktopSidebar = () => {
 
                 {/* FOOTER ACTION BUTTONS & USER CARD */}
                 <div className="p-4 border-t border-[#FFCCE1]/60 bg-gradient-to-b from-white to-[#FFF0F3]/80 space-y-3">
-                  <Link
-                    href="/admin?tab=overview"
-                    onClick={() => setMobileOpen(false)}
-                    className="flex items-center justify-center space-x-2.5 w-full bg-gradient-to-r from-[#FF5C8A] via-[#FF2A6D] to-[#E01A4F] text-white font-black px-4 py-3 rounded-2xl text-xs shadow-md uppercase tracking-wider border border-white/30"
-                  >
-                    <AlertTriangle className="w-4 h-4 animate-pulse" />
-                    <span>EMERGENCY COMMAND</span>
-                  </Link>
+                  {!isParent && !isOrganization && (
+                    <Link
+                      href={
+                        isSuperAdmin ? '/admin?tab=overview' : activeSession ? '/active-sos' : '/dashboard'
+                      }
+                      onClick={() => setMobileOpen(false)}
+                      className="flex items-center justify-center space-x-2.5 w-full bg-gradient-to-r from-[#FF5C8A] via-[#FF2A6D] to-[#E01A4F] text-white font-black px-4 py-3 rounded-2xl text-xs shadow-md uppercase tracking-wider border border-white/30"
+                    >
+                      <AlertTriangle className="w-4 h-4 animate-pulse" />
+                      <span>
+                        {isSuperAdmin
+                          ? '🚨 EMERGENCY COMMAND'
+                          : activeSession
+                            ? '🚨 VIEW SOS STATUS'
+                            : 'EMERGENCY SOS'}
+                      </span>
+                    </Link>
+                  )}
 
                   {/* USER CARD */}
                   <div className="bg-white border border-[#FFCCE1] p-3 rounded-2xl flex items-center justify-between shadow-xs">
@@ -506,7 +521,9 @@ export const DesktopSidebar = () => {
                         <p className="font-black text-xs text-[#2A0826] group-hover:text-[#FF2A6D] transition-colors truncate">
                           {displayName}
                         </p>
-                        <p className="text-[10px] font-bold text-[#FF2A6D] truncate">Super Admin</p>
+                        <p className="text-[10px] font-bold text-[#FF2A6D] truncate">
+                          {isSuperAdmin ? 'Super Admin' : isOrganization ? 'Organization Admin' : isParent ? 'Parent / Guardian' : 'Active Protection'}
+                        </p>
                       </div>
                     </Link>
 
@@ -526,8 +543,6 @@ export const DesktopSidebar = () => {
               </div>
             </div>
           )}
-        </>
-      )}
     </>
   );
 };

@@ -12,8 +12,14 @@ export default function HelpScreen({ navigation }) {
   };
 
   const handleCallSupport = () => {
-    Linking.openURL('tel:+18001234567').catch(() => {
+    Linking.openURL('tel:8237999101').catch(() => {
       Alert.alert('Error', 'Could not open dialer.');
+    });
+  };
+
+  const handleWhatsappSupport = () => {
+    Linking.openURL('https://wa.me/918237999101').catch(() => {
+      Alert.alert('Error', 'Could not open WhatsApp.');
     });
   };
 
@@ -33,11 +39,33 @@ export default function HelpScreen({ navigation }) {
           <Ionicons name="chatbubbles-outline" size={48} color={COLORS.primary} style={{ marginBottom: 12 }} />
           <Text style={styles.title}>How can we help you?</Text>
           <Text style={styles.description}>
-            If you have any questions or run into issues with the app, our support team is available 24/7.
+            Contact us for plan upgrades, account assistance, or emergency support.
           </Text>
         </View>
 
         <View style={styles.contactContainer}>
+          <TouchableOpacity style={styles.contactCard} onPress={handleCallSupport} activeOpacity={0.8}>
+            <View style={[styles.iconWrap, { backgroundColor: '#FCE7F3' }]}>
+              <Ionicons name="call" size={24} color={COLORS.primary} />
+            </View>
+            <View style={styles.contactTextWrap}>
+              <Text style={styles.contactTitle}>Call / Upgrade Plan</Text>
+              <Text style={styles.contactDesc}>+91 8237999101</Text>
+            </View>
+            <Ionicons name="chevron-forward" size={20} color={COLORS.textMuted} />
+          </TouchableOpacity>
+
+          <TouchableOpacity style={styles.contactCard} onPress={handleWhatsappSupport} activeOpacity={0.8}>
+            <View style={[styles.iconWrap, { backgroundColor: '#DCFCE7' }]}>
+              <Ionicons name="logo-whatsapp" size={24} color="#16A34A" />
+            </View>
+            <View style={styles.contactTextWrap}>
+              <Text style={styles.contactTitle}>WhatsApp Support</Text>
+              <Text style={styles.contactDesc}>Message 8237999101 directly</Text>
+            </View>
+            <Ionicons name="chevron-forward" size={20} color={COLORS.textMuted} />
+          </TouchableOpacity>
+
           <TouchableOpacity style={styles.contactCard} onPress={handleEmailSupport} activeOpacity={0.8}>
             <View style={[styles.iconWrap, { backgroundColor: '#DBEAFE' }]}>
               <Ionicons name="mail" size={24} color="#2563EB" />
@@ -45,17 +73,6 @@ export default function HelpScreen({ navigation }) {
             <View style={styles.contactTextWrap}>
               <Text style={styles.contactTitle}>Email Us</Text>
               <Text style={styles.contactDesc}>support@sakhisuraksha.com</Text>
-            </View>
-            <Ionicons name="chevron-forward" size={20} color={COLORS.textMuted} />
-          </TouchableOpacity>
-
-          <TouchableOpacity style={styles.contactCard} onPress={handleCallSupport} activeOpacity={0.8}>
-            <View style={[styles.iconWrap, { backgroundColor: '#DCFCE7' }]}>
-              <Ionicons name="call" size={24} color="#16A34A" />
-            </View>
-            <View style={styles.contactTextWrap}>
-              <Text style={styles.contactTitle}>Call Support</Text>
-              <Text style={styles.contactDesc}>1-800-123-4567</Text>
             </View>
             <Ionicons name="chevron-forward" size={20} color={COLORS.textMuted} />
           </TouchableOpacity>

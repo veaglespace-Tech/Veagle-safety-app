@@ -18,7 +18,7 @@ export default function SOSHeroButton() {
   const { activeSession, isTriggering, isResolving } = useSelector((state) => state.sos);
   
   const [holding, setHolding] = useState(false);
-  const [countdown, setCountdown] = useState(2);
+  const [countdown, setCountdown] = useState(3);
   const [isSilent, setIsSilent] = useState(false);
   
   const prevActiveSession = useRef(null);
@@ -54,7 +54,7 @@ export default function SOSHeroButton() {
   
   const holdAnimRef = useRef(null);
 
-  const HOLD_DURATION = 2000;
+  const HOLD_DURATION = 3000;
   
   // Progress stroke
   const radius = 100;
@@ -99,7 +99,7 @@ export default function SOSHeroButton() {
     }
     if (isTriggering) return;
     setHolding(true);
-    setCountdown(2);
+    setCountdown(3);
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy);
     Animated.spring(scaleAnim, { toValue: 0.95, useNativeDriver: true }).start();
 
@@ -210,7 +210,7 @@ export default function SOSHeroButton() {
               <View style={[styles.badge, (holding || isTriggering || isResolving) && styles.badgeHolding]}>
                 <View style={[styles.badgeDot, (holding || isTriggering || isResolving) && { backgroundColor: '#FFD700' }]} />
                 <Text style={styles.badgeText}>
-                  {isResolving ? 'STOPPING...' : holding ? 'DISPATCHING...' : isTriggering ? 'CONNECTING...' : activeSession ? 'TAP TO RESOLVE' : 'HOLD 2 SECS'}
+                  {isResolving ? 'STOPPING...' : holding ? 'DISPATCHING...' : isTriggering ? 'CONNECTING...' : activeSession ? 'TAP TO RESOLVE' : 'HOLD 3 SECS'}
                 </Text>
               </View>
             </LinearGradient>
@@ -221,7 +221,7 @@ export default function SOSHeroButton() {
       <View style={styles.silentToggleWrap}>
         <View style={styles.infoBox}>
           <Ionicons name="radio" size={14} color="#FF2A6D" />
-          <Text style={styles.infoBoxText}>Press & hold for 2 seconds to broadcast GPS location</Text>
+          <Text style={styles.infoBoxText}>Press & hold for 3 seconds to broadcast GPS location</Text>
         </View>
         <TouchableOpacity 
           style={[styles.silentToggle, isSilent ? styles.silentToggleOn : styles.silentToggleOff]}
@@ -288,9 +288,16 @@ const styles = StyleSheet.create({
     fontWeight: '900',
     color: '#FFF',
     letterSpacing: 2,
-    textShadowColor: 'rgba(0,0,0,0.3)',
-    textShadowOffset: { width: 0, height: 2 },
-    textShadowRadius: 4,
+    ...Platform.select({
+      web: {
+        textShadow: '0 2px 4px rgba(0,0,0,0.3)',
+      },
+      default: {
+        textShadowColor: 'rgba(0,0,0,0.3)',
+        textShadowOffset: { width: 0, height: 2 },
+        textShadowRadius: 4,
+      },
+    }),
   },
   badge: {
     flexDirection: 'row',
