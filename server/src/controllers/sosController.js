@@ -284,6 +284,8 @@ export const updateSosLocation = async (req, res) => {
             parentEmail: true,
             emergencyContactPhone: true,
             trustedContacts: { select: { email: true, phone: true } },
+            // Include org admin so we can push location to org dashboard too
+            organization: { select: { email: true, phone: true } },
           },
         },
       },
@@ -377,7 +379,19 @@ export const updateSosLocation = async (req, res) => {
         });
       }
 
-      // Emit to each parent/guardian room
+      // Add organization admin rooms — so org dashboard live map updates in real-time
+      if (session?.user?.organization?.email) {
+        targetRooms.add(`user:${session.user.organization.email.trim().toLowerCase()}`);
+      }
+      if (session?.user?.organization?.phone) {
+        const cleanOrgPhone = session.user.organization.phone.replace(/\D/g, '');
+        if (cleanOrgPhone) {
+          targetRooms.add(`user:${cleanOrgPhone}`);
+          if (cleanOrgPhone.length >= 10) targetRooms.add(`user:${cleanOrgPhone.slice(-10)}`);
+        }
+      }
+
+      // Emit to each parent/guardian/org-admin room
       targetRooms.forEach((roomName) => {
         io.to(roomName).emit('SOS_LOCATION_UPDATE', payload);
       });

@@ -113,13 +113,17 @@ export default function OrganizationDashboardScreen({ navigation }) {
     socket.on('connect', () => {
       console.log('[OrgDashboard] Socket connected:', socket.id);
       if (user) {
-        // Register this org admin so the server can push SOS events for their members
+        const cleanPhone = user.phone ? user.phone.replace(/\D/g, '') : null;
+        // Register — server auto-joins user:email and user:phone rooms
         socket.emit('register-user', {
           email: user.email?.trim().toLowerCase(),
+          phone: cleanPhone,
           role:  user.role,
         });
-        if (user.email) socket.emit('join-room', `org:${user.email.trim().toLowerCase()}`);
-        if (user.organizationId) socket.emit('join-room', `org:${user.organizationId}`);
+        // Explicitly join our own email room so we receive SOS_ALARM_BROADCAST
+        // (server broadcasts to user:${org.email} when a member triggers SOS)
+        if (user.email) socket.emit('join-room', `user:${user.email.trim().toLowerCase()}`);
+        if (cleanPhone) socket.emit('join-room', `user:${cleanPhone}`);
       }
     });
 

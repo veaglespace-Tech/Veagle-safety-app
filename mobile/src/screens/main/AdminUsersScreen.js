@@ -194,6 +194,77 @@ export default function AdminUsersScreen() {
     }
   };
 
+  const renderUserCardTop = (u, roleBadge) => (
+    <View style={styles.userCardTop}>
+      <View style={styles.avatarCircle}>
+        <Text style={styles.avatarText}>
+          {u.fullName ? u.fullName.charAt(0).toUpperCase() : 'U'}
+        </Text>
+      </View>
+      <View style={{ flex: 1 }}>
+        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
+          <Text style={styles.userName}>{u.fullName}</Text>
+          <View style={[styles.roleBadge, { backgroundColor: roleBadge.bg }]}>
+            <Text style={[styles.roleBadgeText, { color: roleBadge.text }]}>{roleBadge.label}</Text>
+          </View>
+        </View>
+        <Text style={[styles.userContactText, { marginTop: 4 }]}>
+          {`\u{1F4DE} ${u.phone || 'No mobile'} \u2022 \u2709\uFE0F ${u.email}`}
+        </Text>
+      </View>
+    </View>
+  );
+
+  const renderUserStatusRow = (u, isSubActive) => (
+    <View style={styles.statusRow}>
+      <View style={styles.statusItem}>
+        <Text style={styles.statusLabel}>PROTECTION PLAN</Text>
+        <View style={[styles.subStatusBadge, isSubActive ? styles.subActive : styles.subInactive]}>
+          <Ionicons
+            name={isSubActive ? 'shield-checkmark' : 'shield-outline'}
+            size={11}
+            color={isSubActive ? '#16A34A' : '#DC2626'}
+          />
+          <Text style={[styles.subStatusText, isSubActive ? { color: '#16A34A' } : { color: '#DC2626' }]}>
+            {isSubActive ? 'ACTIVE PROTECTION' : 'FREE / EXPIRED'}
+          </Text>
+        </View>
+      </View>
+      {u.city ? (
+        <View style={styles.statusItem}>
+          <Text style={styles.statusLabel}>LOCATION</Text>
+          <Text style={styles.statusValue}>{u.city}</Text>
+        </View>
+      ) : null}
+    </View>
+  );
+
+  const renderUserActions = (u, isSubActive) => (
+    <View style={styles.userActionsRow}>
+      <TouchableOpacity style={styles.actionBtnGrant} onPress={() => handleGrantFreePlan(u)}>
+        <Ionicons name="sparkles" size={13} color="#9333EA" />
+        <Text style={styles.actionBtnGrantText}>GRANT 1-YR FREE</Text>
+      </TouchableOpacity>
+      <TouchableOpacity style={styles.actionBtnRole} onPress={() => setSelectedUserForRole(u)}>
+        <Ionicons name="swap-horizontal" size={13} color={COLORS.textDark} />
+        <Text style={styles.actionBtnRoleText}>CHANGE ROLE</Text>
+      </TouchableOpacity>
+      <TouchableOpacity
+        style={[styles.actionBtnBlock, u.isBlocked && styles.actionBtnUnblock]}
+        onPress={() => handleToggleBlock(u)}
+      >
+        <Ionicons
+          name={u.isBlocked ? 'lock-open' : 'lock-closed'}
+          size={13}
+          color={u.isBlocked ? '#16A34A' : '#DC2626'}
+        />
+        <Text style={[styles.actionBtnBlockText, u.isBlocked ? { color: '#16A34A' } : { color: '#DC2626' }]}>
+          {u.isBlocked ? 'UNBLOCK' : 'BLOCK'}
+        </Text>
+      </TouchableOpacity>
+    </View>
+  );
+
   return (
     <SafeAreaView style={styles.safe}>
       {/* HEADER */}
@@ -291,110 +362,10 @@ export default function AdminUsersScreen() {
               const isSubActive = u.subscriptionStatus === 'ACTIVE';
 
               return (
-                <View key={u.id} style={styles.userCard}>
-                  {/* Top: Avatar + Name + Role */}
-                  <View style={styles.userCardTop}>
-                    <View style={styles.avatarCircle}>
-                      <Text style={styles.avatarText}>
-                        {u.fullName ? u.fullName.charAt(0).toUpperCase() : 'U'}
-                      </Text>
-                    </View>
-
-                    <View style={{ flex: 1 }}>
-                      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
-                        <Text style={styles.userName}>{u.fullName}</Text>
-                        <View style={[styles.roleBadge, { backgroundColor: roleBadge.bg }]}>
-                          <Text style={[styles.roleBadgeText, { color: roleBadge.text }]}>
-                            {roleBadge.label}
-                          </Text>
-                        </View>
-                      </View>
-                      <Text style={styles.userContactText}>
-                        📞 {u.phone || 'No mobile'} • ✉️ {u.email}
-                      </Text>
-                    </View>
-                  </View>
-
-                  {/* Middle Status Info */}
-                  <View style={styles.statusRow}>
-                    <View style={styles.statusItem}>
-                      <Text style={styles.statusLabel}>PROTECTION PLAN</Text>
-                      <View
-                        style={[
-                          styles.subStatusBadge,
-                          isSubActive ? styles.subActive : styles.subInactive,
-                        ]}
-                      >
-                        <Ionicons
-                          name={isSubActive ? 'shield-checkmark' : 'shield-outline'}
-                          size={11}
-                          color={isSubActive ? '#16A34A' : '#DC2626'}
-                        />
-                        <Text
-                          style={[
-                            styles.subStatusText,
-                            isSubActive ? { color: '#16A34A' } : { color: '#DC2626' },
-                          ]}
-                        >
-                          {isSubActive ? 'ACTIVE PROTECTION' : 'FREE / EXPIRED'}
-                        </Text>
-                      </View>
-                    </View>
-
-                    {u.city && (
-                      <View style={styles.statusItem}>
-                        <Text style={styles.statusLabel}>LOCATION</Text>
-                        <Text style={styles.statusValue}>{u.city}</Text>
-                      </View>
-                    )}
-                  </View>
-
-                  {/* Bottom Action Buttons */}
-                  <View style={styles.userActionsRow}>
-                    {/* Grant Subscription */}
-                    <TouchableOpacity
-                      style={styles.actionBtnGrant}
-                      onPress={() => handleGrantFreePlan(u)}
-                    >
-                      <Ionicons name="sparkles" size={13} color="#9333EA" />
-                      <Text style={styles.actionBtnGrantText}>GRANT 1-YR FREE</Text>
-                    </TouchableOpacity>
-
-                    {/* Change Role */}
-                    <TouchableOpacity
-                      style={styles.actionBtnRole}
-                      onPress={() => setSelectedUserForRole(u)}
-                    >
-                      <Ionicons name="swap-horizontal" size={13} color={COLORS.textDark} />
-                      <Text style={styles.actionBtnRoleText}>CHANGE ROLE</Text>
-                    </TouchableOpacity>
-
-                    {/* Block / Unblock */}
-                    <TouchableOpacity
-                      style={[
-                        styles.actionBtnBlock,
-                        u.isBlocked && styles.actionBtnUnblock,
-                      ]}
-                      onPress={() => handleToggleBlock(u)}
-                    >
-                      <Ionicons
-                        name={u.isBlocked ? 'lock-open' : 'lock-closed'}
-                        size={13}
-                        color={u.isBlocked ? '#16A34A' : '#DC2626'}
-                      />
-                      <Text
-                        style={[
-                          styles.actionBtnBlockText,
-                          u.isBlocked ? { color: '#16A34A' } : { color: '#DC2626' },
-                        ]}
-                      >
-                        {u.isBlocked ? 'UNBLOCK' : 'BLOCK'}
-                      </Text>
-                    </TouchableOpacity>
-                  </View>
-                </View>
+                <View key={u.id} style={styles.userCard}>{renderUserCardTop(u, roleBadge)}{renderUserStatusRow(u, isSubActive)}{renderUserActions(u, isSubActive)}</View>
               );
             })}
+
           </View>
         )}
       </ScrollView>

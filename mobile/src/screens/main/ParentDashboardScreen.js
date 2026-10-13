@@ -125,7 +125,8 @@ export default function ParentDashboardScreen({ navigation }) {
     const socket = io(serverUrl, {
       path: '/api/socket.io',
       transports: ['websocket', 'polling'],
-      reconnectionAttempts: 5,
+      reconnectionAttempts: 10,
+      reconnectionDelay: 2000,
       timeout: 10000,
     });
     socketRef.current = socket;
@@ -211,7 +212,7 @@ export default function ParentDashboardScreen({ navigation }) {
 
     return () => {
       clearInterval(interval);
-      stopEmergencySiren();
+      stopEmergencySiren().catch(() => {});
       if (socket) socket.disconnect();
     };
   }, [fetchData, user]);
@@ -225,7 +226,7 @@ export default function ParentDashboardScreen({ navigation }) {
     if (hasUnmutedSos) {
       playEmergencySiren().catch(() => {});
     } else {
-      stopEmergencySiren();
+      stopEmergencySiren().catch(() => {});
     }
   }, [childrenList, mutedSosIds]);
 
