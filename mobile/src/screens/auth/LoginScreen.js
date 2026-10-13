@@ -1,50 +1,236 @@
-import React, { useState } from 'react';
+import React, { useState, useCallback, memo } from 'react';
 import {
-  View, Text, StyleSheet, TextInput, TouchableOpacity,
-  ScrollView, KeyboardAvoidingView, Platform, Alert, ActivityIndicator, Image, Linking,
+  View,
+  Text,
+  StyleSheet,
+  TextInput,
+  TouchableOpacity,
+  ScrollView,
+  KeyboardAvoidingView,
+  Platform,
+  Alert,
+  ActivityIndicator,
+  Image,
+  Linking,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useDispatch, useSelector } from 'react-redux';
-import { loginUser, clearAuthMessages } from '../../redux/slices/authSlice';
+import { LinearGradient } from 'expo-linear-gradient';
+
+import { loginUser, clearAuthMessages, isSuperAdminError } from '../../redux/slices/authSlice';
 import { COLORS } from '../../theme/colors';
+
+// ---------------------------------------------------------------------------
+// Constants
+// ---------------------------------------------------------------------------
+
+const SUPPORT_PHONE    = '8237999101';
+const SUPPORT_WHATSAPP = `https://wa.me/91${SUPPORT_PHONE}`;
+
+/**
+ * All user roles that can log in through this single screen.
+ * This is shown as a visual info strip — it is NOT a selector.
+ * The backend determines the actual role from the credentials.
+ */
+const ALL_ROLES = [
+  { icon: 'person',          label: 'User',         color: '#3B82F6' },
+  { icon: 'heart',           label: 'Parent',       color: '#10B981' },
+  { icon: 'business',        label: 'Organisation', color: '#8B5CF6' },
+  { icon: 'shield-checkmark', label: 'Super Admin', color: '#FF2A6D' },
+];
+
+// ---------------------------------------------------------------------------
+// Sub-components
+// ---------------------------------------------------------------------------
+
+/** Labelled input with left icon and optional right element */
+const InputField = memo(function InputField({ label, icon, right, inputProps }) {
+  return (
+    <View style={styles.fieldWrap}>
+      <Text style={styles.label}>{label}</Text>
+      <View style={styles.inputRow}>
+        <Ionicons name={icon} size={18} color={COLORS.textMuted} style={styles.inputIcon} />
+        <TextInput
+          style={styles.input}
+          placeholderTextColor={COLORS.primaryBorder}
+          {...inputProps}
+        />
+        {right}
+      </View>
+    </View>
+  );
+});
+
+/** Error banner — only rendered when there is an error */
+const ErrorBanner = memo(function ErrorBanner({ message }) {
+  if (!message) return null;
+  return (
+    <View style={styles.errorBox}>
+      <Ionicons name="alert-circle" size={16} color={COLORS.primary} />
+      <Text style={styles.errorText}>{message}</Text>
+    </View>
+  );
+});
+
+/**
+ * "All roles use this screen" strip.
+ * Makes it immediately clear that every type of account — User, Parent,
+ * Organisation, or Super Admin — logs in right here.
+ */
+const RoleStrip = memo(function RoleStrip() {
+  return (
+    <View style={styles.roleStripWrap}>
+      <Text style={styles.roleStripHeading}>One Login for All Accounts</Text>
+      <View style={styles.roleRow}>
+        {ALL_ROLES.map(({ icon, label, color }) => (
+          <View key={label} style={styles.roleChip}>
+            <View style={[styles.roleChipIcon, { backgroundColor: color + '18' }]}>
+              <Ionicons name={icon} size={14} color={color} />
+            </View>
+            <Text style={[styles.roleChipLabel, { color }]}>{label}</Text>
+          </View>
+        ))}
+      </View>
+      <Text style={styles.roleStripNote}>
+        Enter your credentials — we'll take you to the right dashboard automatically.
+      </Text>
+    </View>
+  );
+});
+
+/** Support CTA */
+const SupportCard = memo(function SupportCard() {
+  return (
+    <View style={styles.supportCard}>
+      <Ionicons name="headset-outline" size={22} color={COLORS.primary} style={styles.supportIcon} />
+      <Text style={styles.supportTitle}>Need an Account or Plan Upgrade?</Text>
+      <Text style={styles.supportSub}>
+        Self-registration is disabled. Contact support to activate your account or upgrade your safety plan.
+      </Text>
+      <View style={styles.supportBtnsRow}>
+        <TouchableOpacity
+          style={styles.callBtn}
+          onPress={() => Linking.openURL(`tel:${SUPPORT_PHONE}`)}
+          activeOpacity={0.85}
+        >
+          <Ionicons name="call" size={15} color="#fff" />
+          <Text style={styles.supportBtnText}>Call Us</Text>
+        </TouchableOpacity>
+        <TouchableOpacity
+          style={styles.whatsappBtn}
+          onPress={() => Linking.openURL(SUPPORT_WHATSAPP)}
+          activeOpacity={0.85}
+        >
+          <Ionicons name="logo-whatsapp" size={15} color="#fff" />
+          <Text style={styles.supportBtnText}>WhatsApp</Text>
+        </TouchableOpacity>
+      </View>
+    </View>
+  );
+});
+
+// ---------------------------------------------------------------------------
+// Main Screen
+// ---------------------------------------------------------------------------
 
 export default function LoginScreen({ navigation }) {
   const dispatch = useDispatch();
-  const { isLoading, error, showOtpModal } = useSelector((state) => state.auth);
-  const [email, setEmail] = useState('');
+  const { isLoading, error } = useSelector((state) => state.auth);
+
+  const [email,    setEmail]    = useState('');
   const [password, setPassword] = useState('');
   const [showPass, setShowPass] = useState(false);
 
-  const handleLogin = async () => {
-    if (!email || !password) {
-      Alert.alert('Required', 'Please enter your email and password.');
-      return;
+  // ── Validation ────────────────────────────────────────────────────────────
+
+  const validate = useCallback(() => {
+    if (!email.trim()) {
+      Alert.alert('Email Required', 'Please enter your email address.');
+      return false;
     }
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(email.trim())) {
+      Alert.alert('Invalid Email', 'Please enter a valid email address.');
+      return false;
+    }
+    if (!password) {
+      Alert.alert('Password Required', 'Please enter your password.');
+      return false;
+    }
+    return true;
+  }, [email, password]);
+
+  // ── OTP redirect helper ───────────────────────────────────────────────────
+
+  const handleOtpRedirect = useCallback(
+    (payload) => {
+      if (payload?.requiresVerification || payload?.pendingToken) {
+        navigation.navigate('OTP', { email: email.trim(), mode: 'login' });
+        return true;
+      }
+      return false;
+    },
+    [email, navigation],
+  );
+
+  // ── Core login logic ──────────────────────────────────────────────────────
+  //
+  // Flow:
+  //   1. Try a normal login → if fulfilled, redirect (OTP or Main).
+  //   2. If the backend says it's a super-admin account, silently retry
+  //      with isAdminLogin: true — same screen, seamless UX.
+  //   3. Any other failure → Redux error state shows the ErrorBanner.
+  //
+  // ALL roles (User, Parent, Organisation, Super Admin) go through this
+  // single function. The backend decides the role; the RoleBasedNavigator
+  // then shows the correct dashboard automatically.
+  // ─────────────────────────────────────────────────────────────────────────
+
+  const handleLogin = useCallback(async () => {
+    if (!validate()) return;
+
     dispatch(clearAuthMessages());
-    const result = await dispatch(loginUser({ email, password }));
+
+    // Step 1 — Standard login
+    const result = await dispatch(loginUser({ email: email.trim(), password }));
+
     if (loginUser.fulfilled.match(result)) {
-      if (result.payload?.requiresVerification || result.payload?.pendingToken) {
-        navigation.navigate('OTP', { email, mode: 'login' });
-      }
-      // If token comes directly, AppNavigator will switch to Main
-    } else if (result.payload?.error === 'SuperAdmin access is restricted. Please use the dedicated admin login URL.') {
-      // Auto-retry with admin flag for SuperAdmin
-      const adminResult = await dispatch(loginUser({ email, password, isAdminLogin: true }));
-      if (loginUser.fulfilled.match(adminResult)) {
-        if (adminResult.payload?.requiresVerification || adminResult.payload?.pendingToken) {
-          navigation.navigate('OTP', { email, mode: 'login' });
-        }
-      }
+      handleOtpRedirect(result.payload);
+      return; // AppNavigator switches to the correct role dashboard
     }
-  };
+
+    // Step 2 — Super Admin silent retry
+    const rejectedError = result.payload?.error || '';
+    if (isSuperAdminError(rejectedError)) {
+      dispatch(clearAuthMessages());
+      const adminResult = await dispatch(
+        loginUser({ email: email.trim(), password, isAdminLogin: true }),
+      );
+      if (loginUser.fulfilled.match(adminResult)) {
+        handleOtpRedirect(adminResult.payload);
+      }
+      // On second failure, Redux error state is shown via ErrorBanner
+    }
+  }, [validate, dispatch, email, password, handleOtpRedirect]);
+
+  const togglePassword = useCallback(() => setShowPass((v) => !v), []);
+
+  // ── Render ────────────────────────────────────────────────────────────────
 
   return (
     <SafeAreaView style={styles.safe}>
-      <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={{ flex: 1 }}>
-        <ScrollView contentContainerStyle={styles.scroll} showsVerticalScrollIndicator={false}>
+      <KeyboardAvoidingView
+        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+        style={styles.flex}
+      >
+        <ScrollView
+          contentContainerStyle={styles.scroll}
+          showsVerticalScrollIndicator={false}
+          keyboardShouldPersistTaps="handled"
+        >
 
-          {/* HEADER */}
+          {/* ── Header ── */}
           <View style={styles.header}>
             <View style={styles.logoWrap}>
               <Image
@@ -57,91 +243,98 @@ export default function LoginScreen({ navigation }) {
             <Text style={styles.subtitle}>Sign in to your SakhiSuraksha account</Text>
           </View>
 
-          {/* ERROR */}
-          {error && (
-            <View style={styles.errorBox}>
-              <Ionicons name="alert-circle" size={16} color={COLORS.primary} />
-              <Text style={styles.errorText}>{error}</Text>
-            </View>
-          )}
+          {/* ── Role Strip ── */}
+          <RoleStrip />
 
-          {/* FORM */}
+          {/* ── Error Banner ── */}
+          <ErrorBanner message={error} />
+
+          {/* ── Form ── */}
           <View style={styles.form}>
-            <View style={styles.fieldWrap}>
-              <Text style={styles.label}>Email Address</Text>
-              <View style={styles.inputRow}>
-                <Ionicons name="mail-outline" size={18} color={COLORS.textMuted} style={styles.inputIcon} />
-                <TextInput
-                  style={styles.input}
-                  placeholder="your@email.com"
-                  placeholderTextColor={COLORS.primaryBorder}
-                  keyboardType="email-address"
-                  autoCapitalize="none"
-                  value={email}
-                  onChangeText={setEmail}
-                />
-              </View>
-            </View>
 
-            <View style={styles.fieldWrap}>
-              <Text style={styles.label}>Password</Text>
-              <View style={styles.inputRow}>
-                <Ionicons name="lock-closed-outline" size={18} color={COLORS.textMuted} style={styles.inputIcon} />
-                <TextInput
-                  style={[styles.input, { flex: 1 }]}
-                  placeholder="Enter your password"
-                  placeholderTextColor={COLORS.primaryBorder}
-                  secureTextEntry={!showPass}
-                  value={password}
-                  onChangeText={setPassword}
-                />
-                <TouchableOpacity onPress={() => setShowPass(!showPass)} style={styles.eyeBtn}>
-                  <Ionicons name={showPass ? 'eye-off-outline' : 'eye-outline'} size={18} color={COLORS.textMuted} />
+            {/* Email */}
+            <InputField
+              label="Email Address"
+              icon="mail-outline"
+              inputProps={{
+                placeholder:    'your@email.com',
+                keyboardType:   'email-address',
+                autoCapitalize: 'none',
+                autoCorrect:    false,
+                returnKeyType:  'next',
+                value:          email,
+                onChangeText:   setEmail,
+              }}
+            />
+
+            {/* Password */}
+            <InputField
+              label="Password"
+              icon="lock-closed-outline"
+              inputProps={{
+                placeholder:     'Enter your password',
+                secureTextEntry: !showPass,
+                returnKeyType:   'done',
+                onSubmitEditing: handleLogin,
+                value:           password,
+                onChangeText:    setPassword,
+              }}
+              right={
+                <TouchableOpacity onPress={togglePassword} style={styles.eyeBtn} hitSlop={8}>
+                  <Ionicons
+                    name={showPass ? 'eye-off-outline' : 'eye-outline'}
+                    size={18}
+                    color={COLORS.textMuted}
+                  />
                 </TouchableOpacity>
-              </View>
-            </View>
+              }
+            />
 
-            <TouchableOpacity onPress={() => navigation.navigate('ForgotPassword')} style={styles.forgotBtn}>
+            {/* Forgot password */}
+            <TouchableOpacity
+              onPress={() => navigation.navigate('ForgotPassword')}
+              style={styles.forgotBtn}
+              hitSlop={8}
+            >
               <Text style={styles.forgotText}>Forgot Password?</Text>
             </TouchableOpacity>
 
+            {/* Sign In */}
             <TouchableOpacity
               style={[styles.loginBtn, isLoading && styles.btnDisabled]}
               onPress={handleLogin}
               disabled={isLoading}
               activeOpacity={0.85}
             >
-              {isLoading
-                ? <ActivityIndicator color="#fff" size="small" />
-                : <Text style={styles.loginBtnText}>SIGN IN</Text>
-              }
+              <LinearGradient
+                colors={['#FF5C8A', '#FF2A6D']}
+                start={{ x: 0, y: 0 }}
+                end={{ x: 1, y: 1 }}
+                style={styles.loginBtnGradient}
+              >
+                {isLoading ? (
+                  <ActivityIndicator color="#fff" size="small" />
+                ) : (
+                  <>
+                    <Ionicons name="log-in-outline" size={18} color="#fff" />
+                    <Text style={styles.loginBtnText}>SIGN IN</Text>
+                  </>
+                )}
+              </LinearGradient>
             </TouchableOpacity>
+
+            {/* Info note */}
+            <View style={styles.infoRow}>
+              <Ionicons name="information-circle-outline" size={14} color={COLORS.textMuted} />
+              <Text style={styles.infoText}>
+                Your role is detected automatically from your credentials.
+              </Text>
+            </View>
+
           </View>
 
-          <View style={styles.contactUpgradeBox}>
-            <Text style={styles.contactUpgradeTitle}>Need an Account or Plan Upgrade?</Text>
-            <Text style={styles.contactUpgradeSub}>
-              Self-registration is disabled. Please contact support to activate your account or upgrade your safety plan.
-            </Text>
-            <View style={styles.contactButtonsRow}>
-              <TouchableOpacity
-                style={styles.contactCallBtn}
-                onPress={() => Linking.openURL('tel:8237999101')}
-                activeOpacity={0.85}
-              >
-                <Ionicons name="call" size={15} color="#fff" />
-                <Text style={styles.contactBtnText}>Call: 8237999101</Text>
-              </TouchableOpacity>
-              <TouchableOpacity
-                style={styles.contactWhatsappBtn}
-                onPress={() => Linking.openURL('https://wa.me/918237999101')}
-                activeOpacity={0.85}
-              >
-                <Ionicons name="logo-whatsapp" size={15} color="#fff" />
-                <Text style={styles.contactBtnText}>WhatsApp</Text>
-              </TouchableOpacity>
-            </View>
-          </View>
+          {/* ── Support Card ── */}
+          <SupportCard />
 
         </ScrollView>
       </KeyboardAvoidingView>
@@ -149,28 +342,71 @@ export default function LoginScreen({ navigation }) {
   );
 }
 
+// ---------------------------------------------------------------------------
+// Styles
+// ---------------------------------------------------------------------------
+
 const styles = StyleSheet.create({
-  safe: { flex: 1, backgroundColor: COLORS.primaryBg },
+  // Layout
+  safe:  { flex: 1, backgroundColor: COLORS.primaryBg },
+  flex:  { flex: 1 },
   scroll: { flexGrow: 1, paddingHorizontal: 24, paddingBottom: 40 },
-  header: { alignItems: 'center', paddingTop: 32, paddingBottom: 28 },
+
+  // Header
+  header: { alignItems: 'center', paddingTop: 32, paddingBottom: 20 },
   logoWrap: {
-    width: 80, height: 80, borderRadius: 22,
-    backgroundColor: COLORS.surface, borderWidth: 2, borderColor: COLORS.primaryBorder,
-    alignItems: 'center', justifyContent: 'center', marginBottom: 20,
-    shadowColor: COLORS.primary, shadowOffset: { width: 0, height: 8 },
-    shadowOpacity: 0.2, shadowRadius: 16, elevation: 8, overflow: 'hidden',
+    width: 84, height: 84, borderRadius: 24,
+    backgroundColor: COLORS.surface,
+    borderWidth: 2, borderColor: COLORS.primaryBorder,
+    alignItems: 'center', justifyContent: 'center',
+    marginBottom: 20, overflow: 'hidden',
+    shadowColor: COLORS.primary,
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.2, shadowRadius: 16, elevation: 8,
   },
-  logoImg: { width: '100%', height: '100%', borderRadius: 20 },
-  logoEmoji: { fontSize: 38 },
-  title: { fontSize: 26, fontWeight: '900', color: COLORS.textDark, letterSpacing: -0.5, marginBottom: 6 },
+  logoImg:  { width: '100%', height: '100%' },
+  title:    { fontSize: 26, fontWeight: '900', color: COLORS.textDark, letterSpacing: -0.5, marginBottom: 6 },
   subtitle: { fontSize: 13, fontWeight: '600', color: COLORS.textMuted, textAlign: 'center' },
+
+  // Role strip
+  roleStripWrap: {
+    backgroundColor: COLORS.surface,
+    borderWidth: 1.5, borderColor: COLORS.primaryBorder,
+    borderRadius: 20, padding: 16, marginBottom: 16,
+    shadowColor: COLORS.primary,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.06, shadowRadius: 8, elevation: 2,
+  },
+  roleStripHeading: {
+    fontSize: 11, fontWeight: '900', color: COLORS.textDark,
+    textTransform: 'uppercase', letterSpacing: 0.8,
+    textAlign: 'center', marginBottom: 12,
+  },
+  roleRow: {
+    flexDirection: 'row', justifyContent: 'space-between', gap: 6, marginBottom: 10,
+  },
+  roleChip: { flex: 1, alignItems: 'center', gap: 4 },
+  roleChipIcon: {
+    width: 34, height: 34, borderRadius: 10,
+    alignItems: 'center', justifyContent: 'center',
+  },
+  roleChipLabel: { fontSize: 9, fontWeight: '800', textAlign: 'center', letterSpacing: 0.3 },
+  roleStripNote: {
+    fontSize: 10, fontWeight: '600', color: COLORS.textMuted,
+    textAlign: 'center', lineHeight: 15,
+  },
+
+  // Error banner
   errorBox: {
     flexDirection: 'row', alignItems: 'center', gap: 8,
-    backgroundColor: '#FFF0F3', borderWidth: 1.5, borderColor: COLORS.primaryBorder,
+    backgroundColor: '#FFF0F3',
+    borderWidth: 1.5, borderColor: COLORS.primaryBorder,
     borderRadius: 14, padding: 12, marginBottom: 16,
   },
   errorText: { fontSize: 12, fontWeight: '700', color: COLORS.primary, flex: 1 },
-  form: { gap: 16 },
+
+  // Form
+  form:      { gap: 16 },
   fieldWrap: {},
   label: {
     fontSize: 11, fontWeight: '800', color: COLORS.textDark,
@@ -178,92 +414,72 @@ const styles = StyleSheet.create({
   },
   inputRow: {
     flexDirection: 'row', alignItems: 'center',
-    backgroundColor: COLORS.surface, borderWidth: 1.5, borderColor: COLORS.primaryBorder,
+    backgroundColor: COLORS.surface,
+    borderWidth: 1.5, borderColor: COLORS.primaryBorder,
     borderRadius: 16, paddingHorizontal: 14, paddingVertical: 14,
-    shadowColor: COLORS.primary, shadowOffset: { width: 0, height: 2 },
+    shadowColor: COLORS.primary,
+    shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.06, shadowRadius: 6, elevation: 2,
   },
   inputIcon: { marginRight: 10 },
-  input: { flex: 1, fontSize: 14, fontWeight: '600', color: COLORS.textDark },
-  eyeBtn: { padding: 4 },
-  forgotBtn: { alignSelf: 'flex-end', marginTop: -4 },
+  input:     { flex: 1, fontSize: 14, fontWeight: '600', color: COLORS.textDark },
+  eyeBtn:    { padding: 4 },
+
+  // Forgot
+  forgotBtn:  { alignSelf: 'flex-end', marginTop: -4 },
   forgotText: { fontSize: 12, fontWeight: '800', color: COLORS.primary },
+
+  // Sign-in button
   loginBtn: {
-    backgroundColor: COLORS.primary, borderRadius: 999,
-    paddingVertical: 17, alignItems: 'center', justifyContent: 'center',
-    shadowColor: COLORS.primary, shadowOffset: { width: 0, height: 8 },
-    shadowOpacity: 0.38, shadowRadius: 20, elevation: 10, marginTop: 8,
+    borderRadius: 999, overflow: 'hidden', marginTop: 8,
+    shadowColor: COLORS.primary,
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.38, shadowRadius: 20, elevation: 10,
   },
   btnDisabled: { opacity: 0.65 },
+  loginBtnGradient: {
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'center',
+    gap: 8, paddingVertical: 17,
+  },
   loginBtnText: { fontSize: 15, fontWeight: '900', color: '#fff', letterSpacing: 1 },
-  contactUpgradeBox: {
-    marginTop: 26,
+
+  // Info note
+  infoRow: {
+    flexDirection: 'row', alignItems: 'center', gap: 6,
+    justifyContent: 'center', marginTop: -4,
+  },
+  infoText: { fontSize: 11, fontWeight: '600', color: COLORS.textMuted, flex: 1 },
+
+  // Support card
+  supportCard: {
+    marginTop: 24,
     backgroundColor: COLORS.surface,
-    borderWidth: 1.5,
-    borderColor: COLORS.primaryBorder,
-    borderRadius: 20,
-    padding: 16,
+    borderWidth: 1.5, borderColor: COLORS.primaryBorder,
+    borderRadius: 20, padding: 18,
     alignItems: 'center',
     shadowColor: COLORS.primary,
     shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.08,
-    shadowRadius: 10,
-    elevation: 3,
+    shadowOpacity: 0.08, shadowRadius: 10, elevation: 3,
   },
-  contactUpgradeTitle: {
-    fontSize: 13,
-    fontWeight: '900',
-    color: COLORS.textDark,
-    textAlign: 'center',
-    marginBottom: 4,
-  },
-  contactUpgradeSub: {
-    fontSize: 11,
-    fontWeight: '600',
-    color: COLORS.textMuted,
-    textAlign: 'center',
-    lineHeight: 16,
-    marginBottom: 12,
-  },
-  contactButtonsRow: {
-    flexDirection: 'row',
-    gap: 10,
-    width: '100%',
-  },
-  contactCallBtn: {
-    flex: 1,
-    backgroundColor: COLORS.primary,
-    borderRadius: 12,
-    paddingVertical: 11,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 6,
+  supportIcon:  { marginBottom: 8 },
+  supportTitle: { fontSize: 13, fontWeight: '900', color: COLORS.textDark, textAlign: 'center', marginBottom: 4 },
+  supportSub:   { fontSize: 11, fontWeight: '600', color: COLORS.textMuted, textAlign: 'center', lineHeight: 16, marginBottom: 14 },
+  supportBtnsRow: { flexDirection: 'row', gap: 10, width: '100%' },
+  callBtn: {
+    flex: 1, backgroundColor: COLORS.primary,
+    borderRadius: 12, paddingVertical: 11,
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6,
     shadowColor: COLORS.primary,
     shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.25,
-    shadowRadius: 8,
-    elevation: 4,
+    shadowOpacity: 0.25, shadowRadius: 8, elevation: 4,
   },
-  contactWhatsappBtn: {
-    flex: 1,
-    backgroundColor: '#25D366',
-    borderRadius: 12,
-    paddingVertical: 11,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 6,
+  whatsappBtn: {
+    flex: 1, backgroundColor: '#25D366',
+    borderRadius: 12, paddingVertical: 11,
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6,
     shadowColor: '#25D366',
     shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.25,
-    shadowRadius: 8,
-    elevation: 4,
+    shadowOpacity: 0.25, shadowRadius: 8, elevation: 4,
   },
-  contactBtnText: {
-    fontSize: 12,
-    fontWeight: '900',
-    color: '#fff',
-    letterSpacing: 0.3,
-  },
+  supportBtnText: { fontSize: 12, fontWeight: '900', color: '#fff', letterSpacing: 0.3 },
 });

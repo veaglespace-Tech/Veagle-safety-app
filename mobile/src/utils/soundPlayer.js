@@ -164,18 +164,20 @@ export const playEmergencySiren = (loop = true) => {
             }, 300);
           }
         }
-        return;
+        // Always return a Promise so callers can safely use .catch()
+        return Promise.resolve();
       }
     } catch (e) {
       console.warn('[SoundPlayer] Web Audio notice:', e);
     }
+    return Promise.resolve();
   }
 
   // 2. Native Mobile Platform (Android / iOS): Instant local bundled WAV playback (0ms delay)
-  (async () => {
+  return (async () => {
     try {
       const { createAudioPlayer, setAudioModeAsync } = await import('expo-audio');
-      
+
       if (setAudioModeAsync) {
         setAudioModeAsync({
           playsInSilentMode: true,
@@ -249,4 +251,7 @@ export const stopEmergencySiren = () => {
       }
     } catch (e) {}
   }
+
+  // Always return a resolved Promise so callers can safely chain .catch()
+  return Promise.resolve();
 };

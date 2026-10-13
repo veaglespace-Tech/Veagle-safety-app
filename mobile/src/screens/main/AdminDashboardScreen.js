@@ -121,7 +121,7 @@ export default function AdminDashboardScreen({ navigation }) {
   useEffect(() => {
     fetchOverviewData(true);
 
-    // Auto-refresh background poll every 8 seconds (matching client web)
+    // Auto-refresh background poll every 8 seconds (fallback)
     const pollInterval = setInterval(() => {
       fetchOverviewData(false);
     }, 8000);
@@ -130,14 +130,23 @@ export default function AdminDashboardScreen({ navigation }) {
     const socket = io(serverUrl, {
       path: '/api/socket.io',
       transports: ['websocket', 'polling'],
-      reconnectionAttempts: 5,
+      reconnectionAttempts: 10,
+      reconnectionDelay: 2000,
       timeout: 10000,
     });
     socketRef.current = socket;
 
     socket.on('connect', () => {
-      // Register as admin to join admin-ops room for real-time SOS broadcasts
+      console.log('[AdminDashboard] Socket connected:', socket.id);
+      // Register as Super Admin — joins the admin-ops broadcast room on the server
       socket.emit('register-user', { role: 'SUPER_ADMIN' });
+      // Explicitly join admin rooms so server-side room-targeted events reach us
+      socket.emit('join-room', 'admin-ops');
+      socket.emit('join-room', 'super-admin');
+    });
+
+    socket.on('connect_error', (err) => {
+      console.log('[AdminDashboard] Socket error:', err?.message);
     });
 
     socket.on('SOS_ALARM_BROADCAST', (data) => {
@@ -154,6 +163,9 @@ export default function AdminDashboardScreen({ navigation }) {
       setTrackingSos(null);
     });
 
+    socket.on('SOS_PERIODIC_5MIN_UPDATE', () => fetchOverviewData(false));
+    socket.on('JOURNEY_STATUS_UPDATE',     () => fetchOverviewData(false));
+
     socket.on('SOS_LOCATION_UPDATE', (data) => {
       if (!data?.sosSessionId || !data?.latitude || !data?.longitude) return;
       const incomingId = parseInt(data.sosSessionId, 10);
@@ -163,14 +175,14 @@ export default function AdminDashboardScreen({ navigation }) {
         if (prev && parseInt(prev.id, 10) === incomingId) {
           const hist = prev.locationHistory ? [...prev.locationHistory] : [];
           hist.push({
-            latitude: data.latitude,
-            longitude: data.longitude,
-            accuracy: data.accuracy,
+            latitude:   data.latitude,
+            longitude:  data.longitude,
+            accuracy:   data.accuracy,
             recordedAt: data.recordedAt,
           });
           return {
             ...prev,
-            latitude: data.latitude,
+            latitude:  data.latitude,
             longitude: data.longitude,
             locations: [{ latitude: data.latitude, longitude: data.longitude, accuracy: data.accuracy || 15 }],
             locationHistory: hist,
@@ -188,14 +200,14 @@ export default function AdminDashboardScreen({ navigation }) {
             if (parseInt(sos.id, 10) === incomingId) {
               const hist = sos.locations ? [...sos.locations] : [];
               hist.unshift({
-                latitude: data.latitude,
-                longitude: data.longitude,
-                accuracy: data.accuracy,
+                latitude:   data.latitude,
+                longitude:  data.longitude,
+                accuracy:   data.accuracy,
                 recordedAt: data.recordedAt,
               });
               return {
                 ...sos,
-                latitude: data.latitude,
+                latitude:  data.latitude,
                 longitude: data.longitude,
                 locations: hist,
               };
@@ -209,7 +221,7 @@ export default function AdminDashboardScreen({ navigation }) {
     return () => {
       clearInterval(pollInterval);
       stopEmergencySiren().catch(() => {});
-      if (socket) socket.disconnect();
+      socket.disconnect();
     };
   }, [fetchOverviewData]);
 
