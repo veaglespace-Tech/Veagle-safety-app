@@ -167,9 +167,9 @@ export default function GlobalEmergencyListener() {
   const handleOpenMap = () => {
     if (alarmData?.latitude && alarmData?.longitude) {
       const url = `https://www.google.com/maps/search/?api=1&query=${alarmData.latitude},${alarmData.longitude}`;
-      Linking.openURL(url).catch(() => {});
+      Linking.openURL(url).catch(() => { });
     } else if (alarmData?.trackingUrl) {
-      Linking.openURL(alarmData.trackingUrl).catch(() => {});
+      Linking.openURL(alarmData.trackingUrl).catch(() => { });
     }
   };
 
