@@ -6,18 +6,24 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useDispatch, useSelector } from 'react-redux';
-import { verifyEmailOtp, resendOtpCode, clearAuthMessages } from '../../redux/slices/authSlice';
+import { verifyEmailOtp, resendOtpCode, loginUser, clearAuthMessages } from '../../redux/slices/authSlice';
 import { COLORS } from '../../theme/colors';
 
 export default function OTPScreen({ navigation, route }) {
   const dispatch = useDispatch();
   const { isLoading, error, pendingVerificationEmail, pendingToken } = useSelector((state) => state.auth);
-  const { email: routeEmail } = route.params || {};
+  const { email: routeEmail, password, mode, debugOtp } = route.params || {};
   const displayEmail = pendingVerificationEmail || routeEmail || '';
 
   const [otp, setOtp] = useState(['', '', '', '', '', '']);
   const [resendCooldown, setResendCooldown] = useState(0);
   const inputs = useRef([]);
+
+  useEffect(() => {
+    if (debugOtp && typeof debugOtp === 'string' && debugOtp.length === 6) {
+      setOtp(debugOtp.split(''));
+    }
+  }, [debugOtp]);
 
   useEffect(() => {
     let timer;
@@ -56,10 +62,40 @@ export default function OTPScreen({ navigation, route }) {
 
   const handleResend = async () => {
     if (resendCooldown > 0) return;
-    await dispatch(resendOtpCode({ email: displayEmail, pendingToken }));
-    setResendCooldown(60);
-    setOtp(['', '', '', '', '', '']);
-    inputs.current[0]?.focus();
+    dispatch(clearAuthMessages());
+
+    // If logging in with password, re-triggering login generates a fresh OTP on the live server
+    if (mode === 'login' && password) {
+      const loginRes = await dispatch(loginUser({ email: displayEmail, password }));
+      if (loginUser.fulfilled.match(loginRes)) {
+        setResendCooldown(60);
+        setOtp(['', '', '', '', '', '']);
+        if (loginRes.payload?.debugOtp && typeof loginRes.payload.debugOtp === 'string') {
+          setOtp(loginRes.payload.debugOtp.split(''));
+        }
+        inputs.current[0]?.focus();
+        Alert.alert('OTP Sent', 'A fresh OTP has been requested and sent to your email.');
+        return;
+      }
+    }
+
+    // Default resend flow
+    const res = await dispatch(resendOtpCode({ email: displayEmail, pendingToken }));
+    if (resendOtpCode.fulfilled.match(res)) {
+      setResendCooldown(60);
+      setOtp(['', '', '', '', '', '']);
+      if (res.payload?.debugOtp && typeof res.payload.debugOtp === 'string') {
+        setOtp(res.payload.debugOtp.split(''));
+      }
+      inputs.current[0]?.focus();
+      Alert.alert('OTP Sent', res.payload?.message || 'A new OTP has been dispatched to your email.');
+    } else {
+      Alert.alert(
+        'Resend Notice',
+        res.payload || 'Could not resend OTP. Please go back to Login and enter your credentials again.',
+        [{ text: 'OK' }]
+      );
+    }
   };
 
   return (

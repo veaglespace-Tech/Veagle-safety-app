@@ -16,6 +16,7 @@ describe('Auth Redux Slice Unit Tests', () => {
     error: null,
     successMessage: null,
     showOtpModal: false,
+    isBootstrapping: true,
   };
 
   it('should return initial state by default', () => {

@@ -7,8 +7,14 @@ import * as Haptics from 'expo-haptics';
 import * as Location from 'expo-location';
 import { useDispatch, useSelector } from 'react-redux';
 import { startEmergencySos, resolveEmergencySos } from '../../redux/slices/sosSlice';
-import { setLocation } from '../../redux/slices/locationSlice';
+import { setLocation, setLocationStatus } from '../../redux/slices/locationSlice';
 import { store } from '../../redux/store';
+import {
+  checkLocationPermissions,
+  requestPermissionsAfterConsent,
+  handleDisclosureDecline,
+} from '../../services/permissionService';
+import ProminentDisclosureModal from '../common/ProminentDisclosureModal';
 
 import { useNavigation } from '@react-navigation/native';
 
@@ -22,6 +28,7 @@ export default function SOSHeroButton() {
   const [holding, setHolding] = useState(false);
   const [countdown, setCountdown] = useState(3);
   const [isSilent, setIsSilent] = useState(false);
+  const [showDisclosure, setShowDisclosure] = useState(false);
   
   const prevActiveSession = useRef(null);
   useEffect(() => {
@@ -30,15 +37,29 @@ export default function SOSHeroButton() {
       
       const user = store.getState().auth.user;
       const phoneToCall = user?.emergencyContactPhone || user?.parentPhone; // Fallback if needed
-      
+      const victimName = user?.fullName || user?.name || 'Sakhi Member';
+      const victimPhone = user?.phone || phoneToCall || '';
+      const loc = store.getState().location;
+      const curLat = loc?.latitude || 18.5204;
+      const curLng = loc?.longitude || 73.8567;
+      const trackingUrl = activeSession?.trackingUrl || '';
+      const googleMapsUrl = activeSession?.googleMapsUrl || `https://www.google.com/maps?q=${curLat},${curLng}`;
+
       if (phoneToCall) {
-        // 1. Open WhatsApp with a pre-filled emergency message
-        const waMsg = encodeURIComponent(`🚨 EMERGENCY! I have triggered an SOS on SakhiSuraksha. My live location is being broadcasted to you now.`);
-        Linking.openURL(`whatsapp://send?text=${waMsg}&phone=${phoneToCall}`).catch(() => console.log('WhatsApp not installed'));
+        // 1. Open WhatsApp with full emergency details and live tracking link
+        const cleanPhone = String(phoneToCall).replace(/\D/g, '');
+        const message = `🚨 SAKHI EMERGENCY SOS ALERT!\n\nVictim: ${victimName}\nPhone: ${victimPhone}\n\n📍 GPS Coordinates:\nLat: ${curLat}, Lng: ${curLng}\n\n👉 Live Location Tracking:\n${trackingUrl}\n\n🌐 Google Maps:\n${googleMapsUrl}\n\nPlease take immediate action!`;
+        const waMsg = encodeURIComponent(message);
+        
+        Linking.openURL(`whatsapp://send?phone=${cleanPhone}&text=${waMsg}`).catch(() => {
+          Linking.openURL(`https://api.whatsapp.com/send?phone=${cleanPhone}&text=${waMsg}`).catch(() => {
+            console.log('WhatsApp could not be opened');
+          });
+        });
 
         // 2. Schedule the phone call 2 seconds later so both actions occur
         setTimeout(() => {
-          Linking.openURL(`tel:${phoneToCall}`).catch(err => console.log('Error opening dialer', err));
+          Linking.openURL(`tel:${cleanPhone}`).catch(err => console.log('Error opening dialer', err));
         }, 2000);
       } else {
         // If no emergency contact phone is found, dial standard emergency number (112 for India)
@@ -93,13 +114,50 @@ export default function SOSHeroButton() {
     return () => holdProgress.removeListener(listenerId);
   }, [circumference]);
 
-  const handlePressIn = () => {
+  const handleAgreeDisclosure = async () => {
+    setShowDisclosure(false);
+    // User tapped "Agree" -> Trigger native Android runtime permission prompt
+    const result = await requestPermissionsAfterConsent();
+    if (result.foregroundGranted) {
+      dispatch(setLocationStatus('LIVE'));
+      Alert.alert(
+        'Location Access Granted',
+        'Your safety permissions are active. Press and hold the SOS button for 3 seconds to trigger an emergency alert.',
+        [{ text: 'OK' }]
+      );
+    } else {
+      dispatch(setLocationStatus('DENIED'));
+    }
+  };
+
+  const handleDeclineDisclosure = async () => {
+    setShowDisclosure(false);
+    // User tapped "Decline" -> Dismiss disclosure, cancel action, DO NOT trigger native prompt
+    await handleDisclosureDecline();
+    dispatch(setLocationStatus('DENIED'));
+    Alert.alert(
+      'Location Sharing Declined',
+      'SOS alerts require location access to transmit your coordinates to guardians. You can enable it anytime.',
+      [{ text: 'OK' }]
+    );
+  };
+
+  const handlePressIn = async () => {
     if (activeSession) {
       if (isResolving) return;
       dispatch(resolveEmergencySos(activeSession.id));
       return;
     }
     if (isTriggering) return;
+
+    // Check permissions before initiating the hold
+    const perms = await checkLocationPermissions();
+    if (!perms.foregroundGranted) {
+      // Show Prominent Disclosure FIRST before requesting any native permissions
+      setShowDisclosure(true);
+      return;
+    }
+
     setHolding(true);
     setCountdown(3);
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy);
@@ -254,6 +312,13 @@ export default function SOSHeroButton() {
           </Text>
         </TouchableOpacity>
       </View>
+
+      {/* Google Play Prominent Disclosure Dialog */}
+      <ProminentDisclosureModal
+        visible={showDisclosure}
+        onAgree={handleAgreeDisclosure}
+        onDecline={handleDeclineDisclosure}
+      />
     </View>
   );
 }

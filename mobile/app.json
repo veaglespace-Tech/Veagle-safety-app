@@ -34,7 +34,7 @@
         "backgroundColor": "#FFF0F3"
       },
       "package": "com.veaglesafety.app",
-      "versionCode": 7,
+      "versionCode": 8,
       "permissions": [
         "android.permission.ACCESS_FINE_LOCATION",
         "android.permission.ACCESS_COARSE_LOCATION",
@@ -76,7 +76,8 @@
         }
       ],
       "expo-image",
-      "expo-font"
+      "expo-font",
+      "expo-asset"
     ]
   }
 }

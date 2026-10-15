@@ -22,17 +22,25 @@ export default function PrivacyScreen({ navigation }) {
           
           <Text style={styles.heading}>1. Information We Collect</Text>
           <Text style={styles.paragraph}>
-            At SakhiSuraksha, your privacy is our priority. We collect information you provide directly to us, such as when you create an account, update your profile, or use our emergency SOS features. This includes your location data (which is strictly used for safety tracking) and your designated emergency contacts.
+            At SakhiSuraksha, your privacy and physical security are our utmost priorities. We collect information you provide directly to us, including your profile details, emergency contacts, and real-time location data. 
+          </Text>
+          <Text style={[styles.paragraph, { marginTop: 8, fontWeight: '600' }]}>
+            Prominent Disclosure: Sakhi Suraksha collects your background location data to share your live whereabouts with trusted contacts and trigger SOS alerts during an emergency. This data is only used for your safety.
           </Text>
 
           <Text style={styles.heading}>2. How We Use Information</Text>
           <Text style={styles.paragraph}>
-            We use the information we collect to provide, maintain, and improve our services, particularly to ensure rapid response during emergencies. Your live location is only shared with your trusted guardians when you explicitly trigger an SOS or a journey.
+            We use your location and emergency contact data solely for real-time SOS broadcasting, active journey protection, and emergency alerting. Your location is transmitted encrypted and is never sold, leased, or shared with third-party advertisers.
           </Text>
 
-          <Text style={styles.heading}>3. Data Security</Text>
+          <Text style={styles.heading}>3. Background Location Tracking</Text>
           <Text style={styles.paragraph}>
-            We implement industry-standard encryption to protect your personal data. We do not sell your personal data to third parties.
+            Background location access is strictly activated during an active emergency SOS or when you initiate a protected journey. It ensures your emergency contacts receive continuous, life-saving GPS updates even if your device screen locks or the application is minimized.
+          </Text>
+
+          <Text style={styles.heading}>4. Data Security & Retention</Text>
+          <Text style={styles.paragraph}>
+            All sensitive telemetry is transmitted via secure HTTPS/WSS protocols with standard encryption. You may revoke location permissions at any time through your operating system settings.
           </Text>
         </View>
       </ScrollView>

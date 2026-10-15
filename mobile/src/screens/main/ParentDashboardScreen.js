@@ -403,7 +403,7 @@ export default function ParentDashboardScreen({ navigation }) {
           activeOpacity={0.85}
         >
           <Ionicons
-            name="activity"
+            name="pulse-outline"
             size={15}
             color={activeTab === 'safety' ? '#FFF' : COLORS.textMuted}
           />

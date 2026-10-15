@@ -11,6 +11,7 @@ describe('SOS Redux Slice Unit Tests', () => {
     isResolving: false,
     isAlarmPlaying: false,
     error: null,
+    mutedSosIds: [],
   };
 
   it('should return initial state by default', () => {

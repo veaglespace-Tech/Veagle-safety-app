@@ -1,23 +1,19 @@
 import { useEffect, useRef } from 'react';
-import { Alert } from 'react-native';
-import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as Location from 'expo-location';
 import { useDispatch, useSelector } from 'react-redux';
 import { setLocation, setLocationStatus } from '../redux/slices/locationSlice';
 import { sosApi } from '../api/sosApi';
 
-// Key stored in AsyncStorage so we only show the disclosure dialog once ever
-const BG_LOCATION_PROMPTED_KEY = 'bg_location_disclosed_v1';
-
 /**
  * Background GPS location tracker
- * - Safe permissions check (background dialog shown only ONCE, then never again)
+ * - Safe permissions check (observes status without unprompted system dialogs)
  * - Updates Redux store with current coords
  * - Sends updates to backend during active SOS session
  */
 export function useLocation() {
   const dispatch = useDispatch();
   const { activeSession } = useSelector((state) => state.sos);
+  const locationStatus = useSelector((state) => state.location.status);
   const locationSubscription = useRef(null);
 
   useEffect(() => {
@@ -25,55 +21,14 @@ export function useLocation() {
 
     const startTracking = async () => {
       try {
-        // ── Step 1: Foreground permission ────────────────────────────────────
-        const perm = await Location.requestForegroundPermissionsAsync().catch(() => null);
-        if (!perm || perm.status !== 'granted') {
-          if (mounted) dispatch(setLocationStatus('DENIED'));
+        // Safe check without triggering unprompted runtime dialogs
+        const fgStatus = await Location.getForegroundPermissionsAsync().catch(() => null);
+        if (!fgStatus || fgStatus.status !== 'granted') {
+          if (mounted) dispatch(setLocationStatus('OFFLINE'));
           return;
         }
 
-        // ── Step 2: Background permission — show disclosure ONLY ONCE ────────
-        const bgStatus = await Location.getBackgroundPermissionsAsync().catch(() => ({ status: 'undetermined' }));
-
-        if (bgStatus.status !== 'granted') {
-          // Check if we already showed the disclosure dialog in a past session
-          const alreadyPrompted = await AsyncStorage.getItem(BG_LOCATION_PROMPTED_KEY).catch(() => null);
-
-          if (alreadyPrompted === 'true') {
-            // User has seen the dialog before — silently request without showing Alert again
-            await Location.requestBackgroundPermissionsAsync().catch(() => null);
-          } else {
-            // First-ever time: show Google Play required prominent disclosure
-            await new Promise((resolve) => {
-              Alert.alert(
-                'Background Location Access',
-                'SakhiSuraksha collects location data to enable continuous real-time SOS tracking and to broadcast your live position to your emergency contacts even when the app is closed or not in use. This continuous tracking is critical for your safety during an active SOS.',
-                [
-                  {
-                    text: 'Cancel',
-                    style: 'cancel',
-                    onPress: () => {
-                      // Mark as shown so we don't nag them again
-                      AsyncStorage.setItem(BG_LOCATION_PROMPTED_KEY, 'true').catch(() => {});
-                      resolve(false);
-                    },
-                  },
-                  {
-                    text: 'I Understand',
-                    onPress: async () => {
-                      // Mark as shown before requesting so it's persisted even on crash
-                      await AsyncStorage.setItem(BG_LOCATION_PROMPTED_KEY, 'true').catch(() => {});
-                      await Location.requestBackgroundPermissionsAsync().catch(() => null);
-                      resolve(true);
-                    },
-                  },
-                ],
-              );
-            });
-          }
-        }
-
-        // ── Step 3: Get initial position ─────────────────────────────────────
+        // Get initial position with Balanced accuracy
         const initial = await Location.getCurrentPositionAsync({
           accuracy: Location.Accuracy.Balanced,
         }).catch(() => null);
@@ -87,7 +42,7 @@ export function useLocation() {
           dispatch(setLocationStatus('LIVE'));
         }
 
-        // ── Step 4: Continuous watch ─────────────────────────────────────────
+        // Continuous watch
         const sub = await Location.watchPositionAsync(
           { accuracy: Location.Accuracy.Balanced, distanceInterval: 10, timeInterval: 15000 },
           (loc) => {
@@ -118,7 +73,7 @@ export function useLocation() {
         locationSubscription.current.remove();
       }
     };
-  }, [dispatch]);
+  }, [dispatch, locationStatus]);
 
   // High-precision live GPS tracking and sync to backend during active SOS
   const { latitude, longitude, accuracy } = useSelector((state) => state.location);

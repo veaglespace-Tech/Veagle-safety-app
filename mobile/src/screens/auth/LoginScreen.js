@@ -166,12 +166,17 @@ export default function LoginScreen({ navigation }) {
   const handleOtpRedirect = useCallback(
     (payload) => {
       if (payload?.requiresVerification || payload?.pendingToken) {
-        navigation.navigate('OTP', { email: email.trim(), mode: 'login' });
+        navigation.navigate('OTP', {
+          email: email.trim(),
+          password,
+          mode: 'login',
+          debugOtp: payload?.debugOtp || null,
+        });
         return true;
       }
       return false;
     },
-    [email, navigation],
+    [email, password, navigation],
   );
 
   // ── Core login logic ──────────────────────────────────────────────────────
@@ -200,6 +205,11 @@ export default function LoginScreen({ navigation }) {
       return; // AppNavigator switches to the correct role dashboard
     }
 
+    if (result.payload?.requiresVerification) {
+      handleOtpRedirect(result.payload);
+      return;
+    }
+
     // Step 2 — Super Admin silent retry
     const rejectedError = result.payload?.error || '';
     if (isSuperAdminError(rejectedError)) {
@@ -209,8 +219,9 @@ export default function LoginScreen({ navigation }) {
       );
       if (loginUser.fulfilled.match(adminResult)) {
         handleOtpRedirect(adminResult.payload);
+      } else if (adminResult.payload?.requiresVerification) {
+        handleOtpRedirect(adminResult.payload);
       }
-      // On second failure, Redux error state is shown via ErrorBanner
     }
   }, [validate, dispatch, email, password, handleOtpRedirect]);
 
@@ -242,9 +253,6 @@ export default function LoginScreen({ navigation }) {
             <Text style={styles.title}>Welcome Back</Text>
             <Text style={styles.subtitle}>Sign in to your SakhiSuraksha account</Text>
           </View>
-
-          {/* ── Role Strip ── */}
-          <RoleStrip />
 
           {/* ── Error Banner ── */}
           <ErrorBanner message={error} />

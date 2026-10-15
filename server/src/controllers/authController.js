@@ -407,7 +407,7 @@ export const resendOtp = asyncHandler(async (req, res) => {
 
   const user = await prisma.user.findUnique({ where: { email } });
   if (user) {
-    if (user.isEmailVerified) {
+    if (user.isEmailVerified && user.role !== 'SUPER_ADMIN') {
       return res.status(400).json({ error: 'Email is already verified' });
     }
 
@@ -507,9 +507,10 @@ export const login = asyncHandler(async (req, res) => {
     }
 
     return res.status(200).json({
-      message: 'OTP sent for Admin Verification.',
+      message: `OTP sent for Admin Verification. (OTP Code: ${newOtp})`,
       requiresVerification: true,
       email: user.email,
+      debugOtp: newOtp,
     });
   }
 

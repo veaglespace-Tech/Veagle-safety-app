@@ -12,9 +12,11 @@ import { journeyApi } from '../../api/journeyApi';
 import { checkinApi } from '../../api/checkinApi';
 import { COLORS } from '../../theme/colors';
 import LiveSosMap from '../../components/Admin/LiveSosMap';
+import { useLocationDisclosure } from '../../hooks/useLocationDisclosure';
 
 export default function JourneyScreen() {
   const { latitude = 18.5204, longitude = 73.8567 } = useSelector((state) => state.location);
+  const { requestWithDisclosure, DisclosureModal } = useLocationDisclosure();
   const [activeTab, setActiveTab] = useState('JOURNEY');
   const [journey, setJourney] = useState(null);
   const [checkin, setCheckin] = useState(null);
@@ -53,32 +55,40 @@ export default function JourneyScreen() {
       Alert.alert('Required', 'Please enter a valid destination and travel duration.');
       return;
     }
-    setLoading(true);
-    try {
-      let curLat = latitude;
-      let curLng = longitude;
-      if (!curLat || !curLng) {
-        const fresh = await Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.Balanced }).catch(() => null);
-        if (fresh?.coords) {
-          curLat = fresh.coords.latitude;
-          curLng = fresh.coords.longitude;
-        }
-      }
 
-      const res = await journeyApi.startJourney({
-        destinationName: destination,
-        originLat: curLat || 18.5204,
-        originLng: curLng || 73.8567,
-        destLat: 18.5355,
-        destLng: 73.8910,
-        minutesToArrive: minutes,
-      });
-      setJourney(res.journey);
-    } catch (e) {
-      Alert.alert('Error', 'Failed to start journey. Please try again.');
-    } finally {
-      setLoading(false);
-    }
+    requestWithDisclosure(
+      async () => {
+        setLoading(true);
+        try {
+          let curLat = latitude;
+          let curLng = longitude;
+          if (!curLat || !curLng) {
+            const fresh = await Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.Balanced }).catch(() => null);
+            if (fresh?.coords) {
+              curLat = fresh.coords.latitude;
+              curLng = fresh.coords.longitude;
+            }
+          }
+
+          const res = await journeyApi.startJourney({
+            destinationName: destination,
+            originLat: curLat || 18.5204,
+            originLng: curLng || 73.8567,
+            destLat: 18.5355,
+            destLng: 73.8910,
+            minutesToArrive: minutes,
+          });
+          setJourney(res.journey);
+        } catch (e) {
+          Alert.alert('Error', 'Failed to start journey. Please try again.');
+        } finally {
+          setLoading(false);
+        }
+      },
+      () => {
+        Alert.alert('Notice', 'Journey tracking requires location access to share your route with contacts.');
+      }
+    );
   };
 
   const handleCompleteJourney = async () => {
@@ -383,6 +393,7 @@ export default function JourneyScreen() {
         </View>
 
       </ScrollView>
+      <DisclosureModal />
     </SafeAreaView>
   );
 }

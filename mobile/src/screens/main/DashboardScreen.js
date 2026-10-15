@@ -10,6 +10,8 @@ import { fetchContacts } from '../../redux/slices/contactsSlice';
 import { checkActiveSos } from '../../redux/slices/sosSlice';
 import { fetchUser } from '../../redux/slices/authSlice';
 import { journeyApi } from '../../api/journeyApi';
+import { setLocationStatus } from '../../redux/slices/locationSlice';
+import { useLocationDisclosure } from '../../hooks/useLocationDisclosure';
 import { COLORS } from '../../theme/colors';
 import SOSHeroButton from '../../components/sos/SOSHeroButton';
 
@@ -72,12 +74,18 @@ const JourneyBanner = memo(({ journey, onPress }) => (
 ));
 
 /** GPS status pill */
-const GpsPill = memo(({ locInfo, accuracy }) => (
-  <View style={styles.gpsPill}>
+const GpsPill = memo(({ locInfo, accuracy, onPress }) => (
+  <TouchableOpacity
+    style={styles.gpsPill}
+    onPress={onPress}
+    disabled={!onPress}
+    activeOpacity={0.7}
+  >
     <View style={[styles.gpsDot, { backgroundColor: locInfo.dot }]} />
     <Text style={styles.gpsLabel}>{locInfo.label}</Text>
     <Text style={styles.gpsAccuracy}>±{accuracy || 10}m</Text>
-  </View>
+    {onPress && <Ionicons name="chevron-forward" size={12} color={COLORS.primary} style={{ marginLeft: 2 }} />}
+  </TouchableOpacity>
 ));
 
 /** A single quick-action card */
@@ -92,7 +100,7 @@ const QuickCard = memo(({ icon, label, sub, onPress }) => (
 ));
 
 /** Safety readiness card */
-const ReadinessCard = memo(({ score, contacts }) => (
+const ReadinessCard = memo(({ score, contacts, locStatus, onRequestLocation }) => (
   <View style={styles.card}>
     <View style={styles.cardHeader}>
       <Text style={styles.cardTitle}>Safety Readiness</Text>
@@ -105,11 +113,22 @@ const ReadinessCard = memo(({ score, contacts }) => (
       <View style={[styles.progressFill, { width: `${score}%` }]} />
     </View>
 
-    <View style={styles.checkRow}>
-      <Ionicons name="checkmark-circle" size={16} color={COLORS.success} />
+    <TouchableOpacity
+      style={styles.checkRow}
+      onPress={onRequestLocation}
+      disabled={locStatus === 'LIVE'}
+      activeOpacity={0.7}
+    >
+      <Ionicons
+        name={locStatus === 'LIVE' ? 'checkmark-circle' : 'alert-circle'}
+        size={16}
+        color={locStatus === 'LIVE' ? COLORS.success : COLORS.warning}
+      />
       <Text style={styles.checkLabel}>GPS Location Permissions</Text>
-      <Text style={styles.checkStatus}>Active</Text>
-    </View>
+      <Text style={[styles.checkStatus, { color: locStatus === 'LIVE' ? COLORS.success : COLORS.warning }]}>
+        {locStatus === 'LIVE' ? 'Active' : 'Enable'}
+      </Text>
+    </TouchableOpacity>
     <View style={styles.checkRow}>
       <Ionicons
         name="checkmark-circle"
@@ -170,6 +189,18 @@ export default function DashboardScreen({ navigation }) {
   const locAccuracy   = useSelector((s) => s.location.accuracy ?? 10);
 
   const [activeJourney, setActiveJourney] = useState(null);
+  const { requestWithDisclosure, DisclosureModal } = useLocationDisclosure();
+
+  const handleRequestLocation = useCallback(() => {
+    requestWithDisclosure(
+      () => {
+        dispatch(setLocationStatus('LIVE'));
+      },
+      () => {
+        dispatch(setLocationStatus('DENIED'));
+      }
+    );
+  }, [requestWithDisclosure, dispatch]);
 
   // ── Data loading ──────────────────────────────────────────────────────────
 
@@ -267,7 +298,11 @@ export default function DashboardScreen({ navigation }) {
           </View>
 
           {/* GPS pill */}
-          <GpsPill locInfo={locInfo} accuracy={locAccuracy} />
+          <GpsPill
+            locInfo={locInfo}
+            accuracy={locAccuracy}
+            onPress={locStatus !== 'LIVE' ? handleRequestLocation : undefined}
+          />
 
           {/* SOS Hero Button */}
           <SOSHeroButton />
@@ -281,7 +316,12 @@ export default function DashboardScreen({ navigation }) {
         </LinearGradient>
 
         {/* Safety Readiness */}
-        <ReadinessCard score={readinessScore} contacts={contacts} />
+        <ReadinessCard
+          score={readinessScore}
+          contacts={contacts}
+          locStatus={locStatus}
+          onRequestLocation={handleRequestLocation}
+        />
 
         {/* Emergency Guardians */}
         <View style={styles.card}>
@@ -310,6 +350,7 @@ export default function DashboardScreen({ navigation }) {
         </View>
 
       </ScrollView>
+      <DisclosureModal />
     </SafeAreaView>
   );
 }
