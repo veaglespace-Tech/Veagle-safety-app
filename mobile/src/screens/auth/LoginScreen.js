@@ -1,4 +1,5 @@
-import React, { useState, useCallback, memo } from 'react';
+import React, { useState, useEffect, useCallback, memo } from 'react';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import {
   View,
   Text,
@@ -20,6 +21,8 @@ import { LinearGradient } from 'expo-linear-gradient';
 
 import { loginUser, clearAuthMessages, isSuperAdminError } from '../../redux/slices/authSlice';
 import { COLORS } from '../../theme/colors';
+import ProminentDisclosureModal from '../../components/common/ProminentDisclosureModal';
+import { LOCATION_DISCLOSURE_KEY } from '../../services/permissionService';
 
 // ---------------------------------------------------------------------------
 // Constants
@@ -141,6 +144,35 @@ export default function LoginScreen({ navigation }) {
   const [email,    setEmail]    = useState('');
   const [password, setPassword] = useState('');
   const [showPass, setShowPass] = useState(false);
+  const [showIntroDisclosure, setShowIntroDisclosure] = useState(false);
+
+  // Check on app launch if the user has seen the starting disclosure
+  useEffect(() => {
+    let mounted = true;
+    (async () => {
+      try {
+        const consent = await AsyncStorage.getItem(LOCATION_DISCLOSURE_KEY);
+        if (!consent && mounted) {
+          setShowIntroDisclosure(true);
+        }
+      } catch (e) {}
+    })();
+    return () => { mounted = false; };
+  }, []);
+
+  const handleIntroAgree = useCallback(async () => {
+    try {
+      await AsyncStorage.setItem(LOCATION_DISCLOSURE_KEY, 'agreed');
+    } catch (e) {}
+    setShowIntroDisclosure(false);
+  }, []);
+
+  const handleIntroDecline = useCallback(async () => {
+    try {
+      await AsyncStorage.setItem(LOCATION_DISCLOSURE_KEY, 'declined');
+    } catch (e) {}
+    setShowIntroDisclosure(false);
+  }, []);
 
   // ── Validation ────────────────────────────────────────────────────────────
 
@@ -344,8 +376,29 @@ export default function LoginScreen({ navigation }) {
           {/* ── Support Card ── */}
           <SupportCard />
 
+          {/* ── Google Play Policy: Footer with Privacy Policy & Terms Links ── */}
+          <View style={styles.policyFooter}>
+            <TouchableOpacity onPress={() => navigation.navigate('Privacy')} hitSlop={8}>
+              <Text style={styles.policyLinkText}>Privacy Policy</Text>
+            </TouchableOpacity>
+            <Text style={styles.policyDivider}>•</Text>
+            <TouchableOpacity onPress={() => navigation.navigate('Terms')} hitSlop={8}>
+              <Text style={styles.policyLinkText}>Terms of Service</Text>
+            </TouchableOpacity>
+          </View>
+
         </ScrollView>
       </KeyboardAvoidingView>
+
+      {/* Prominent Disclosure on App Launch (Informational consent before login) */}
+      <ProminentDisclosureModal
+        visible={showIntroDisclosure}
+        onAgree={handleIntroAgree}
+        onDecline={handleIntroDecline}
+        consentNotice="By continuing, you understand that Sakhi Suraksha collects location data during emergencies to protect you. System location permissions will only be requested when you initiate an SOS alert or safety feature."
+        agreeText="I Understand"
+        declineText="Close"
+      />
     </SafeAreaView>
   );
 }
@@ -490,4 +543,22 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.25, shadowRadius: 8, elevation: 4,
   },
   supportBtnText: { fontSize: 12, fontWeight: '900', color: '#fff', letterSpacing: 0.3 },
+  policyFooter: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 12,
+    marginTop: 24,
+    marginBottom: 8,
+  },
+  policyLinkText: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: COLORS.primary,
+    textDecorationLine: 'underline',
+  },
+  policyDivider: {
+    fontSize: 12,
+    color: COLORS.textMuted,
+  },
 });

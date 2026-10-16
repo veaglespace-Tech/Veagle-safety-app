@@ -243,16 +243,28 @@ export default function DashboardScreen({ navigation }) {
   // ── Memoised navigation callbacks ─────────────────────────────────────────
 
   const goSOS      = useCallback(() => navigation.navigate('ActiveSOS'),  [navigation]);
-  const goJourney  = useCallback(() => navigation.navigate('Journey'),    [navigation]);
   const goContacts = useCallback(() => navigation.navigate('Contacts'),   [navigation]);
   const goHelplines = useCallback(() => navigation.navigate('Helplines'), [navigation]);
 
+  const handleTrackJourney = useCallback(() => {
+    requestWithDisclosure(
+      () => {
+        dispatch(setLocationStatus('LIVE'));
+        navigation.navigate('Journey');
+      },
+      () => {
+        dispatch(setLocationStatus('DENIED'));
+        navigation.navigate('Journey');
+      }
+    );
+  }, [requestWithDisclosure, dispatch, navigation]);
+
   const QUICK_ACTIONS = useMemo(() => [
-    { icon: 'navigate',  label: 'Track Journey', sub: 'Share Live Route',       onPress: goJourney },
-    { icon: 'time',      label: 'Check On Me',   sub: 'Safety Timer',           onPress: goJourney },
+    { icon: 'navigate',  label: 'Track Journey', sub: 'Share Live Route',       onPress: handleTrackJourney },
+    { icon: 'time',      label: 'Check On Me',   sub: 'Safety Timer',           onPress: handleTrackJourney },
     { icon: 'people',    label: 'Guardians',     sub: `${contacts.length} Trusted`, onPress: goContacts },
     { icon: 'call',      label: 'Helplines',     sub: '112 & 1091',             onPress: goHelplines },
-  ], [contacts.length, goJourney, goContacts, goHelplines]);
+  ], [contacts.length, handleTrackJourney, goContacts, goHelplines]);
 
   // ── Render ────────────────────────────────────────────────────────────────
 

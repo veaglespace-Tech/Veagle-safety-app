@@ -34,7 +34,7 @@
         "backgroundColor": "#FFF0F3"
       },
       "package": "com.veaglesafety.app",
-      "versionCode": 8,
+      "versionCode": 9,
       "permissions": [
         "android.permission.ACCESS_FINE_LOCATION",
         "android.permission.ACCESS_COARSE_LOCATION",

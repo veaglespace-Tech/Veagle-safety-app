@@ -27,6 +27,9 @@ export default function ProminentDisclosureModal({
   visible = false,
   onAgree,
   onDecline,
+  consentNotice,
+  agreeText = 'I Understand',
+  declineText = 'Cancel',
 }) {
   return (
     <Modal
@@ -68,7 +71,7 @@ export default function ProminentDisclosureModal({
                 <Text style={styles.disclosureHeading}>Why We Collect This Data</Text>
               </View>
               <Text style={styles.mandatoryCopy}>
-                Sakhi Suraksha collects your background location data to share your live whereabouts with trusted contacts and trigger SOS alerts during an emergency. This data is only used for your safety.
+                Sakhi Suraksha collects location data to enable live whereabouts sharing with trusted contacts and SOS emergency alerts, even when the app is closed or not in use.
               </Text>
             </View>
 
@@ -101,7 +104,11 @@ export default function ProminentDisclosureModal({
 
             {/* Consent Notice */}
             <Text style={styles.consentNotice}>
-              By tapping <Text style={styles.boldText}>Agree</Text>, you will be asked by your operating system to grant location access (select &quot;Allow all the time&quot; when prompted). Tapping <Text style={styles.boldText}>Decline</Text> will cancel location features without requesting permissions.
+              {consentNotice || (
+                <>
+                  By tapping <Text style={styles.boldText}>I Understand</Text>, you will be asked by your operating system to grant location access (select &quot;Allow all the time&quot; when prompted). Tapping <Text style={styles.boldText}>Cancel</Text> will dismiss this notice without requesting permissions.
+                </>
+              )}
             </Text>
 
             {/* Action Buttons: "Agree" and "Decline" */}
@@ -119,7 +126,7 @@ export default function ProminentDisclosureModal({
                   style={styles.gradientBtn}
                 >
                   <Ionicons name="checkmark-circle" size={20} color="#fff" />
-                  <Text style={styles.agreeButtonText}>Agree</Text>
+                  <Text style={styles.agreeButtonText}>{agreeText}</Text>
                 </LinearGradient>
               </TouchableOpacity>
 
@@ -130,7 +137,7 @@ export default function ProminentDisclosureModal({
                 onPress={onDecline}
               >
                 <Ionicons name="close-circle-outline" size={18} color={COLORS.textMuted} />
-                <Text style={styles.declineButtonText}>Decline</Text>
+                <Text style={styles.declineButtonText}>{declineText}</Text>
               </TouchableOpacity>
             </View>
           </ScrollView>

@@ -11,6 +11,7 @@ import { setLocation, setLocationStatus } from '../../redux/slices/locationSlice
 import { store } from '../../redux/store';
 import {
   checkLocationPermissions,
+  hasAgreedDisclosure,
   requestPermissionsAfterConsent,
   handleDisclosureDecline,
 } from '../../services/permissionService';
@@ -132,12 +133,12 @@ export default function SOSHeroButton() {
 
   const handleDeclineDisclosure = async () => {
     setShowDisclosure(false);
-    // User tapped "Decline" -> Dismiss disclosure, cancel action, DO NOT trigger native prompt
+    // User tapped "Cancel" -> Dismiss custom dialog, DO NOT request system permissions
     await handleDisclosureDecline();
     dispatch(setLocationStatus('DENIED'));
     Alert.alert(
-      'Location Sharing Declined',
-      'SOS alerts require location access to transmit your coordinates to guardians. You can enable it anytime.',
+      'Location Access Required',
+      'The SOS emergency alert feature cannot transmit your live coordinates to guardians without location permission. You can enable it anytime from settings or by pressing the SOS button.',
       [{ text: 'OK' }]
     );
   };
@@ -153,7 +154,7 @@ export default function SOSHeroButton() {
     // Check permissions before initiating the hold
     const perms = await checkLocationPermissions();
     if (!perms.foregroundGranted) {
-      // Show Prominent Disclosure FIRST before requesting any native permissions
+      // GOOGLE PLAY STRICT RULE: Custom Prominent Disclosure MUST IMMEDIATELY precede the native prompt
       setShowDisclosure(true);
       return;
     }

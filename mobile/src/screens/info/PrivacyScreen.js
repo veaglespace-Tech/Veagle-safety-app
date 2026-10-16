@@ -18,29 +18,56 @@ export default function PrivacyScreen({ navigation }) {
 
       <ScrollView contentContainerStyle={styles.scroll} showsVerticalScrollIndicator={false}>
         <View style={styles.contentCard}>
-          <Text style={styles.lastUpdated}>Last Updated: October 2026</Text>
+          <Text style={styles.lastUpdated}>Effective Date: October 2026</Text>
           
-          <Text style={styles.heading}>1. Information We Collect</Text>
+          <Text style={styles.heading}>1. Prominent Disclosure: Location Data Access</Text>
+          <View style={styles.disclosureHighlight}>
+            <Text style={styles.disclosureHighlightText}>
+              Sakhi Suraksha collects location data to enable live whereabouts sharing with trusted contacts and SOS emergency alerts, even when the app is closed or not in use.
+            </Text>
+          </View>
           <Text style={styles.paragraph}>
-            At SakhiSuraksha, your privacy and physical security are our utmost priorities. We collect information you provide directly to us, including your profile details, emergency contacts, and real-time location data. 
-          </Text>
-          <Text style={[styles.paragraph, { marginTop: 8, fontWeight: '600' }]}>
-            Prominent Disclosure: Sakhi Suraksha collects your background location data to share your live whereabouts with trusted contacts and trigger SOS alerts during an emergency. This data is only used for your safety.
-          </Text>
-
-          <Text style={styles.heading}>2. How We Use Information</Text>
-          <Text style={styles.paragraph}>
-            We use your location and emergency contact data solely for real-time SOS broadcasting, active journey protection, and emergency alerting. Your location is transmitted encrypted and is never sold, leased, or shared with third-party advertisers.
+            This prominent disclosure informs you prior to any permission request that your device location will be accessed only for your physical safety and emergency rescue assistance.
           </Text>
 
-          <Text style={styles.heading}>3. Background Location Tracking</Text>
+          <Text style={styles.heading}>2. Information We Collect</Text>
           <Text style={styles.paragraph}>
-            Background location access is strictly activated during an active emergency SOS or when you initiate a protected journey. It ensures your emergency contacts receive continuous, life-saving GPS updates even if your device screen locks or the application is minimized.
+            • Personal Information: Your name, email address, phone number, and account credentials.{'\n'}
+            • Emergency Contacts: Phone numbers and names of your chosen guardians.{'\n'}
+            • Precise & Approximate Location: Real-time GPS coordinates (latitude, longitude, accuracy) gathered during emergency events, check-ins, or active journeys.{'\n'}
+            • Device Information: Device model, operating system version, and unique push notification identifiers for delivering safety alerts.
           </Text>
 
-          <Text style={styles.heading}>4. Data Security & Retention</Text>
+          <Text style={styles.heading}>3. Background Location Collection & Purpose</Text>
           <Text style={styles.paragraph}>
-            All sensitive telemetry is transmitted via secure HTTPS/WSS protocols with standard encryption. You may revoke location permissions at any time through your operating system settings.
+            Sakhi Suraksha utilizes ACCESS_BACKGROUND_LOCATION strictly to protect you during emergency situations. When you trigger an SOS alert or start a protected journey, the application transmits your live GPS coordinates continuously to your designated guardians, even when the app is minimized, running in the background, or your screen is locked. Background location tracking ceases immediately when the SOS emergency is resolved or journey tracking ends.
+          </Text>
+
+          <Text style={styles.heading}>4. How We Use and Share Your Data</Text>
+          <Text style={styles.paragraph}>
+            • We use your information solely to deliver emergency safety features, SOS alerts, guardian live-map tracking, and journey monitoring.{'\n'}
+            • We do NOT sell, rent, monetize, or trade your personal data or location history with any third parties or advertisers.{'\n'}
+            • Data is only transmitted to your designated guardians, organization administrators (if applicable), and authorized emergency services.
+          </Text>
+
+          <Text style={styles.heading}>5. Data Security & Encryption</Text>
+          <Text style={styles.paragraph}>
+            All sensitive telemetry, including live location streams, is encrypted in transit using industry-standard HTTPS and secure WebSockets (TLS/WSS). Stored credentials are encrypted using modern cryptographic hashing algorithms.
+          </Text>
+
+          <Text style={styles.heading}>6. Data Retention and Account Deletion</Text>
+          <Text style={styles.paragraph}>
+            In compliance with Google Play's User Data & Account Deletion policies, you have complete control over your personal data. You may request account deletion or data removal at any time through the app settings or by contacting privacy@veaglesafety.org. Upon account deletion, all personal profiles, contacts, and historical location logs are permanently removed from our active servers.
+          </Text>
+
+          <Text style={styles.heading}>7. Revoking Permissions</Text>
+          <Text style={styles.paragraph}>
+            You may modify or revoke location access at any time through your Android device settings: Settings &gt; Apps &gt; Sakhi Suraksha &gt; Permissions &gt; Location. Note that disabling location access will restrict real-time SOS broadcasting.
+          </Text>
+
+          <Text style={styles.heading}>8. Contact Us</Text>
+          <Text style={styles.paragraph}>
+            If you have questions regarding this Privacy Policy or wish to exercise your data rights, contact our Data Protection Officer at privacy@veaglesafety.org or support@veaglespace.com.
           </Text>
         </View>
       </ScrollView>
@@ -58,4 +85,18 @@ const styles = StyleSheet.create({
   lastUpdated: { fontSize: 12, fontWeight: '700', color: COLORS.textMuted, marginBottom: 24 },
   heading: { fontSize: 15, fontWeight: '800', color: COLORS.textDark, marginBottom: 8, marginTop: 16 },
   paragraph: { fontSize: 14, color: COLORS.textDark, opacity: 0.8, lineHeight: 22 },
+  disclosureHighlight: {
+    backgroundColor: '#FFF0F3',
+    padding: 14,
+    borderRadius: 14,
+    borderWidth: 1.5,
+    borderColor: '#FFCCE1',
+    marginVertical: 10,
+  },
+  disclosureHighlightText: {
+    fontSize: 13,
+    fontWeight: '700',
+    color: COLORS.primary,
+    lineHeight: 20,
+  },
 });
