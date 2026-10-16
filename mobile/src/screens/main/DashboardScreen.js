@@ -243,6 +243,7 @@ export default function DashboardScreen({ navigation }) {
   // ── Memoised navigation callbacks ─────────────────────────────────────────
 
   const goSOS      = useCallback(() => navigation.navigate('ActiveSOS'),  [navigation]);
+  const goJourney  = useCallback(() => navigation.navigate('Journey'),    [navigation]);
   const goContacts = useCallback(() => navigation.navigate('Contacts'),   [navigation]);
   const goHelplines = useCallback(() => navigation.navigate('Helplines'), [navigation]);
 
