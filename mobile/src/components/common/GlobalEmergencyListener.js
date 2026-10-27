@@ -1,7 +1,7 @@
 import React, { useEffect, useState, useRef } from 'react';
 import {
   Modal, View, Text, StyleSheet, TouchableOpacity,
-  Linking, Platform, Vibration,
+  Linking, Platform, Vibration, Alert, AppState,
 } from 'react-native';
 import { useSelector, useDispatch } from 'react-redux';
 import { io } from 'socket.io-client';
@@ -11,6 +11,7 @@ import { API_URL } from '../../utils/constants';
 import { COLORS } from '../../theme/colors';
 import { playEmergencySiren, stopEmergencySiren } from '../../utils/soundPlayer';
 import { clearSosState, checkActiveSos } from '../../redux/slices/sosSlice';
+import { adminApi } from '../../api/adminApi';
 
 export default function GlobalEmergencyListener() {
   const dispatch = useDispatch();
@@ -26,11 +27,23 @@ export default function GlobalEmergencyListener() {
     const serverUrl = API_URL.replace(/\/api\/?$/, '');
     const socket = io(serverUrl, {
       path: '/api/socket.io',
-      transports: ['websocket', 'polling'],
-      reconnectionAttempts: 10,
-      timeout: 10000,
+      transports: ['polling', 'websocket'],
+      reconnection: true,
+      reconnectionAttempts: Infinity,
+      reconnectionDelay: 1000,
+      reconnectionDelayMax: 5000,
+      timeout: 15000,
     });
     socketRef.current = socket;
+
+    // Auto-reconnect when app comes to foreground / screen unlocked
+    const appStateSub = AppState.addEventListener('change', (nextState) => {
+      if (nextState === 'active') {
+        if (socket && !socket.connected) {
+          socket.connect();
+        }
+      }
+    });
 
     const registerRooms = () => {
       const cleanPhone = user.phone ? user.phone.replace(/\D/g, '') : null;
@@ -112,11 +125,16 @@ export default function GlobalEmergencyListener() {
 
     // 👨‍👩‍👧 WHEN PARENT SENDS A SAFETY CHECK-IN PING:
     socket.on('PARENT_CHECKIN_PING', (data) => {
-      Alert.alert(
-        '🛡️ Safety Check-in Request',
-        `${data?.parentName || 'Your Parent'} sent a safety check-in request. Please confirm you are safe.`,
-        [{ text: 'I AM SAFE & OK', style: 'default' }]
-      );
+      const msg = `${data?.parentName || 'Your Parent'} sent a safety check-in request. Please confirm you are safe.`;
+      if (Platform.OS === 'web' && typeof window !== 'undefined') {
+        window.alert('🛡️ Safety Check-in Request\n\n' + msg);
+      } else {
+        Alert.alert(
+          '🛡️ Safety Check-in Request',
+          msg,
+          [{ text: 'I AM SAFE & OK', style: 'default' }]
+        );
+      }
     });
 
     // 📍 WHEN LIVE LOCATION COORDINATES UPDATE FOR ACTIVE SOS:
@@ -139,6 +157,9 @@ export default function GlobalEmergencyListener() {
 
 
     return () => {
+      if (appStateSub && typeof appStateSub.remove === 'function') {
+        appStateSub.remove();
+      }
       socket.disconnect();
       stopEmergencySiren();
     };
@@ -162,6 +183,35 @@ export default function GlobalEmergencyListener() {
       dismissedSosIdsRef.current.add(String(sosId));
     }
     setAlarmData(null);
+  };
+
+  const handleAdminResolve = async () => {
+    const sosId = alarmData?.sosId || alarmData?.id || alarmData?.sosSessionId;
+    if (!sosId) return;
+
+    if (Platform.OS === 'web') {
+      const confirmed = typeof window !== 'undefined' && window.confirm
+        ? window.confirm('Confirm marking this emergency SOS as RESOLVED and SAFE on behalf of dispatch center?')
+        : true;
+      if (!confirmed) return;
+    }
+
+    try {
+      await adminApi.adminResolveSos({
+        sosSessionId: sosId,
+        note: 'Resolved directly via Emergency Dispatch Alert by Admin',
+      });
+      stopEmergencySiren();
+      setIsSirenPlaying(false);
+      setAlarmData(null);
+      dispatch(clearSosState());
+      dispatch(checkActiveSos());
+    } catch (e) {
+      console.error('[GlobalEmergencyListener] Failed to resolve:', e);
+      if (Platform.OS === 'web' && typeof window !== 'undefined') {
+        window.alert('Failed to resolve SOS: ' + (e?.response?.data?.error || e.message));
+      }
+    }
   };
 
   const handleOpenMap = () => {
@@ -263,6 +313,17 @@ export default function GlobalEmergencyListener() {
               <Ionicons name="navigate" size={18} color="#fff" />
               <Text style={styles.btnText}>OPEN LIVE LOCATION TRACK</Text>
             </TouchableOpacity>
+
+            {(user?.role === 'SUPER_ADMIN' || user?.role === 'ADMIN') && (
+              <TouchableOpacity
+                style={styles.resolveAdminBtn}
+                onPress={handleAdminResolve}
+                activeOpacity={0.85}
+              >
+                <Ionicons name="checkmark-done-circle" size={20} color="#fff" />
+                <Text style={styles.btnText}>RESOLVE EMERGENCY (MARK SAFE)</Text>
+              </TouchableOpacity>
+            )}
 
             <TouchableOpacity
               style={styles.dismissBtn}
@@ -436,6 +497,21 @@ const styles = StyleSheet.create({
     width: '100%',
     paddingVertical: 10,
     alignItems: 'center',
+  },
+  resolveAdminBtn: {
+    backgroundColor: '#059669',
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+    paddingVertical: 14,
+    borderRadius: 16,
+    width: '100%',
+    shadowColor: '#059669',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 4,
   },
   dismissBtnText: {
     fontSize: 12,

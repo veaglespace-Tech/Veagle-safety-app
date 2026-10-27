@@ -1,7 +1,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import {
   View, Text, StyleSheet, TextInput, TouchableOpacity,
-  ActivityIndicator, Alert, Keyboard,
+  ActivityIndicator, Alert, Keyboard, Platform,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
@@ -46,10 +46,18 @@ export default function OTPScreen({ navigation, route }) {
     }
   };
 
+  const notify = (title, msg) => {
+    if (Platform.OS === 'web' && typeof window !== 'undefined') {
+      window.alert((title ? title + '\n\n' : '') + msg);
+    } else {
+      Alert.alert(title, msg);
+    }
+  };
+
   const handleVerify = async () => {
     const code = otp.join('');
     if (code.length < 6) {
-      Alert.alert('Invalid OTP', 'Please enter the complete 6-digit OTP.');
+      notify('Invalid OTP', 'Please enter the complete 6-digit OTP.');
       return;
     }
     Keyboard.dismiss();
@@ -74,7 +82,7 @@ export default function OTPScreen({ navigation, route }) {
           setOtp(loginRes.payload.debugOtp.split(''));
         }
         inputs.current[0]?.focus();
-        Alert.alert('OTP Sent', 'A fresh OTP has been requested and sent to your email.');
+        notify('OTP Sent', 'A fresh OTP has been requested and sent to your email.');
         return;
       }
     }
@@ -88,12 +96,11 @@ export default function OTPScreen({ navigation, route }) {
         setOtp(res.payload.debugOtp.split(''));
       }
       inputs.current[0]?.focus();
-      Alert.alert('OTP Sent', res.payload?.message || 'A new OTP has been dispatched to your email.');
+      notify('OTP Sent', res.payload?.message || 'A new OTP has been dispatched to your email.');
     } else {
-      Alert.alert(
+      notify(
         'Resend Notice',
-        res.payload || 'Could not resend OTP. Please go back to Login and enter your credentials again.',
-        [{ text: 'OK' }]
+        res.payload || 'Could not resend OTP. Please go back to Login and enter your credentials again.'
       );
     }
   };

@@ -103,7 +103,7 @@ export default function OrganizationDashboardScreen({ navigation }) {
     const serverUrl = API_URL.replace(/\/api\/?$/, '');
     const socket = io(serverUrl, {
       path: '/api/socket.io',
-      transports: ['websocket', 'polling'],
+      transports: ['polling', 'websocket'],
       reconnectionAttempts: 10,
       reconnectionDelay: 2000,
       timeout: 10000,
@@ -233,7 +233,23 @@ export default function OrganizationDashboardScreen({ navigation }) {
     } catch (_) {}
   }, [settings?.orgReferralCode]);
 
+  const notify = (title, message) => {
+    if (Platform.OS === 'web' && typeof window !== 'undefined') {
+      window.alert(`${title}\n\n${message}`);
+    } else {
+      Alert.alert(title, message);
+    }
+  };
+
   const removeMember = useCallback((userId) => {
+    if (Platform.OS === 'web' && typeof window !== 'undefined') {
+      if (window.confirm('Remove Member\n\nAre you sure you want to remove this member?')) {
+        organizationApi.removeMember(userId)
+          .then(() => setMembers((prev) => prev.filter((m) => m.userId !== userId)))
+          .catch(() => notify('Error', 'Failed to remove member'));
+      }
+      return;
+    }
     Alert.alert('Remove Member', 'Are you sure you want to remove this member?', [
       { text: 'Cancel', style: 'cancel' },
       {

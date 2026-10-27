@@ -124,7 +124,7 @@ export default function ParentDashboardScreen({ navigation }) {
     const serverUrl = API_URL.replace(/\/api\/?$/, '');
     const socket = io(serverUrl, {
       path: '/api/socket.io',
-      transports: ['websocket', 'polling'],
+      transports: ['polling', 'websocket'],
       reconnectionAttempts: 10,
       reconnectionDelay: 2000,
       timeout: 10000,
@@ -235,15 +235,36 @@ export default function ParentDashboardScreen({ navigation }) {
     fetchData(false);
   };
 
+  const notify = (title, message) => {
+    if (Platform.OS === 'web' && typeof window !== 'undefined') {
+      window.alert(`${title}\n\n${message}`);
+    } else {
+      Alert.alert(title, message);
+    }
+  };
+
+  const confirmAction = (title, message, onConfirm) => {
+    if (Platform.OS === 'web' && typeof window !== 'undefined') {
+      if (window.confirm(`${title}\n\n${message}`)) {
+        onConfirm();
+      }
+    } else {
+      Alert.alert(title, message, [
+        { text: 'Cancel', style: 'cancel' },
+        { text: 'Confirm', onPress: onConfirm },
+      ]);
+    }
+  };
+
   // Handle Child Safety Check-in Ping (New Feature from Web!)
   const handlePingCheckin = async (childId, childName) => {
     try {
       setPingingChildId(childId);
       const res = await parentApi.pingCheckin(childId);
-      Alert.alert('Ping Dispatched', res.message || `Safety check-in ping dispatched to ${childName}!`);
+      notify('Ping Dispatched', res.message || `Safety check-in ping dispatched to ${childName}!`);
     } catch (err) {
       const msg = err?.response?.data?.error || err.message || 'Failed to dispatch safety ping.';
-      Alert.alert('Notice', msg);
+      notify('Notice', msg);
     } finally {
       setPingingChildId(null);
     }
@@ -252,7 +273,7 @@ export default function ParentDashboardScreen({ navigation }) {
   // Link Child
   const handleLinkChild = async () => {
     if (!linkInput.trim()) {
-      Alert.alert('Required', 'Please enter your child\'s registered email or 10-digit mobile number.');
+      notify('Required', 'Please enter your child\'s registered email or 10-digit mobile number.');
       return;
     }
 
@@ -264,14 +285,14 @@ export default function ParentDashboardScreen({ navigation }) {
       });
 
       if (res && res.success) {
-        Alert.alert('Child Linked', res.message || 'Child account successfully linked!');
+        notify('Child Linked', res.message || 'Child account successfully linked!');
         setLinkInput('');
         setShowLinkModal(false);
         fetchData(false);
       }
     } catch (e) {
       const msg = e?.response?.data?.error || e.message || 'Failed to link child account. Please verify mobile/email.';
-      Alert.alert('Linking Error', msg);
+      notify('Linking Error', msg);
     } finally {
       setIsLinking(false);
     }
@@ -279,27 +300,20 @@ export default function ParentDashboardScreen({ navigation }) {
 
   // Unlink Child
   const handleUnlink = (linkId, childName) => {
-    Alert.alert(
+    confirmAction(
       'Unlink Child Account',
       `Are you sure you want to unlink ${childName}? You will no longer receive emergency alerts for this child.`,
-      [
-        { text: 'Cancel', style: 'cancel' },
-        {
-          text: 'Unlink Account',
-          style: 'destructive',
-          onPress: async () => {
-            try {
-              const res = await parentApi.unlinkChild(linkId);
-              if (res && res.success) {
-                Alert.alert('Success', `${childName} has been unlinked.`);
-                fetchData(false);
-              }
-            } catch (e) {
-              Alert.alert('Error', e?.response?.data?.error || 'Failed to unlink child.');
-            }
-          },
-        },
-      ]
+      async () => {
+        try {
+          const res = await parentApi.unlinkChild(linkId);
+          if (res && res.success) {
+            notify('Success', `${childName} has been unlinked.`);
+            fetchData(false);
+          }
+        } catch (e) {
+          notify('Error', e?.response?.data?.error || 'Failed to unlink child.');
+        }
+      }
     );
   };
 

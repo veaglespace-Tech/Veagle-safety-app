@@ -63,14 +63,22 @@ export default function EmergencyEmailsScreen({ navigation }) {
 
   const handleAddEmail = () => {
     if (!newEmail.trim()) {
-      Alert.alert('Error', 'Please enter a valid email address.');
+      if (Platform.OS === 'web' && typeof window !== 'undefined') {
+        window.alert('Please enter a valid email address.');
+      } else {
+        Alert.alert('Error', 'Please enter a valid email address.');
+      }
       return;
     }
     
     // Simple email regex
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     if (!emailRegex.test(newEmail)) {
-      Alert.alert('Invalid Email', 'Please enter a properly formatted email address.');
+      if (Platform.OS === 'web' && typeof window !== 'undefined') {
+        window.alert('Please enter a properly formatted email address.');
+      } else {
+        Alert.alert('Invalid Email', 'Please enter a properly formatted email address.');
+      }
       return;
     }
 
@@ -83,6 +91,16 @@ export default function EmergencyEmailsScreen({ navigation }) {
   };
 
   const handleDelete = (id) => {
+    if (Platform.OS === 'web') {
+      const confirmed = typeof window !== 'undefined' && window.confirm
+        ? window.confirm('Remove Email: Are you sure you want to stop sending SOS alerts to this email?')
+        : true;
+      if (confirmed) {
+        dispatch(deleteEmergencyEmail(id));
+      }
+      return;
+    }
+
     Alert.alert(
       'Remove Email',
       'Are you sure you want to stop sending SOS alerts to this email?',

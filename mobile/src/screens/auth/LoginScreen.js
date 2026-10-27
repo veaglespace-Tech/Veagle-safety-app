@@ -178,16 +178,28 @@ export default function LoginScreen({ navigation }) {
 
   const validate = useCallback(() => {
     if (!email.trim()) {
-      Alert.alert('Email Required', 'Please enter your email address.');
+      if (Platform.OS === 'web' && typeof window !== 'undefined') {
+        window.alert('Please enter your email address.');
+      } else {
+        Alert.alert('Email Required', 'Please enter your email address.');
+      }
       return false;
     }
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     if (!emailRegex.test(email.trim())) {
-      Alert.alert('Invalid Email', 'Please enter a valid email address.');
+      if (Platform.OS === 'web' && typeof window !== 'undefined') {
+        window.alert('Please enter a valid email address.');
+      } else {
+        Alert.alert('Invalid Email', 'Please enter a valid email address.');
+      }
       return false;
     }
     if (!password) {
-      Alert.alert('Password Required', 'Please enter your password.');
+      if (Platform.OS === 'web' && typeof window !== 'undefined') {
+        window.alert('Please enter your password.');
+      } else {
+        Alert.alert('Password Required', 'Please enter your password.');
+      }
       return false;
     }
     return true;

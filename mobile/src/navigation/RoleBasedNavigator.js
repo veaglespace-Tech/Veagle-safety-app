@@ -30,24 +30,24 @@ const Tab = createBottomTabNavigator();
 
 /** Shared tab bar appearance */
 const TAB_BAR_STYLE = {
-  backgroundColor: COLORS.surface,
-  borderTopWidth: 1.5,
-  borderTopColor: COLORS.primaryBorder,
-  paddingTop: 6,
-  paddingBottom: Platform.OS === 'ios' ? 20 : 10,
-  height: Platform.OS === 'ios' ? 82 : 68,
-  shadowColor: COLORS.primary,
-  shadowOffset: { width: 0, height: -4 },
-  shadowOpacity: 0.10,
-  shadowRadius: 12,
-  elevation: 12,
+  backgroundColor: '#FFFFFF',
+  borderTopWidth: 1,
+  borderTopColor: '#F0E2E7',
+  paddingTop: 5,
+  paddingBottom: Platform.OS === 'ios' ? 22 : 6,
+  height: Platform.OS === 'ios' ? 86 : 64,
+  shadowColor: '#000',
+  shadowOffset: { width: 0, height: -2 },
+  shadowOpacity: 0.05,
+  shadowRadius: 6,
+  elevation: 8,
 };
 
 const TAB_LABEL_STYLE = {
-  fontSize: 10,
+  fontSize: 10.5,
   fontWeight: '700',
-  marginTop: 2,
-  letterSpacing: 0.3,
+  marginBottom: 2,
+  letterSpacing: 0.2,
 };
 
 // ---------------------------------------------------------------------------
@@ -65,6 +65,11 @@ const makeScreenOptions = (TAB_ICONS) => ({ route }) => ({
   tabBarInactiveTintColor: COLORS.textMuted,
   tabBarStyle:      TAB_BAR_STYLE,
   tabBarLabelStyle: TAB_LABEL_STYLE,
+  tabBarItemStyle: {
+    paddingVertical: 2,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
   tabBarIcon: ({ focused }) => {
     const icons    = TAB_ICONS[route.name] || { focused: 'help-circle', unfocused: 'help-circle-outline' };
     const iconName = focused ? icons.focused : icons.unfocused;
@@ -72,7 +77,7 @@ const makeScreenOptions = (TAB_ICONS) => ({ route }) => ({
       <View style={[styles.iconWrap, focused && styles.iconWrapActive]}>
         <Ionicons
           name={iconName}
-          size={22}
+          size={20}
           color={focused ? COLORS.primary : COLORS.textMuted}
         />
       </View>
@@ -186,13 +191,13 @@ export default function RoleBasedNavigator() {
 
 const styles = StyleSheet.create({
   iconWrap: {
-    width: 40,
-    height: 30,
-    borderRadius: 15,
+    width: 36,
+    height: 26,
+    borderRadius: 13,
     alignItems: 'center',
     justifyContent: 'center',
   },
   iconWrapActive: {
-    backgroundColor: COLORS.primaryBg,
+    backgroundColor: '#FFEBF1',
   },
 });

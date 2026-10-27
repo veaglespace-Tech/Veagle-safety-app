@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, ScrollView, Vibration, Dimensions } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, ScrollView, Vibration, Platform } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import Animated, { 
@@ -15,7 +15,21 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { COLORS } from '../../theme/colors';
 import { playEmergencySiren, stopEmergencySiren } from '../../utils/soundPlayer';
 
-const { height, width } = Dimensions.get('window');
+const safeVibrate = (pattern) => {
+  if (Platform.OS !== 'web') {
+    try {
+      Vibration.vibrate(pattern, true);
+    } catch (e) {}
+  }
+};
+
+const safeCancelVibration = () => {
+  if (Platform.OS !== 'web') {
+    try {
+      Vibration.cancel();
+    } catch (e) {}
+  }
+};
 
 export default function AlarmScreen() {
   const [isSirenActive, setIsSirenActive] = useState(false);
@@ -126,7 +140,7 @@ export default function AlarmScreen() {
           <TouchableOpacity 
             onPress={() => {
               // Vibrate briefly to simulate phone ringing, then show fake call overlay
-              Vibration.vibrate([0, 1000, 2000, 1000], true);
+              safeVibrate([0, 1000, 2000, 1000]);
               setShowFakeCall(true);
             }}
             activeOpacity={0.85}
@@ -152,7 +166,7 @@ export default function AlarmScreen() {
               <TouchableOpacity 
                 style={[styles.callBtn, { backgroundColor: '#FF3B30' }]}
                 onPress={() => {
-                  Vibration.cancel();
+                  safeCancelVibration();
                   setShowFakeCall(false);
                 }}
               >
@@ -166,7 +180,7 @@ export default function AlarmScreen() {
                 style={[styles.callBtn, { backgroundColor: '#34C759' }]}
                 onPress={() => {
                   // Actually answering it? Just stop vibration and pretend to be on call, or just close it.
-                  Vibration.cancel();
+                  safeCancelVibration();
                   setShowFakeCall(false);
                 }}
               >
@@ -214,7 +228,7 @@ const styles = StyleSheet.create({
   fakeCallBtn: { marginHorizontal: 20, marginBottom: 20, backgroundColor: '#34C759', paddingVertical: 14, borderRadius: 100, alignItems: 'center', shadowColor: '#34C759', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.3, shadowRadius: 8 },
   fakeCallBtnText: { color: '#FFF', fontSize: 12, fontWeight: '900', letterSpacing: 0.5 },
 
-  fakeCallOverlay: { position: 'absolute', top: 0, left: 0, width, height, backgroundColor: '#1C1C1E', zIndex: 999, justifyContent: 'space-between', paddingTop: 80, paddingBottom: 60 },
+  fakeCallOverlay: { ...StyleSheet.absoluteFillObject, backgroundColor: '#1C1C1E', zIndex: 999, justifyContent: 'space-between', paddingTop: 80, paddingBottom: 60 },
   callTop: { alignItems: 'center' },
   callCaller: { color: '#FFF', fontSize: 36, fontWeight: '300' },
   callType: { color: 'rgba(255,255,255,0.6)', fontSize: 16, marginTop: 8 },

@@ -23,7 +23,8 @@
         "NSLocationAlwaysAndWhenInUseUsageDescription": "SakhiSuraksha requires background location access to continuously broadcast your live position to emergency contacts even when your phone is locked or the app is minimized during an active SOS event. This continuous tracking is critical for your safety.",
         "UIBackgroundModes": [
           "location",
-          "fetch"
+          "fetch",
+          "audio"
         ],
         "ITSAppUsesNonExemptEncryption": false
       }
@@ -41,6 +42,7 @@
         "android.permission.ACCESS_BACKGROUND_LOCATION",
         "android.permission.FOREGROUND_SERVICE",
         "android.permission.FOREGROUND_SERVICE_LOCATION",
+        "android.permission.FOREGROUND_SERVICE_MEDIA_PLAYBACK",
         "android.permission.RECEIVE_BOOT_COMPLETED",
         "android.permission.VIBRATE",
         "android.permission.WAKE_LOCK",
@@ -77,7 +79,8 @@
       ],
       "expo-image",
       "expo-font",
-      "expo-asset"
+      "expo-asset",
+      "expo-status-bar"
     ]
   }
 }

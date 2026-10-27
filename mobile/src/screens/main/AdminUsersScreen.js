@@ -63,9 +63,30 @@ export default function AdminUsersScreen() {
     fetchUsers(true);
   }, [fetchUsers]);
 
+  const notify = (title, message) => {
+    if (Platform.OS === 'web' && typeof window !== 'undefined') {
+      window.alert(`${title}\n\n${message}`);
+    } else {
+      Alert.alert(title, message);
+    }
+  };
+
+  const confirmAction = (title, message, onConfirm) => {
+    if (Platform.OS === 'web' && typeof window !== 'undefined') {
+      if (window.confirm(`${title}\n\n${message}`)) {
+        onConfirm();
+      }
+    } else {
+      Alert.alert(title, message, [
+        { text: 'Cancel', style: 'cancel' },
+        { text: 'Confirm', onPress: onConfirm },
+      ]);
+    }
+  };
+
   const handleCreateUser = async () => {
     if (!newFullName.trim() || !newEmail.trim() || !newPassword.trim()) {
-      Alert.alert('Required Fields', 'Full Name, Email, and Password are required.');
+      notify('Required Fields', 'Full Name, Email, and Password are required.');
       return;
     }
 
@@ -84,7 +105,7 @@ export default function AdminUsersScreen() {
         planDurationDays: 365,
       });
 
-      Alert.alert('Success', res.message || 'Account created successfully!');
+      notify('Success', res.message || 'Account created successfully!');
       setShowCreateModal(false);
       // Reset form
       setNewFullName('');
@@ -97,57 +118,44 @@ export default function AdminUsersScreen() {
       fetchUsers(false);
     } catch (err) {
       const msg = err?.response?.data?.error || err.message || 'Failed to create user account';
-      Alert.alert('Error', msg);
+      notify('Error', msg);
     } finally {
       setCreateLoading(false);
     }
   };
 
   const handleGrantFreePlan = (user) => {
-    Alert.alert(
+    confirmAction(
       'Grant 1-Year Protection',
       `Grant 365 Days of Free Active Protection to ${user.fullName}?`,
-      [
-        { text: 'Cancel', style: 'cancel' },
-        {
-          text: 'GRANT ACCESS',
-          onPress: async () => {
-            try {
-              const res = await adminApi.grantSubscription(user.id, { planDurationDays: 365 });
-              Alert.alert('Success', res.message || '1-Year protection granted!');
-              fetchUsers(false);
-            } catch (err) {
-              const msg = err?.response?.data?.error || err.message || 'Failed to grant subscription';
-              Alert.alert('Error', msg);
-            }
-          },
-        },
-      ]
+      async () => {
+        try {
+          const res = await adminApi.grantSubscription(user.id, { planDurationDays: 365 });
+          notify('Success', res.message || '1-Year protection granted!');
+          fetchUsers(false);
+        } catch (err) {
+          const msg = err?.response?.data?.error || err.message || 'Failed to grant subscription';
+          notify('Error', msg);
+        }
+      }
     );
   };
 
   const handleToggleBlock = (user) => {
     const isBlocked = user.isBlocked;
-    Alert.alert(
+    confirmAction(
       isBlocked ? 'Unblock User' : 'Block User',
       `Are you sure you want to ${isBlocked ? 'unblock' : 'block'} ${user.fullName}?`,
-      [
-        { text: 'Cancel', style: 'cancel' },
-        {
-          text: isBlocked ? 'UNBLOCK' : 'BLOCK',
-          style: 'destructive',
-          onPress: async () => {
-            try {
-              const res = await adminApi.toggleUserBlock(user.id);
-              Alert.alert('Status Updated', res.message || 'User account status updated.');
-              fetchUsers(false);
-            } catch (err) {
-              const msg = err?.response?.data?.error || err.message || 'Failed to update user status';
-              Alert.alert('Error', msg);
-            }
-          },
-        },
-      ]
+      async () => {
+        try {
+          const res = await adminApi.toggleUserBlock(user.id);
+          notify('Status Updated', res.message || 'User account status updated.');
+          fetchUsers(false);
+        } catch (err) {
+          const msg = err?.response?.data?.error || err.message || 'Failed to update user status';
+          notify('Error', msg);
+        }
+      }
     );
   };
 
@@ -158,12 +166,12 @@ export default function AdminUsersScreen() {
         userId: selectedUserForRole.id,
         role: targetRole,
       });
-      Alert.alert('Role Updated', res.message || `Role updated to ${targetRole}`);
+      notify('Role Updated', res.message || `Role updated to ${targetRole}`);
       setSelectedUserForRole(null);
       fetchUsers(false);
     } catch (err) {
       const msg = err?.response?.data?.error || err.message || 'Failed to update role';
-      Alert.alert('Error', msg);
+      notify('Error', msg);
     }
   };
 
@@ -215,29 +223,39 @@ export default function AdminUsersScreen() {
     </View>
   );
 
-  const renderUserStatusRow = (u, isSubActive) => (
-    <View style={styles.statusRow}>
-      <View style={styles.statusItem}>
-        <Text style={styles.statusLabel}>PROTECTION PLAN</Text>
-        <View style={[styles.subStatusBadge, isSubActive ? styles.subActive : styles.subInactive]}>
-          <Ionicons
-            name={isSubActive ? 'shield-checkmark' : 'shield-outline'}
-            size={11}
-            color={isSubActive ? '#16A34A' : '#DC2626'}
-          />
-          <Text style={[styles.subStatusText, isSubActive ? { color: '#16A34A' } : { color: '#DC2626' }]}>
-            {isSubActive ? 'ACTIVE PROTECTION' : 'FREE / EXPIRED'}
-          </Text>
-        </View>
-      </View>
-      {u.city ? (
+  const renderUserStatusRow = (u, isSubActive) => {
+    const isSuperAdmin = u.role === 'SUPER_ADMIN' || u.role === 'ADMIN';
+    return (
+      <View style={styles.statusRow}>
         <View style={styles.statusItem}>
-          <Text style={styles.statusLabel}>LOCATION</Text>
-          <Text style={styles.statusValue}>{u.city}</Text>
+          <Text style={styles.statusLabel}>PROTECTION PLAN</Text>
+          {isSuperAdmin ? (
+            <View style={[styles.subStatusBadge, { backgroundColor: '#F3E8FF', borderColor: '#E9D5FF' }]}>
+              <Ionicons name="shield-checkmark" size={11} color="#9333EA" />
+              <Text style={[styles.subStatusText, { color: '#9333EA' }]}>UNLIMITED ADMIN ACCESS</Text>
+            </View>
+          ) : (
+            <View style={[styles.subStatusBadge, isSubActive ? styles.subActive : styles.subInactive]}>
+              <Ionicons
+                name={isSubActive ? 'shield-checkmark' : 'shield-outline'}
+                size={11}
+                color={isSubActive ? '#16A34A' : '#DC2626'}
+              />
+              <Text style={[styles.subStatusText, isSubActive ? { color: '#16A34A' } : { color: '#DC2626' }]}>
+                {isSubActive ? 'ACTIVE PROTECTION' : 'FREE / EXPIRED'}
+              </Text>
+            </View>
+          )}
         </View>
-      ) : null}
-    </View>
-  );
+        {u.city ? (
+          <View style={styles.statusItem}>
+            <Text style={styles.statusLabel}>LOCATION</Text>
+            <Text style={styles.statusValue}>{u.city}</Text>
+          </View>
+        ) : null}
+      </View>
+    );
+  };
 
   const renderUserActions = (u, isSubActive) => (
     <View style={styles.userActionsRow}>
@@ -306,31 +324,37 @@ export default function AdminUsersScreen() {
       </View>
 
       {/* ROLE FILTER CHIPS */}
-      <ScrollView
-        horizontal
-        showsHorizontalScrollIndicator={false}
-        contentContainerStyle={styles.filterScroll}
-      >
-        {ROLE_FILTERS.map((rf) => {
-          const isSelected = selectedRole === rf;
-          return (
-            <TouchableOpacity
-              key={rf}
-              style={[styles.filterChip, isSelected && styles.filterChipActive]}
-              onPress={() => setSelectedRole(rf)}
-            >
-              <Text style={[styles.filterChipText, isSelected && styles.filterChipTextActive]}>
-                {rf}
-              </Text>
-            </TouchableOpacity>
-          );
-        })}
-      </ScrollView>
+      <View style={styles.filterContainer}>
+        <ScrollView
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          contentContainerStyle={styles.filterScroll}
+          style={styles.filterScrollView}
+        >
+          {ROLE_FILTERS.map((rf) => {
+            const isSelected = selectedRole === rf;
+            return (
+              <TouchableOpacity
+                key={rf}
+                style={[styles.filterChip, isSelected && styles.filterChipActive]}
+                onPress={() => setSelectedRole(rf)}
+                activeOpacity={0.7}
+              >
+                <Text style={[styles.filterChipText, isSelected && styles.filterChipTextActive]}>
+                  {rf}
+                </Text>
+              </TouchableOpacity>
+            );
+          })}
+        </ScrollView>
+      </View>
 
       {/* USER LIST */}
       <ScrollView
+        style={styles.listScrollView}
         contentContainerStyle={styles.scroll}
-        showsVerticalScrollIndicator={false}
+        showsVerticalScrollIndicator={true}
+        keyboardShouldPersistTaps="handled"
         refreshControl={
           <RefreshControl
             refreshing={refreshing}
@@ -362,10 +386,13 @@ export default function AdminUsersScreen() {
               const isSubActive = u.subscriptionStatus === 'ACTIVE';
 
               return (
-                <View key={u.id} style={styles.userCard}>{renderUserCardTop(u, roleBadge)}{renderUserStatusRow(u, isSubActive)}{renderUserActions(u, isSubActive)}</View>
+                <View key={u.id} style={styles.userCard}>
+                  {renderUserCardTop(u, roleBadge)}
+                  {renderUserStatusRow(u, isSubActive)}
+                  {renderUserActions(u, isSubActive)}
+                </View>
               );
             })}
-
           </View>
         )}
       </ScrollView>
@@ -524,121 +551,157 @@ export default function AdminUsersScreen() {
 }
 
 const styles = StyleSheet.create({
-  safe: { flex: 1, backgroundColor: '#FFF9FB' },
+  safe: {
+    flex: 1,
+    backgroundColor: '#FAF6F8',
+    ...(Platform.OS === 'web' ? { height: '100vh', maxHeight: '100vh', overflow: 'hidden' } : {}),
+  },
   header: {
     paddingHorizontal: 16,
-    paddingVertical: 14,
+    paddingVertical: 12,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    backgroundColor: '#FFF',
-    borderBottomWidth: 1.5,
-    borderBottomColor: '#FFCCE1',
+    backgroundColor: '#FFFFFF',
+    borderBottomWidth: 1,
+    borderBottomColor: '#F0E2E7',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.04,
+    shadowRadius: 4,
+    elevation: 2,
   },
-  headerTitle: { fontSize: 16, fontWeight: '900', color: COLORS.textDark, letterSpacing: 0.3 },
-  headerSubtitle: { fontSize: 10, fontWeight: '700', color: COLORS.textMuted, marginTop: 2 },
+  headerTitle: { fontSize: 15, fontWeight: '900', color: COLORS.textDark, letterSpacing: 0.3 },
+  headerSubtitle: { fontSize: 10, fontWeight: '700', color: COLORS.textMuted, marginTop: 1 },
   createBtn: {
     flexDirection: 'row',
     alignItems: 'center',
     backgroundColor: '#FF2A6D',
     paddingHorizontal: 12,
     paddingVertical: 8,
-    borderRadius: 14,
+    borderRadius: 12,
     gap: 4,
     shadowColor: '#FF2A6D',
-    shadowOffset: { width: 0, height: 3 },
+    shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.25,
-    shadowRadius: 6,
-    elevation: 3,
+    shadowRadius: 4,
+    elevation: 2,
   },
   createBtnText: { color: '#FFF', fontSize: 10, fontWeight: '900', letterSpacing: 0.5 },
 
-  searchRow: { paddingHorizontal: 16, paddingTop: 12 },
+  searchRow: { paddingHorizontal: 16, paddingTop: 10, paddingBottom: 2 },
   searchContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#FFF',
-    borderWidth: 1.5,
-    borderColor: '#FFCCE1',
-    borderRadius: 14,
-    paddingHorizontal: 12,
-    height: 44,
-  },
-  searchInput: { flex: 1, fontSize: 12, fontWeight: '700', color: COLORS.textDark },
-
-  filterScroll: { paddingHorizontal: 16, paddingVertical: 10, gap: 8 },
-  filterChip: {
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 20,
-    backgroundColor: '#FFF',
+    backgroundColor: '#FFFFFF',
     borderWidth: 1,
-    borderColor: '#FFCCE1',
+    borderColor: '#F0E2E7',
+    borderRadius: 12,
+    paddingHorizontal: 12,
+    height: 42,
   },
-  filterChipActive: { backgroundColor: '#FF2A6D', borderColor: '#FF2A6D' },
-  filterChipText: { fontSize: 10, fontWeight: '800', color: COLORS.textDark },
-  filterChipTextActive: { color: '#FFF' },
+  searchInput: { flex: 1, fontSize: 12, fontWeight: '600', color: COLORS.textDark },
 
-  scroll: { paddingHorizontal: 16, paddingBottom: 32 },
+  filterContainer: {
+    height: 48,
+    minHeight: 48,
+    maxHeight: 48,
+    justifyContent: 'center',
+    paddingVertical: 4,
+  },
+  filterScrollView: {
+    flexGrow: 0,
+    height: 40,
+  },
+  filterScroll: {
+    paddingHorizontal: 16,
+    alignItems: 'center',
+    gap: 8,
+  },
+  filterChip: {
+    paddingHorizontal: 14,
+    paddingVertical: 6,
+    borderRadius: 16,
+    backgroundColor: '#FFFFFF',
+    borderWidth: 1,
+    borderColor: '#F0E2E7',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  filterChipActive: {
+    backgroundColor: '#FF2A6D',
+    borderColor: '#FF2A6D',
+  },
+  filterChipText: { fontSize: 10.5, fontWeight: '800', color: '#684E67', letterSpacing: 0.3 },
+  filterChipTextActive: { color: '#FFFFFF' },
+
+  listScrollView: {
+    flex: 1,
+  },
+  scroll: {
+    paddingHorizontal: 16,
+    paddingTop: 4,
+    paddingBottom: 40,
+  },
   loadingContainer: { paddingVertical: 40, alignItems: 'center', gap: 10 },
   loadingText: { fontSize: 12, fontWeight: '700', color: COLORS.textMuted },
   emptyContainer: {
     alignItems: 'center',
     justifyContent: 'center',
-    paddingVertical: 40,
-    backgroundColor: '#FFF',
-    borderRadius: 20,
-    borderWidth: 1.5,
-    borderColor: '#FFCCE1',
-    borderStyle: 'dashed',
+    paddingVertical: 36,
+    backgroundColor: '#FFFFFF',
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: '#F0E2E7',
     gap: 6,
     paddingHorizontal: 20,
     marginTop: 10,
   },
-  emptyTitle: { fontSize: 14, fontWeight: '900', color: COLORS.textDark },
-  emptySub: { fontSize: 11, fontWeight: '600', color: COLORS.textMuted, textAlign: 'center' },
+  emptyTitle: { fontSize: 13.5, fontWeight: '800', color: COLORS.textDark },
+  emptySub: { fontSize: 11, fontWeight: '500', color: COLORS.textMuted, textAlign: 'center' },
 
   userCard: {
-    backgroundColor: '#FFF',
-    borderRadius: 20,
-    padding: 14,
-    borderWidth: 1.5,
-    borderColor: '#FFCCE1',
-    gap: 12,
+    backgroundColor: '#FFFFFF',
+    borderRadius: 16,
+    padding: 13,
+    borderWidth: 1,
+    borderColor: '#F0E2E7',
+    gap: 10,
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
+    shadowOffset: { width: 0, height: 1.5 },
     shadowOpacity: 0.03,
-    shadowRadius: 6,
-    elevation: 2,
+    shadowRadius: 5,
+    elevation: 1.5,
   },
   userCardTop: { flexDirection: 'row', alignItems: 'center', gap: 10 },
   avatarCircle: {
-    width: 38,
-    height: 38,
-    borderRadius: 19,
-    backgroundColor: COLORS.primary,
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: '#FF2A6D',
     alignItems: 'center',
     justifyContent: 'center',
   },
-  avatarText: { color: '#FFF', fontSize: 16, fontWeight: '900' },
-  userName: { fontSize: 13, fontWeight: '900', color: COLORS.textDark },
-  roleBadge: { paddingHorizontal: 6, paddingVertical: 2, borderRadius: 6 },
-  roleBadgeText: { fontSize: 9, fontWeight: '900' },
-  userContactText: { fontSize: 10, fontWeight: '700', color: COLORS.textMuted, marginTop: 2 },
+  avatarText: { color: '#FFF', fontSize: 15, fontWeight: '900' },
+  userName: { fontSize: 13, fontWeight: '800', color: COLORS.textDark },
+  roleBadge: { paddingHorizontal: 7, paddingVertical: 2, borderRadius: 6 },
+  roleBadgeText: { fontSize: 8.5, fontWeight: '900', letterSpacing: 0.4 },
+  userContactText: { fontSize: 10, fontWeight: '600', color: COLORS.textMuted, marginTop: 2 },
 
   statusRow: {
     flexDirection: 'row',
     alignItems: 'center',
     backgroundColor: '#FFF9FB',
-    padding: 10,
-    borderRadius: 12,
+    padding: 9,
+    borderRadius: 10,
     borderWidth: 1,
-    borderColor: '#FFCCE1',
-    gap: 16,
+    borderColor: '#FCE0E9',
+    gap: 14,
+    flexWrap: 'wrap',
   },
   statusItem: { gap: 2 },
-  statusLabel: { fontSize: 8, fontWeight: '900', color: COLORS.textMuted },
-  statusValue: { fontSize: 11, fontWeight: '800', color: COLORS.textDark },
+  statusLabel: { fontSize: 8, fontWeight: '900', color: COLORS.textMuted, letterSpacing: 0.3 },
+  statusValue: { fontSize: 10.5, fontWeight: '800', color: COLORS.textDark },
   subStatusBadge: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -649,7 +712,7 @@ const styles = StyleSheet.create({
   },
   subActive: { backgroundColor: '#DCFCE7' },
   subInactive: { backgroundColor: '#FEE2E2' },
-  subStatusText: { fontSize: 9, fontWeight: '900' },
+  subStatusText: { fontSize: 8.5, fontWeight: '900', letterSpacing: 0.3 },
 
   userActionsRow: {
     flexDirection: 'row',
@@ -661,35 +724,35 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     backgroundColor: '#F3E8FF',
-    paddingHorizontal: 10,
+    paddingHorizontal: 9,
     paddingVertical: 6,
-    borderRadius: 10,
+    borderRadius: 8,
     gap: 4,
   },
-  actionBtnGrantText: { fontSize: 9, fontWeight: '900', color: '#9333EA' },
+  actionBtnGrantText: { fontSize: 9, fontWeight: '900', color: '#9333EA', letterSpacing: 0.3 },
   actionBtnRole: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#FFF0F3',
-    paddingHorizontal: 10,
+    backgroundColor: '#FFFFFF',
+    paddingHorizontal: 9,
     paddingVertical: 6,
-    borderRadius: 10,
+    borderRadius: 8,
     gap: 4,
     borderWidth: 1,
-    borderColor: '#FFCCE1',
+    borderColor: '#F0E2E7',
   },
-  actionBtnRoleText: { fontSize: 9, fontWeight: '900', color: COLORS.textDark },
+  actionBtnRoleText: { fontSize: 9, fontWeight: '900', color: COLORS.textDark, letterSpacing: 0.3 },
   actionBtnBlock: {
     flexDirection: 'row',
     alignItems: 'center',
     backgroundColor: '#FEE2E2',
-    paddingHorizontal: 10,
+    paddingHorizontal: 9,
     paddingVertical: 6,
-    borderRadius: 10,
+    borderRadius: 8,
     gap: 4,
   },
   actionBtnUnblock: { backgroundColor: '#DCFCE7' },
-  actionBtnBlockText: { fontSize: 9, fontWeight: '900' },
+  actionBtnBlockText: { fontSize: 9, fontWeight: '900', letterSpacing: 0.3 },
 
   // MODAL STYLES
   modalOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.6)', justifyContent: 'flex-end' },

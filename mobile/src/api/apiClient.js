@@ -1,12 +1,12 @@
 import axios from 'axios';
-import { Alert, Linking } from 'react-native';
+import { Alert, Linking, Platform } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { API_URL, TOKEN_KEY } from '../utils/constants';
 
 export const apiClient = axios.create({
   baseURL: API_URL,
   headers: { 'Content-Type': 'application/json' },
-  timeout: 15000,
+  timeout: 30000,
 });
 
 // Attach JWT token — mirrors the web app's interceptor using localStorage
@@ -29,17 +29,25 @@ apiClient.interceptors.response.use(
         await AsyncStorage.removeItem(TOKEN_KEY);
       } catch (e) {}
     } else if (error.response && error.response.status === 402) {
-      Alert.alert(
-        "Subscription Required",
-        "Your subscription plan has expired or is inactive. Please contact support at 8237999101 to upgrade or renew your plan.",
-        [
-          { text: "Dismiss", style: "cancel" },
-          {
-            text: "Call 8237999101",
-            onPress: () => Linking.openURL('tel:8237999101').catch(() => {}),
-          },
-        ]
-      );
+      const msg = "Your subscription plan has expired or is inactive. Please contact support at 8237999101 to upgrade or renew your plan.";
+      if (Platform.OS === 'web' && typeof window !== 'undefined') {
+        const call = window.confirm("Subscription Required\n\n" + msg + "\n\nClick OK to call 8237999101");
+        if (call) {
+          Linking.openURL('tel:8237999101').catch(() => {});
+        }
+      } else {
+        Alert.alert(
+          "Subscription Required",
+          msg,
+          [
+            { text: "Dismiss", style: "cancel" },
+            {
+              text: "Call 8237999101",
+              onPress: () => Linking.openURL('tel:8237999101').catch(() => {}),
+            },
+          ]
+        );
+      }
     }
     return Promise.reject(error);
   }

@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, ActivityIndicator, Alert } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, ActivityIndicator, Alert, Platform } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { COLORS } from '../../theme/colors';
@@ -15,7 +15,12 @@ export default function AdminEnquiriesScreen({ navigation }) {
       const res = await apiClient.get('/admin/enquiries');
       setEnquiries(res.data.enquiries || []);
     } catch (err) {
-      Alert.alert("Error", err.response?.data?.error || "Failed to fetch enquiries");
+      const msg = err.response?.data?.error || "Failed to fetch enquiries";
+      if (Platform.OS === 'web' && typeof window !== 'undefined') {
+        window.alert(msg);
+      } else {
+        Alert.alert("Error", msg);
+      }
     } finally {
       setLoading(false);
     }
@@ -28,10 +33,19 @@ export default function AdminEnquiriesScreen({ navigation }) {
   const handleResolve = async (id) => {
     try {
       await apiClient.post(`/admin/enquiries/${id}/resolve`);
-      Alert.alert("Success", "Enquiry marked as resolved");
+      if (Platform.OS === 'web' && typeof window !== 'undefined') {
+        window.alert("Enquiry marked as resolved");
+      } else {
+        Alert.alert("Success", "Enquiry marked as resolved");
+      }
       fetchEnquiries();
     } catch (err) {
-      Alert.alert("Error", err.response?.data?.error || "Failed to resolve enquiry");
+      const msg = err.response?.data?.error || "Failed to resolve enquiry";
+      if (Platform.OS === 'web' && typeof window !== 'undefined') {
+        window.alert(msg);
+      } else {
+        Alert.alert("Error", msg);
+      }
     }
   };
 

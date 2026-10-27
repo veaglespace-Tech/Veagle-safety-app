@@ -43,21 +43,39 @@ export default function AdminDashboardScreen({ navigation }) {
 
   const socketRef = useRef(null);
 
-  // Fetch Super Admin Overview from /admin/overview
+  // Fetch Super Admin Overview from /admin/overview & sync with registered accounts
   const fetchOverviewData = useCallback(async (showIndicator = true) => {
     try {
       if (showIndicator) setIsLoading(true);
-      const data = await adminApi.fetchOverview();
-      setOverview(data || null);
+      const [overviewRes, usersRes] = await Promise.allSettled([
+        adminApi.fetchOverview(),
+        adminApi.fetchUsers(),
+      ]);
 
-      // Auto-select first active SOS if none selected or previous one ended
-      if (data?.activeSos && data.activeSos.length > 0) {
-        setSelectedSosId((prev) => {
-          const stillExists = data.activeSos.some((s) => s.id === prev);
-          return stillExists ? prev : data.activeSos[0].id;
-        });
-      } else {
-        setSelectedSosId(null);
+      let data = overviewRes.status === 'fulfilled' ? overviewRes.value : null;
+      const usersList = usersRes.status === 'fulfilled' ? usersRes.value?.users : null;
+
+      if (data) {
+        if (usersList && Array.isArray(usersList)) {
+          data = {
+            ...data,
+            metrics: {
+              ...data.metrics,
+              totalUsers: Math.max(data.metrics?.totalUsers || 0, usersList.length),
+            },
+          };
+        }
+        setOverview(data);
+
+        // Auto-select first active SOS if none selected or previous one ended
+        if (data.activeSos && data.activeSos.length > 0) {
+          setSelectedSosId((prev) => {
+            const stillExists = data.activeSos.some((s) => s.id === prev);
+            return stillExists ? prev : data.activeSos[0].id;
+          });
+        } else {
+          setSelectedSosId(null);
+        }
       }
     } catch (err) {
       console.log('[AdminDashboard] Fetch error:', err?.message);
@@ -129,7 +147,7 @@ export default function AdminDashboardScreen({ navigation }) {
     const serverUrl = API_URL.replace(/\/api\/?$/, '');
     const socket = io(serverUrl, {
       path: '/api/socket.io',
-      transports: ['websocket', 'polling'],
+      transports: ['polling', 'websocket'],
       reconnectionAttempts: 10,
       reconnectionDelay: 2000,
       timeout: 10000,
@@ -159,6 +177,7 @@ export default function AdminDashboardScreen({ navigation }) {
     });
 
     socket.on('SOS_ALARM_STOP', () => {
+      stopEmergencySiren().catch(() => {});
       fetchOverviewData(false);
       setTrackingSos(null);
     });
@@ -225,8 +244,45 @@ export default function AdminDashboardScreen({ navigation }) {
     };
   }, [fetchOverviewData]);
 
+  // Execute Resolve SOS Incident
+  const executeResolve = async (sosId) => {
+    try {
+      setIsResolving(true);
+      const res = await adminApi.adminResolveSos({
+        sosSessionId: sosId,
+        note: 'Resolved by Super Admin dispatch center',
+      });
+      stopEmergencySiren().catch(() => {});
+      setTrackingSos(null);
+      if (Platform.OS === 'web' && typeof window !== 'undefined') {
+        window.alert(res.message || 'Incident marked as SAFE and resolved.');
+      } else {
+        Alert.alert('Resolved', res.message || 'Incident marked as SAFE and resolved.');
+      }
+      fetchOverviewData(false);
+    } catch (err) {
+      const msg = err?.response?.data?.error || err.message || 'Failed to resolve emergency SOS';
+      if (Platform.OS === 'web' && typeof window !== 'undefined') {
+        window.alert('Error: ' + msg);
+      } else {
+        Alert.alert('Error', msg);
+      }
+    } finally {
+      setIsResolving(false);
+    }
+  };
+
   // Resolve SOS Action (matching POST /admin/sos/resolve)
   const handleResolveSos = (sosId) => {
+    if (Platform.OS === 'web') {
+      const confirmed = typeof window !== 'undefined' && window.confirm
+        ? window.confirm('Confirm resolving this emergency SOS incident on behalf of dispatch center?')
+        : true;
+      if (confirmed) {
+        executeResolve(sosId);
+      }
+      return;
+    }
     Alert.alert(
       'Resolve Emergency SOS',
       'Confirm resolving this emergency SOS incident on behalf of dispatch center?',
@@ -235,24 +291,7 @@ export default function AdminDashboardScreen({ navigation }) {
         {
           text: 'RESOLVE INCIDENT',
           style: 'destructive',
-          onPress: async () => {
-            try {
-              setIsResolving(true);
-              const res = await adminApi.adminResolveSos({
-                sosSessionId: sosId,
-                note: 'Resolved by Super Admin mobile dispatch',
-              });
-              Alert.alert('Resolved', res.message || 'Incident marked as SAFE and resolved.');
-              setTrackingSos(null);
-              fetchOverviewData(false);
-            } catch (err) {
-              const msg =
-                err?.response?.data?.error || err.message || 'Failed to resolve emergency SOS';
-              Alert.alert('Error', msg);
-            } finally {
-              setIsResolving(false);
-            }
-          },
+          onPress: () => executeResolve(sosId),
         },
       ]
     );
@@ -299,9 +338,9 @@ export default function AdminDashboardScreen({ navigation }) {
       <View style={styles.header}>
         <View style={styles.headerLeft}>
           <View style={styles.shieldIconWrap}>
-            <Ionicons name="shield-checkmark" size={22} color="#FFF" />
+            <Ionicons name="shield-checkmark" size={20} color="#FFF" />
           </View>
-          <View>
+          <View style={{ flex: 1 }}>
             <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
               <Text style={styles.headerTitle}>SUPER ADMIN DISPATCH</Text>
               <View style={styles.statusPill}>
@@ -317,11 +356,12 @@ export default function AdminDashboardScreen({ navigation }) {
           style={styles.refreshBtn}
           onPress={() => fetchOverviewData(true)}
           disabled={isLoading}
+          activeOpacity={0.7}
         >
           {isLoading ? (
             <ActivityIndicator size="small" color={COLORS.primary} />
           ) : (
-            <Ionicons name="refresh" size={22} color={COLORS.primary} />
+            <Ionicons name="refresh" size={20} color={COLORS.primary} />
           )}
         </TouchableOpacity>
       </View>
@@ -393,14 +433,14 @@ export default function AdminDashboardScreen({ navigation }) {
         {/* TOP KPI CARDS */}
         <Animated.View entering={FadeInUp.duration(400)} style={styles.kpiGrid}>
           {/* Card 1: Active SOS */}
-          <View style={[styles.kpiCard, styles.kpiCardSos]}>
+          <View style={[styles.kpiCard, activeSosList.length > 0 && styles.kpiCardSosAlert]}>
             <View style={styles.kpiHeader}>
               <Text style={styles.kpiLabel}>ACTIVE SOS ALERTS</Text>
-              <View style={[styles.kpiIconWrap, { backgroundColor: '#FFE4EC' }]}>
-                <Ionicons name="alert-circle" size={18} color="#FF2A6D" />
+              <View style={[styles.kpiIconWrap, { backgroundColor: activeSosList.length > 0 ? '#FFE4EC' : '#FFF0F3' }]}>
+                <Ionicons name="alert-circle" size={17} color={activeSosList.length > 0 ? '#FF2A6D' : '#FF5C8A'} />
               </View>
             </View>
-            <Text style={[styles.kpiValue, { color: '#FF2A6D' }]}>
+            <Text style={[styles.kpiValue, activeSosList.length > 0 && { color: '#FF2A6D' }]}>
               {metrics.activeSosCount}
             </Text>
             <Text style={styles.kpiSub}>Emergency broadcasts live</Text>
@@ -411,7 +451,7 @@ export default function AdminDashboardScreen({ navigation }) {
             <View style={styles.kpiHeader}>
               <Text style={styles.kpiLabel}>TOTAL MEMBERS</Text>
               <View style={[styles.kpiIconWrap, { backgroundColor: '#F3E8FF' }]}>
-                <Ionicons name="people" size={18} color="#9333EA" />
+                <Ionicons name="people" size={17} color="#9333EA" />
               </View>
             </View>
             <Text style={styles.kpiValue}>{metrics.totalUsers}</Text>
@@ -423,7 +463,7 @@ export default function AdminDashboardScreen({ navigation }) {
             <View style={styles.kpiHeader}>
               <Text style={styles.kpiLabel}>ACTIVE PAID PLANS</Text>
               <View style={[styles.kpiIconWrap, { backgroundColor: '#DCFCE7' }]}>
-                <Ionicons name="shield-checkmark" size={18} color="#16A34A" />
+                <Ionicons name="shield-checkmark" size={17} color="#16A34A" />
               </View>
             </View>
             <Text style={styles.kpiValue}>{metrics.activePlansCount}</Text>
@@ -435,7 +475,7 @@ export default function AdminDashboardScreen({ navigation }) {
             <View style={styles.kpiHeader}>
               <Text style={styles.kpiLabel}>TOTAL REVENUE</Text>
               <View style={[styles.kpiIconWrap, { backgroundColor: '#FEF3C7' }]}>
-                <Ionicons name="trending-up" size={18} color="#D97706" />
+                <Ionicons name="trending-up" size={17} color="#D97706" />
               </View>
             </View>
             <Text style={styles.kpiValue}>₹{Number(metrics.totalRevenue).toFixed(2)}</Text>
@@ -446,13 +486,13 @@ export default function AdminDashboardScreen({ navigation }) {
         {/* SECTION: LIVE ACTIVE EMERGENCY SOS BROADCASTS */}
         <View style={styles.sectionContainer}>
           <View style={styles.sectionHeader}>
-            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
-              <View style={styles.livePulseDot} />
-              <Text style={styles.sectionTitle}>Live Active SOS Emergency Broadcasts</Text>
+            <View style={styles.sectionHeaderLeft}>
+              <View style={[styles.livePulseDot, activeSosList.length > 0 && styles.livePulseDotActive]} />
+              <Text style={styles.sectionTitle} numberOfLines={1}>Live SOS Broadcasts</Text>
             </View>
-            <View style={styles.incidentBadge}>
-              <Text style={styles.incidentBadgeText}>
-                {activeSosList.length} LIVE {activeSosList.length === 1 ? 'INCIDENT' : 'INCIDENTS'}
+            <View style={[styles.incidentBadge, activeSosList.length > 0 ? styles.incidentBadgeActive : styles.incidentBadgeInactive]}>
+              <Text style={[styles.incidentBadgeText, activeSosList.length > 0 ? styles.incidentBadgeTextActive : styles.incidentBadgeTextInactive]}>
+                {activeSosList.length === 0 ? '0 ACTIVE' : `${activeSosList.length} LIVE`}
               </Text>
             </View>
           </View>
@@ -461,13 +501,13 @@ export default function AdminDashboardScreen({ navigation }) {
             /* ALL CLEAR STATE */
             <View style={styles.allClearCard}>
               <View style={styles.allClearIconCircle}>
-                <Ionicons name="checkmark-circle" size={44} color="#10B981" />
+                <Ionicons name="shield-checkmark" size={26} color="#16A34A" />
               </View>
               <Text style={styles.allClearTitle}>
-                All Clear — No Active Emergency SOS Incidents
+                All Clear — Zero Active Emergencies
               </Text>
               <Text style={styles.allClearSub}>
-                All Sakhi members are safe and monitored 24/7 by command dispatch.
+                All Sakhi members are safe. Emergency command center is actively monitoring 24/7.
               </Text>
             </View>
           ) : (
@@ -832,16 +872,21 @@ export default function AdminDashboardScreen({ navigation }) {
 }
 
 const styles = StyleSheet.create({
-  safe: { flex: 1, backgroundColor: '#FFF9FB' },
+  safe: { flex: 1, backgroundColor: '#FAF6F8' },
   header: {
     paddingHorizontal: 16,
     paddingVertical: 12,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    backgroundColor: '#FFF',
-    borderBottomWidth: 1.5,
-    borderBottomColor: '#FFCCE1',
+    backgroundColor: '#FFFFFF',
+    borderBottomWidth: 1,
+    borderBottomColor: '#F0E2E7',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.04,
+    shadowRadius: 4,
+    elevation: 2,
   },
   headerLeft: { flexDirection: 'row', alignItems: 'center', gap: 10, flex: 1 },
   shieldIconWrap: {
@@ -852,24 +897,24 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     shadowColor: '#FF2A6D',
-    shadowOffset: { width: 0, height: 3 },
-    shadowOpacity: 0.3,
-    shadowRadius: 6,
-    elevation: 4,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.25,
+    shadowRadius: 5,
+    elevation: 3,
   },
-  headerTitle: { fontSize: 15, fontWeight: '900', color: COLORS.textDark, letterSpacing: 0.3 },
-  headerSubtitle: { fontSize: 10, fontWeight: '700', color: COLORS.textMuted },
+  headerTitle: { fontSize: 14.5, fontWeight: '900', color: COLORS.textDark, letterSpacing: 0.3 },
+  headerSubtitle: { fontSize: 10, fontWeight: '700', color: COLORS.textMuted, marginTop: 1 },
   statusPill: {
     flexDirection: 'row',
     alignItems: 'center',
     backgroundColor: '#DCFCE7',
     paddingHorizontal: 6,
     paddingVertical: 2,
-    borderRadius: 8,
+    borderRadius: 6,
     gap: 4,
   },
   statusDot: { width: 6, height: 6, borderRadius: 3, backgroundColor: '#16A34A' },
-  statusText: { fontSize: 9, fontWeight: '900', color: '#16A34A' },
+  statusText: { fontSize: 9, fontWeight: '900', color: '#16A34A', letterSpacing: 0.5 },
   refreshBtn: {
     width: 36,
     height: 36,
@@ -878,133 +923,157 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     borderWidth: 1,
-    borderColor: '#FFCCE1',
+    borderColor: '#FCE0E9',
   },
-  scroll: { paddingHorizontal: 16, paddingTop: 16, paddingBottom: 32, gap: 16 },
+  scroll: { paddingHorizontal: 16, paddingTop: 14, paddingBottom: 28, gap: 14 },
 
   // SIREN ALERT BANNER
   sirenAlertBanner: {
-    borderRadius: 20,
-    padding: 14,
+    borderRadius: 16,
+    padding: 12,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    gap: 12,
+    gap: 10,
     shadowColor: '#FF2A6D',
-    shadowOffset: { width: 0, height: 4 },
+    shadowOffset: { width: 0, height: 3 },
     shadowOpacity: 0.25,
-    shadowRadius: 8,
-    elevation: 4,
+    shadowRadius: 6,
+    elevation: 3,
   },
   sirenBannerLeft: { flexDirection: 'row', alignItems: 'center', gap: 10, flex: 1 },
   sirenPulseIcon: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
+    width: 34,
+    height: 34,
+    borderRadius: 17,
     backgroundColor: 'rgba(255, 255, 255, 0.25)',
     alignItems: 'center',
     justifyContent: 'center',
   },
-  sirenBannerTitle: { fontSize: 12, fontWeight: '900', color: '#FFF', letterSpacing: 0.5 },
-  sirenBannerSub: { fontSize: 10, fontWeight: '700', color: 'rgba(255, 255, 255, 0.9)' },
+  sirenBannerTitle: { fontSize: 12, fontWeight: '900', color: '#FFF', letterSpacing: 0.3 },
+  sirenBannerSub: { fontSize: 10, fontWeight: '600', color: 'rgba(255, 255, 255, 0.95)', marginTop: 1 },
   globalMuteBtn: {
     flexDirection: 'row',
     alignItems: 'center',
     backgroundColor: '#FFF',
-    paddingHorizontal: 10,
+    paddingHorizontal: 9,
     paddingVertical: 6,
-    borderRadius: 12,
+    borderRadius: 10,
     gap: 4,
   },
-  globalMuteText: { fontSize: 10, fontWeight: '900', color: '#FF2A6D', letterSpacing: 0.5 },
+  globalMuteText: { fontSize: 9.5, fontWeight: '900', color: '#FF2A6D', letterSpacing: 0.4 },
 
   // KPI GRID
   kpiGrid: {
     flexDirection: 'row',
     flexWrap: 'wrap',
-    gap: 10,
+    justifyContent: 'space-between',
+    rowGap: 10,
   },
   kpiCard: {
-    width: (width - 32 - 10) / 2,
-    backgroundColor: '#FFF',
+    width: '48.5%',
+    backgroundColor: '#FFFFFF',
+    borderRadius: 16,
+    padding: 13,
+    borderWidth: 1,
+    borderColor: '#F0E2E7',
+    gap: 3,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1.5 },
+    shadowOpacity: 0.03,
+    shadowRadius: 5,
+    elevation: 1,
+  },
+  kpiCardSosAlert: {
+    borderColor: '#FECDD3',
+    backgroundColor: '#FFF5F7',
+  },
+  kpiHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
+  kpiLabel: { fontSize: 9.5, fontWeight: '800', color: '#684E67', letterSpacing: 0.4 },
+  kpiIconWrap: { width: 28, height: 28, borderRadius: 8, alignItems: 'center', justifyContent: 'center' },
+  kpiValue: { fontSize: 21, fontWeight: '900', color: COLORS.textDark, marginTop: 2 },
+  kpiSub: { fontSize: 9.5, fontWeight: '600', color: '#8E738D', marginTop: 1 },
+
+  // SECTION CONTAINER
+  sectionContainer: {
+    backgroundColor: '#FFFFFF',
     borderRadius: 20,
-    padding: 14,
-    borderWidth: 1.5,
-    borderColor: '#FFCCE1',
-    gap: 4,
+    padding: 15,
+    borderWidth: 1,
+    borderColor: '#F0E2E7',
+    gap: 12,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.03,
     shadowRadius: 6,
-    elevation: 2,
-  },
-  kpiCardSos: {
-    borderColor: '#FF2A6D',
-    backgroundColor: '#FFF',
-  },
-  kpiHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
-  kpiLabel: { fontSize: 10, fontWeight: '900', color: COLORS.textMuted, letterSpacing: 0.3 },
-  kpiIconWrap: { width: 28, height: 28, borderRadius: 8, alignItems: 'center', justifyContent: 'center' },
-  kpiValue: { fontSize: 22, fontWeight: '900', color: COLORS.textDark },
-  kpiSub: { fontSize: 9, fontWeight: '700', color: COLORS.textMuted },
-
-  // SECTION CONTAINER
-  sectionContainer: {
-    backgroundColor: '#FFF',
-    borderRadius: 24,
-    padding: 16,
-    borderWidth: 1.5,
-    borderColor: '#FFCCE1',
-    gap: 14,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 3 },
-    shadowOpacity: 0.04,
-    shadowRadius: 8,
-    elevation: 2,
+    elevation: 1.5,
   },
   sectionHeader: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
     borderBottomWidth: 1,
-    borderBottomColor: '#FFCCE1',
+    borderBottomColor: '#F5E6EC',
     paddingBottom: 10,
+    gap: 8,
   },
-  livePulseDot: { width: 10, height: 10, borderRadius: 5, backgroundColor: '#FF2A6D' },
-  sectionTitle: { fontSize: 14, fontWeight: '900', color: COLORS.textDark, letterSpacing: 0.3 },
+  sectionHeaderLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    flex: 1,
+  },
+  livePulseDot: { width: 9, height: 9, borderRadius: 4.5, backgroundColor: '#CBD5E1' },
+  livePulseDotActive: { backgroundColor: '#FF2A6D' },
+  sectionTitle: { fontSize: 13.5, fontWeight: '800', color: COLORS.textDark, letterSpacing: 0.2, flexShrink: 1 },
   incidentBadge: {
-    backgroundColor: '#FFE4EC',
     paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: 12,
+    paddingVertical: 3,
+    borderRadius: 10,
     borderWidth: 1,
-    borderColor: '#FFCCE1',
   },
-  incidentBadgeText: { fontSize: 9, fontWeight: '900', color: '#FF2A6D' },
+  incidentBadgeInactive: {
+    backgroundColor: '#F3F4F6',
+    borderColor: '#E5E7EB',
+  },
+  incidentBadgeActive: {
+    backgroundColor: '#FFE4EC',
+    borderColor: '#FECDD3',
+  },
+  incidentBadgeText: { fontSize: 9, fontWeight: '800', letterSpacing: 0.4 },
+  incidentBadgeTextInactive: { color: '#6B7280' },
+  incidentBadgeTextActive: { color: '#FF2A6D' },
 
   // ALL CLEAR CARD
   allClearCard: {
     alignItems: 'center',
     justifyContent: 'center',
-    paddingVertical: 28,
+    paddingVertical: 22,
     paddingHorizontal: 16,
     backgroundColor: '#F0FDF4',
-    borderRadius: 20,
-    borderWidth: 1.5,
-    borderColor: '#BBF7D0',
-    borderStyle: 'dashed',
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: '#DCFCE7',
     gap: 6,
   },
-  allClearIconCircle: { marginBottom: 4 },
-  allClearTitle: { fontSize: 13, fontWeight: '900', color: '#15803D', textAlign: 'center' },
-  allClearSub: { fontSize: 11, fontWeight: '600', color: '#166534', textAlign: 'center' },
+  allClearIconCircle: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    backgroundColor: '#DCFCE7',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 2,
+  },
+  allClearTitle: { fontSize: 13, fontWeight: '800', color: '#15803D', textAlign: 'center' },
+  allClearSub: { fontSize: 11, fontWeight: '500', color: '#166534', textAlign: 'center', lineHeight: 16 },
 
   // MAP CARD INSIDE OVERVIEW
   mapCard: {
-    borderRadius: 20,
-    backgroundColor: '#FFF0F3',
-    borderWidth: 1.5,
-    borderColor: '#FFCCE1',
+    borderRadius: 16,
+    backgroundColor: '#FFF5F7',
+    borderWidth: 1,
+    borderColor: '#FCE0E9',
     padding: 10,
     gap: 10,
   },
@@ -1012,32 +1081,32 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    paddingHorizontal: 4,
+    paddingHorizontal: 2,
   },
-  mapVictimTitle: { fontSize: 12, fontWeight: '900', color: COLORS.textDark },
+  mapVictimTitle: { fontSize: 11.5, fontWeight: '800', color: COLORS.textDark },
   mapExpandBtn: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#FFF',
+    backgroundColor: '#FFFFFF',
     paddingHorizontal: 8,
     paddingVertical: 4,
-    borderRadius: 10,
+    borderRadius: 8,
     borderWidth: 1,
-    borderColor: '#FFCCE1',
+    borderColor: '#FCE0E9',
     gap: 4,
   },
-  mapExpandText: { fontSize: 9, fontWeight: '900', color: '#FF2A6D' },
-  sosSelectorScroll: { gap: 8, paddingVertical: 4 },
+  mapExpandText: { fontSize: 9, fontWeight: '800', color: '#FF2A6D', letterSpacing: 0.3 },
+  sosSelectorScroll: { gap: 6, paddingVertical: 2 },
   sosSelectorTab: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingHorizontal: 10,
-    paddingVertical: 6,
-    borderRadius: 12,
-    backgroundColor: '#FFF',
+    paddingHorizontal: 9,
+    paddingVertical: 5,
+    borderRadius: 10,
+    backgroundColor: '#FFFFFF',
     borderWidth: 1,
-    borderColor: '#FFCCE1',
-    gap: 6,
+    borderColor: '#FCE0E9',
+    gap: 5,
   },
   sosSelectorTabActive: {
     backgroundColor: '#FF2A6D',
@@ -1048,52 +1117,52 @@ const styles = StyleSheet.create({
 
   // ACTIVE SOS CARD
   activeSosCard: {
-    backgroundColor: '#FFF0F3',
-    borderRadius: 20,
-    padding: 14,
-    borderWidth: 1.5,
-    borderColor: '#FFCCD8',
-    gap: 10,
+    backgroundColor: '#FFF8FA',
+    borderRadius: 16,
+    padding: 12,
+    borderWidth: 1,
+    borderColor: '#FCE0E9',
+    gap: 9,
   },
   activeSosCardHighlight: {
     borderColor: '#FF2A6D',
-    backgroundColor: '#FFF5F7',
+    backgroundColor: '#FFF0F3',
   },
   sosTopRow: { flexDirection: 'row', alignItems: 'flex-start', justifyContent: 'space-between' },
   sosUserLeft: { flexDirection: 'row', alignItems: 'center', gap: 10, flex: 1 },
   sosAvatarCircle: {
-    width: 38,
-    height: 38,
-    borderRadius: 19,
+    width: 36,
+    height: 36,
+    borderRadius: 18,
     backgroundColor: '#FF2A6D',
     alignItems: 'center',
     justifyContent: 'center',
   },
-  sosAvatarLetter: { color: '#FFF', fontSize: 16, fontWeight: '900' },
+  sosAvatarLetter: { color: '#FFF', fontSize: 15, fontWeight: '900' },
   sosBadgeId: {
-    backgroundColor: '#FFF',
+    backgroundColor: '#FFFFFF',
     paddingHorizontal: 6,
     paddingVertical: 2,
-    borderRadius: 8,
+    borderRadius: 6,
     borderWidth: 1,
     borderColor: '#FF2A6D',
   },
-  sosBadgeIdText: { fontSize: 9, fontWeight: '900', color: '#FF2A6D' },
-  sosUserName: { fontSize: 13, fontWeight: '900', color: COLORS.textDark, flex: 1 },
-  sosContactDetails: { fontSize: 10, fontWeight: '700', color: COLORS.textMuted, marginTop: 2 },
-  sosTimeText: { fontSize: 10, fontWeight: '800', color: '#FF2A6D' },
+  sosBadgeIdText: { fontSize: 9, fontWeight: '800', color: '#FF2A6D' },
+  sosUserName: { fontSize: 12.5, fontWeight: '800', color: COLORS.textDark, flex: 1 },
+  sosContactDetails: { fontSize: 10, fontWeight: '600', color: COLORS.textMuted, marginTop: 1 },
+  sosTimeText: { fontSize: 9.5, fontWeight: '800', color: '#FF2A6D' },
   sosGpsRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#FFF',
+    backgroundColor: '#FFFFFF',
     paddingHorizontal: 8,
     paddingVertical: 5,
-    borderRadius: 10,
+    borderRadius: 8,
     borderWidth: 1,
-    borderColor: '#FFCCE1',
+    borderColor: '#FCE0E9',
     gap: 4,
   },
-  sosGpsText: { fontSize: 10, fontWeight: '800', color: COLORS.textDark },
+  sosGpsText: { fontSize: 9.5, fontWeight: '700', color: COLORS.textDark },
 
   // ACTIONS ROW
   sosActionsRow: {
@@ -1101,18 +1170,18 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     flexWrap: 'wrap',
     gap: 6,
-    paddingTop: 4,
+    paddingTop: 2,
   },
   sosActionBtn: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingHorizontal: 10,
-    paddingVertical: 7,
-    borderRadius: 10,
+    paddingHorizontal: 9,
+    paddingVertical: 6,
+    borderRadius: 8,
     gap: 4,
   },
   sosActionBtnMuted: {
-    backgroundColor: '#FFF',
+    backgroundColor: '#FFFFFF',
     borderWidth: 1,
     borderColor: '#FF2A6D',
   },
@@ -1124,36 +1193,36 @@ const styles = StyleSheet.create({
   },
   sosActionBtnCall: {
     backgroundColor: '#DCFCE7',
-    paddingHorizontal: 9,
+    paddingHorizontal: 8,
   },
   sosActionBtnWa: {
     backgroundColor: '#DCFCE7',
-    paddingHorizontal: 9,
+    paddingHorizontal: 8,
   },
   sosActionBtnResolve: {
     backgroundColor: '#059669',
   },
-  sosActionText: { fontSize: 10, fontWeight: '900', letterSpacing: 0.3 },
+  sosActionText: { fontSize: 9.5, fontWeight: '800', letterSpacing: 0.3 },
 
   // RECENT LOGS
-  emptyRecentCard: { paddingVertical: 16, alignItems: 'center' },
+  emptyRecentCard: { paddingVertical: 14, alignItems: 'center' },
   emptyRecentText: { fontSize: 11, fontWeight: '600', color: COLORS.textMuted },
   recentItemCard: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
     padding: 10,
-    borderRadius: 14,
-    backgroundColor: '#FFF0F3',
+    borderRadius: 12,
+    backgroundColor: '#FFF9FB',
     borderWidth: 1,
-    borderColor: '#FFCCE1',
+    borderColor: '#FCE0E9',
   },
   recentItemTitle: { fontSize: 11, fontWeight: '800', color: COLORS.textDark },
   recentItemTime: { fontSize: 9, fontWeight: '600', color: COLORS.textMuted, marginTop: 2 },
   recentStatusBadge: { paddingHorizontal: 6, paddingVertical: 2, borderRadius: 6 },
   badgeResolved: { backgroundColor: '#DCFCE7' },
   badgeActive: { backgroundColor: '#FFE4EC' },
-  recentStatusText: { fontSize: 9, fontWeight: '900' },
+  recentStatusText: { fontSize: 8.5, fontWeight: '900', letterSpacing: 0.3 },
   textResolved: { color: '#15803D' },
   textActive: { color: '#FF2A6D' },
 

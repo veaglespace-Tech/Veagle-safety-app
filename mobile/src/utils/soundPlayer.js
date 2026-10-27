@@ -5,7 +5,24 @@ let oscillator = null;
 let gainNode = null;
 let htmlAudioElement = null;
 let isPlaying = false;
+
+if (Platform.OS === 'web' && typeof window !== 'undefined') {
+  const unlockAudio = () => {
+    try {
+      if (audioCtx && audioCtx.state === 'suspended' && isPlaying) {
+        audioCtx.resume().catch(() => {});
+      }
+      if (htmlAudioElement && isPlaying && htmlAudioElement.paused) {
+        htmlAudioElement.play().catch(() => {});
+      }
+    } catch (e) {}
+  };
+  ['click', 'touchstart', 'pointerdown', 'keydown'].forEach((ev) => {
+    window.addEventListener(ev, unlockAudio, { passive: true });
+  });
+}
 let intervalId = null;
+let watchdogInterval = null;
 let cachedSirenUri = null;
 let activeNativePlayer = null;
 let preloadedNativePlayer = null;
@@ -56,11 +73,27 @@ function generateSirenWavDataUri() {
   }
 
   const bytes = new Uint8Array(buffer);
-  let binary = '';
-  for (let i = 0; i < bytes.length; i++) {
-    binary += String.fromCharCode(bytes[i]);
+  const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/';
+  let base64Str = '';
+  let i = 0;
+  const len = bytes.length;
+  for (; i + 2 < len; i += 3) {
+    base64Str += chars[bytes[i] >> 2];
+    base64Str += chars[((bytes[i] & 3) << 4) | (bytes[i + 1] >> 4)];
+    base64Str += chars[((bytes[i + 1] & 15) << 2) | (bytes[i + 2] >> 6)];
+    base64Str += chars[bytes[i + 2] & 63];
   }
-  const base64Str = typeof btoa !== 'undefined' ? btoa(binary) : Buffer.from(binary, 'binary').toString('base64');
+  if (i < len) {
+    base64Str += chars[bytes[i] >> 2];
+    if (i + 1 < len) {
+      base64Str += chars[((bytes[i] & 3) << 4) | (bytes[i + 1] >> 4)];
+      base64Str += chars[(bytes[i + 1] & 15) << 2];
+      base64Str += '=';
+    } else {
+      base64Str += chars[(bytes[i] & 3) << 4];
+      base64Str += '==';
+    }
+  }
   return 'data:audio/wav;base64,' + base64Str;
 }
 
@@ -73,13 +106,45 @@ if (Platform.OS === 'web' && typeof window !== 'undefined') {
     htmlAudioElement.volume = 1.0;
     htmlAudioElement.preload = 'auto';
 
+    htmlAudioElement.onended = () => {
+      if (isPlaying) {
+        try {
+          htmlAudioElement.currentTime = 0;
+          htmlAudioElement.play().catch(() => {});
+        } catch (e) {}
+      }
+    };
+
     const unlock = () => {
       if (audioCtx && audioCtx.state === 'suspended') {
         audioCtx.resume().catch(() => {});
       }
+      if (htmlAudioElement && isPlaying && htmlAudioElement.paused) {
+        htmlAudioElement.play().catch(() => {});
+      }
     };
-    window.addEventListener('touchstart', unlock, { passive: true, once: true });
-    window.addEventListener('click', unlock, { passive: true, once: true });
+    window.addEventListener('touchstart', unlock, { passive: true });
+    window.addEventListener('click', unlock, { passive: true });
+  } catch (e) {}
+}
+
+// Helper to configure native player with reliable looping & status listeners
+function setupNativePlayer(player, loop = true) {
+  if (!player) return;
+  try {
+    player.loop = loop;
+    if (typeof player.addListener === 'function') {
+      player.addListener('playbackStatusUpdate', (status) => {
+        if (isPlaying && (status?.didJustFinish || (!status?.playing && status?.isLoaded && !status?.isBuffering))) {
+          try {
+            if (typeof player.seekTo === 'function') {
+              player.seekTo(0);
+            }
+            player.play();
+          } catch (e) {}
+        }
+      });
+    }
   } catch (e) {}
 }
 
@@ -92,12 +157,17 @@ async function primeNativePlayer() {
       await setAudioModeAsync({
         playsInSilentMode: true,
         staysActiveInBackground: true,
+        interruptionMode: 'doNotMixPersistent',
+        shouldRouteThroughEarpiece: false,
       }).catch(() => {});
     }
     const localSiren = require('../../assets/sounds/alarm_siren.wav');
-    preloadedNativePlayer = createAudioPlayer(localSiren);
+    preloadedNativePlayer = createAudioPlayer(localSiren, {
+      keepAudioSessionActive: true,
+      preferredForwardBufferDuration: 10,
+    });
     if (preloadedNativePlayer) {
-      preloadedNativePlayer.loop = true;
+      setupNativePlayer(preloadedNativePlayer, true);
       activeNativePlayer = preloadedNativePlayer;
     }
   } catch (e) {
@@ -116,6 +186,47 @@ export const playEmergencySiren = (loop = true) => {
     }
   } catch (e) {}
 
+  // Continuous watchdog loop: keeps siren and vibration alive across low-end devices and background states
+  if (watchdogInterval) clearInterval(watchdogInterval);
+  watchdogInterval = setInterval(() => {
+    if (!isPlaying) {
+      clearInterval(watchdogInterval);
+      watchdogInterval = null;
+      return;
+    }
+
+    // 1. Maintain vibration on mobile
+    if (Platform.OS !== 'web') {
+      try {
+        Vibration.vibrate([0, 500, 200, 500], true);
+      } catch (e) {}
+    }
+
+    // 2. Maintain native player playback
+    if (activeNativePlayer && Platform.OS !== 'web') {
+      try {
+        if (!activeNativePlayer.playing) {
+          if (typeof activeNativePlayer.seekTo === 'function') {
+            activeNativePlayer.seekTo(0);
+          }
+          activeNativePlayer.play();
+        }
+      } catch (e) {}
+    }
+
+    // 3. Maintain web audio element
+    if (Platform.OS === 'web') {
+      try {
+        if (htmlAudioElement && htmlAudioElement.paused) {
+          htmlAudioElement.play().catch(() => {});
+        }
+        if (audioCtx && audioCtx.state === 'suspended') {
+          audioCtx.resume().catch(() => {});
+        }
+      } catch (e) {}
+    }
+  }, 1500);
+
   // 1. Web Platform: Instant Dual-Engine
   if (Platform.OS === 'web') {
     try {
@@ -133,38 +244,41 @@ export const playEmergencySiren = (loop = true) => {
 
         const AudioContextClass = window.AudioContext || window.webkitAudioContext;
         if (AudioContextClass) {
-          if (!audioCtx || audioCtx.state === 'closed') {
-            audioCtx = new AudioContextClass();
-          }
-          if (audioCtx.state === 'suspended') {
-            audioCtx.resume().catch(() => {});
-          }
-          if (!oscillator) {
-            oscillator = audioCtx.createOscillator();
-            gainNode = audioCtx.createGain();
+          try {
+            if (!audioCtx || audioCtx.state === 'closed') {
+              audioCtx = new AudioContextClass();
+            }
+            if (audioCtx.state === 'suspended') {
+              audioCtx.resume().catch(() => {});
+            }
+            if (!oscillator) {
+              oscillator = audioCtx.createOscillator();
+              gainNode = audioCtx.createGain();
 
-            oscillator.type = 'sawtooth';
-            oscillator.frequency.setValueAtTime(750, audioCtx.currentTime);
-            gainNode.gain.setValueAtTime(0.9, audioCtx.currentTime);
+              oscillator.type = 'sawtooth';
+              oscillator.frequency.setValueAtTime(750, audioCtx.currentTime);
+              gainNode.gain.setValueAtTime(0.9, audioCtx.currentTime);
 
-            oscillator.connect(gainNode);
-            gainNode.connect(audioCtx.destination);
-            oscillator.start();
+              oscillator.connect(gainNode);
+              gainNode.connect(audioCtx.destination);
+              try {
+                oscillator.start();
+              } catch (e) {}
 
-            let high = true;
-            if (intervalId) clearInterval(intervalId);
-            intervalId = setInterval(() => {
-              if (oscillator && audioCtx && audioCtx.state === 'running') {
-                oscillator.frequency.exponentialRampToValueAtTime(
-                  high ? 1350 : 750,
-                  audioCtx.currentTime + 0.25
-                );
-                high = !high;
-              }
-            }, 300);
-          }
+              let high = true;
+              if (intervalId) clearInterval(intervalId);
+              intervalId = setInterval(() => {
+                if (oscillator && audioCtx && audioCtx.state === 'running') {
+                  oscillator.frequency.exponentialRampToValueAtTime(
+                    high ? 1350 : 750,
+                    audioCtx.currentTime + 0.25
+                  );
+                  high = !high;
+                }
+              }, 300);
+            }
+          } catch (audioErr) {}
         }
-        // Always return a Promise so callers can safely use .catch()
         return Promise.resolve();
       }
     } catch (e) {
@@ -179,23 +293,28 @@ export const playEmergencySiren = (loop = true) => {
       const { createAudioPlayer, setAudioModeAsync } = await import('expo-audio');
 
       if (setAudioModeAsync) {
-        setAudioModeAsync({
+        await setAudioModeAsync({
           playsInSilentMode: true,
           staysActiveInBackground: true,
+          interruptionMode: 'doNotMixPersistent',
+          shouldRouteThroughEarpiece: false,
         }).catch(() => {});
       }
 
       if (preloadedNativePlayer) {
-        preloadedNativePlayer.loop = loop;
+        setupNativePlayer(preloadedNativePlayer, loop);
         preloadedNativePlayer.play();
         activeNativePlayer = preloadedNativePlayer;
         return;
       }
 
       const localSiren = require('../../assets/sounds/alarm_siren.wav');
-      const player = createAudioPlayer(localSiren);
+      const player = createAudioPlayer(localSiren, {
+        keepAudioSessionActive: true,
+        preferredForwardBufferDuration: 10,
+      });
       if (player) {
-        player.loop = loop;
+        setupNativePlayer(player, loop);
         player.play();
         activeNativePlayer = player;
       }
@@ -207,6 +326,11 @@ export const playEmergencySiren = (loop = true) => {
 
 export const stopEmergencySiren = () => {
   isPlaying = false;
+
+  if (watchdogInterval) {
+    clearInterval(watchdogInterval);
+    watchdogInterval = null;
+  }
 
   // Stop Vibration
   try {

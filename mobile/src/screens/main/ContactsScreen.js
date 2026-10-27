@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import {
   View, Text, StyleSheet, ScrollView, TouchableOpacity,
-  TextInput, Alert, ActivityIndicator, Modal, Linking,
+  TextInput, Alert, ActivityIndicator, Modal, Linking, Platform,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
@@ -49,7 +49,11 @@ export default function ContactsScreen() {
 
   const handleSave = async () => {
     if (!name || !phone) {
-      Alert.alert('Required', 'Name and mobile number are required.');
+      if (Platform.OS === 'web' && typeof window !== 'undefined') {
+        window.alert('Name and mobile number are required.');
+      } else {
+        Alert.alert('Required', 'Name and mobile number are required.');
+      }
       return;
     }
     setSaving(true);
@@ -65,13 +69,31 @@ export default function ContactsScreen() {
         setShowModal(false);
       }, 1000);
     } catch (err) {
-      Alert.alert('Error', err || 'Could not save contact. Please try again.');
+      if (Platform.OS === 'web' && typeof window !== 'undefined') {
+        window.alert(err || 'Could not save contact. Please try again.');
+      } else {
+        Alert.alert('Error', err || 'Could not save contact. Please try again.');
+      }
     } finally {
       setSaving(false);
     }
   };
 
   const handleDelete = (id) => {
+    if (Platform.OS === 'web') {
+      const confirmed = typeof window !== 'undefined' && window.confirm
+        ? window.confirm('Remove Contact: They will no longer receive emergency alerts.')
+        : true;
+      if (confirmed) {
+        dispatch(deleteContact(id))
+          .unwrap()
+          .catch((err) => {
+            if (typeof window !== 'undefined') window.alert(err || 'Failed to remove contact. Please try again.');
+          });
+      }
+      return;
+    }
+
     Alert.alert(
       'Remove Contact',
       'They will no longer receive emergency alerts.',

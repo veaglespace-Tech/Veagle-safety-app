@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import {
   View, Text, StyleSheet, ScrollView, TouchableOpacity,
-  TextInput, Alert, ActivityIndicator,
+  TextInput, Alert, ActivityIndicator, Platform,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
@@ -52,7 +52,11 @@ export default function JourneyScreen() {
 
   const handleStartJourney = async () => {
     if (!destination || !minutes || Number(minutes) <= 0) {
-      Alert.alert('Required', 'Please enter a valid destination and travel duration.');
+      if (Platform.OS === 'web' && typeof window !== 'undefined') {
+        window.alert('Please enter a valid destination and travel duration.');
+      } else {
+        Alert.alert('Required', 'Please enter a valid destination and travel duration.');
+      }
       return;
     }
 
@@ -80,18 +84,39 @@ export default function JourneyScreen() {
           });
           setJourney(res.journey);
         } catch (e) {
-          Alert.alert('Error', 'Failed to start journey. Please try again.');
+          if (Platform.OS === 'web' && typeof window !== 'undefined') {
+            window.alert('Failed to start journey. Please try again.');
+          } else {
+            Alert.alert('Error', 'Failed to start journey. Please try again.');
+          }
         } finally {
           setLoading(false);
         }
       },
       () => {
-        Alert.alert('Notice', 'Journey tracking requires location access to share your route with contacts.');
+        if (Platform.OS === 'web' && typeof window !== 'undefined') {
+          window.alert('Journey tracking requires location access to share your route with contacts.');
+        } else {
+          Alert.alert('Notice', 'Journey tracking requires location access to share your route with contacts.');
+        }
       }
     );
   };
 
   const handleCompleteJourney = async () => {
+    if (Platform.OS === 'web') {
+      const confirmed = typeof window !== 'undefined' && window.confirm
+        ? window.confirm("Journey Complete: Confirm that you've arrived safely?")
+        : true;
+      if (confirmed) {
+        try {
+          await journeyApi.completeJourney(journey.id);
+          setJourney(null);
+        } catch (e) {}
+      }
+      return;
+    }
+
     Alert.alert('Journey Complete', 'Confirm that you\'ve arrived safely?', [
       { text: 'Cancel', style: 'cancel' },
       {
@@ -107,7 +132,11 @@ export default function JourneyScreen() {
 
   const handleStartCheckin = async () => {
     if (!checkinInterval || Number(checkinInterval) <= 0) {
-      Alert.alert('Required', 'Please enter a valid check-in interval in minutes.');
+      if (Platform.OS === 'web' && typeof window !== 'undefined') {
+        window.alert('Please enter a valid check-in interval in minutes.');
+      } else {
+        Alert.alert('Required', 'Please enter a valid check-in interval in minutes.');
+      }
       return;
     }
     setLoading(true);
@@ -115,7 +144,11 @@ export default function JourneyScreen() {
       const res = await checkinApi.startCheckin(checkinInterval);
       setCheckin(res.checkin);
     } catch (e) {
-      Alert.alert('Error', 'Failed to start safety check. Please try again.');
+      if (Platform.OS === 'web' && typeof window !== 'undefined') {
+        window.alert('Failed to start safety check. Please try again.');
+      } else {
+        Alert.alert('Error', 'Failed to start safety check. Please try again.');
+      }
     } finally {
       setLoading(false);
     }
