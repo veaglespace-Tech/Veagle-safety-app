@@ -531,7 +531,7 @@ export default function OrganizationDashboardScreen({ navigation }) {
       </ScrollView>
 
       {/* LIVE GPS TRACKING MODAL */}
-      <Modal visible={!!trackingMember} transparent animationType="slide">
+      <Modal visible={!!trackingMember} transparent animationType={Platform.OS === 'ios' ? 'slide' : 'fade'}>
         {trackingMember && (
           <SafeAreaView style={styles.modalOverlay}>
             <View style={styles.modalSheet}>

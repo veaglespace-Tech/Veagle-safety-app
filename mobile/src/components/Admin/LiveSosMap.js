@@ -514,7 +514,7 @@ function UniversalLiveLeafletMap({ lat, lng, accuracy = 15, victimName = 'Victim
             trail,
           }, '*');
         }
-      } else if (webViewRef.current) {
+      } else if (webViewRef.current && typeof webViewRef.current.injectJavaScript === 'function') {
         const script = `
           (function() {
             try {
@@ -531,24 +531,32 @@ function UniversalLiveLeafletMap({ lat, lng, accuracy = 15, victimName = 'Victim
   };
 
   useEffect(() => {
-    pushUpdate();
+    try {
+      pushUpdate();
+    } catch (e) {}
 
     const handleMessage = (e) => {
-      if (e.data && e.data.type === 'LEAFLET_READY') {
-        pushUpdate();
-      }
+      try {
+        if (e.data && e.data.type === 'LEAFLET_READY') {
+          pushUpdate();
+        }
+      } catch (e) {}
     };
     if (Platform.OS === 'web' && typeof window !== 'undefined' && typeof window.addEventListener === 'function') {
-      window.addEventListener('message', handleMessage);
+      try {
+        window.addEventListener('message', handleMessage);
+      } catch (e) {}
     }
 
-    const t1 = setTimeout(pushUpdate, 300);
-    const t2 = setTimeout(pushUpdate, 800);
-    const t3 = setTimeout(pushUpdate, 1500);
+    const t1 = setTimeout(() => { try { pushUpdate(); } catch (e) {} }, 300);
+    const t2 = setTimeout(() => { try { pushUpdate(); } catch (e) {} }, 800);
+    const t3 = setTimeout(() => { try { pushUpdate(); } catch (e) {} }, 1500);
 
     return () => {
       if (Platform.OS === 'web' && typeof window !== 'undefined' && typeof window.removeEventListener === 'function') {
-        window.removeEventListener('message', handleMessage);
+        try {
+          window.removeEventListener('message', handleMessage);
+        } catch (e) {}
       }
       clearTimeout(t1);
       clearTimeout(t2);
@@ -567,8 +575,10 @@ function UniversalLiveLeafletMap({ lat, lng, accuracy = 15, victimName = 'Victim
           style: { border: 0, borderRadius: 20 },
           srcDoc: initialHtml,
           onLoad: () => {
-            pushUpdate();
-            setTimeout(pushUpdate, 300);
+            try {
+              pushUpdate();
+              setTimeout(pushUpdate, 300);
+            } catch (e) {}
           },
         })}
       </View>
@@ -582,23 +592,27 @@ function UniversalLiveLeafletMap({ lat, lng, accuracy = 15, victimName = 'Victim
           ref={webViewRef}
           originWhitelist={['*']}
           source={{ html: initialHtml }}
-          style={{ flex: 1, width: '100%', height: '100%', backgroundColor: '#FAF5F7', opacity: 0.99 }}
+          style={{ flex: 1, width: '100%', height: '100%', backgroundColor: '#FAF5F7' }}
           containerStyle={{ flex: 1, width: '100%', height: '100%', borderRadius: 20, overflow: 'hidden' }}
           javaScriptEnabled={true}
           domStorageEnabled={true}
-          allowFileAccess={true}
-          allowUniversalAccessFromFileURLs={true}
-          mixedContentMode="always"
           scalesPageToFit={false}
           showsHorizontalScrollIndicator={false}
           showsVerticalScrollIndicator={false}
-          bounces={false}
           scrollEnabled={false}
-          overScrollMode="never"
-          androidHardwareAccelerationDisabled={false}
-          useWebKit={true}
-          allowsInlineMediaPlayback={true}
-          dataDetectorTypes="none"
+          {...Platform.select({
+            ios: {
+              bounces: false,
+              useWebKit: true,
+              allowsInlineMediaPlayback: true,
+              dataDetectorTypes: 'none',
+            },
+            android: {
+              androidHardwareAccelerationDisabled: false,
+              androidLayerType: 'hardware',
+              mixedContentMode: 'always',
+            },
+          })}
           onError={(syntheticEvent) => {
             console.log('[LiveSosMap WebView] Load warning:', syntheticEvent?.nativeEvent?.description);
           }}
@@ -620,22 +634,27 @@ function UniversalLiveLeafletMap({ lat, lng, accuracy = 15, victimName = 'Victim
             } catch (e) {}
           }}
           onLoadEnd={() => {
-            pushUpdate();
-            setTimeout(pushUpdate, 150);
-            setTimeout(pushUpdate, 500);
-            setTimeout(pushUpdate, 1000);
+            try {
+              pushUpdate();
+              setTimeout(() => { try { pushUpdate(); } catch (e) {} }, 150);
+              setTimeout(() => { try { pushUpdate(); } catch (e) {} }, 500);
+              setTimeout(() => { try { pushUpdate(); } catch (e) {} }, 1000);
+            } catch (e) {}
           }}
         />
       </View>
     );
   }
 
+  const safeLatText = Number(lat || 0).toFixed(5);
+  const safeLngText = Number(lng || 0).toFixed(5);
+
   return (
     <View style={styles.noMapsFallback}>
       <Ionicons name="navigate-circle" size={38} color="#FF2A6D" />
       <Text style={styles.fallbackTitle}>Live GPS Telemetry Stream</Text>
       <Text style={styles.coordsText}>
-        {lat.toFixed(5)}, {lng.toFixed(5)} (&plusmn;{accuracy}m)
+        {safeLatText}, {safeLngText} (&plusmn;{accuracy}m)
       </Text>
     </View>
   );
