@@ -103,50 +103,6 @@ function UniversalLiveLeafletMap({ lat, lng, accuracy = 15, victimName = 'Victim
       touch-action: pan-x pan-y pinch-zoom;
     }
     
-    .radar-container {
-      position: relative;
-      width: 44px;
-      height: 44px;
-      margin-left: -22px;
-      margin-top: -22px;
-    }
-    .radar-pulse {
-      position: absolute;
-      top: 0;
-      left: 0;
-      width: 44px;
-      height: 44px;
-      border-radius: 50%;
-      background: rgba(255, 42, 109, 0.4);
-      animation: radarPulse 2s infinite ease-out;
-    }
-    .radar-pulse-2 {
-      position: absolute;
-      top: 0;
-      left: 0;
-      width: 44px;
-      height: 44px;
-      border-radius: 50%;
-      background: rgba(255, 42, 109, 0.25);
-      animation: radarPulse 2s infinite ease-out 0.7s;
-    }
-    .radar-dot {
-      position: absolute;
-      top: 13px;
-      left: 13px;
-      width: 18px;
-      height: 18px;
-      background: linear-gradient(135deg, #FF5C8A, #FF2A6D);
-      border: 3px solid #FFFFFF;
-      border-radius: 50%;
-      box-shadow: 0 0 14px rgba(255, 42, 109, 0.9), 0 3px 6px rgba(0,0,0,0.3);
-      z-index: 10;
-    }
-    @keyframes radarPulse {
-      0% { transform: scale(0.35); opacity: 1; }
-      100% { transform: scale(3.2); opacity: 0; }
-    }
-
     .ctrl-box {
       position: absolute;
       top: 10px;
@@ -184,36 +140,6 @@ function UniversalLiveLeafletMap({ lat, lng, accuracy = 15, victimName = 'Victim
       color: #FFF;
       border-color: #FF2A6D;
     }
-
-    .telemetry-hud {
-      position: absolute;
-      bottom: 12px;
-      left: 12px;
-      z-index: 1000;
-      background: rgba(42, 8, 38, 0.9);
-      color: #FFF;
-      padding: 6px 14px;
-      border-radius: 20px;
-      font-size: 11px;
-      font-weight: 800;
-      display: flex;
-      align-items: center;
-      gap: 8px;
-      box-shadow: 0 3px 10px rgba(0,0,0,0.25);
-      border: 1px solid rgba(255, 42, 109, 0.3);
-      backdrop-filter: blur(4px);
-    }
-    .live-dot {
-      width: 8px;
-      height: 8px;
-      border-radius: 50%;
-      background: #34D399;
-      animation: pulseBlink 1.4s infinite;
-    }
-    @keyframes pulseBlink {
-      0%, 100% { opacity: 1; transform: scale(1); }
-      50% { opacity: 0.3; transform: scale(0.85); }
-    }
   </style>
 </head>
 <body>
@@ -222,13 +148,6 @@ function UniversalLiveLeafletMap({ lat, lng, accuracy = 15, victimName = 'Victim
   <div class="ctrl-box">
     <button class="btn-chip active" id="btn-follow" onclick="toggleFollow()">🎯 Lock Target</button>
     <button class="btn-chip" id="btn-satellite" onclick="toggleSatellite()">🗺️ Satellite</button>
-  </div>
-
-  <div class="telemetry-hud">
-    <div class="live-dot"></div>
-    <span id="hud-label">LIVE TRACKING ACTIVE</span>
-    <span style="opacity:0.35">|</span>
-    <span id="hud-coords">--</span>
   </div>
 
   <script>
@@ -253,15 +172,8 @@ function UniversalLiveLeafletMap({ lat, lng, accuracy = 15, victimName = 'Victim
     var isSatellite = false;
     var map = null;
     var streetLayer = null, satLayer = null;
-    var radarIcon = null, accuracyCircle = null, glowTrail = null, coreTrail = null, marker = null;
+    var accuracyCircle = null, coreTrail = null, marker = null;
     var pendingCoords = null;
-
-    function updateHud(latVal, lngVal, accVal, count) {
-      var el = document.getElementById('hud-coords');
-      if (el && typeof latVal === 'number' && typeof lngVal === 'number') {
-        el.innerText = latVal.toFixed(5) + ', ' + lngVal.toFixed(5) + ' (±' + Math.round(accVal || 15) + 'm)';
-      }
-    }
 
     function initMap() {
       if (typeof L === 'undefined') {
@@ -309,52 +221,54 @@ function UniversalLiveLeafletMap({ lat, lng, accuracy = 15, victimName = 'Victim
         setTimeout(doInvalidate, 1500);
         window.addEventListener('resize', doInvalidate);
 
-        radarIcon = L.divIcon({
-          className: 'radar-div-icon',
-          html: '<div class="radar-container"><div class="radar-pulse"></div><div class="radar-pulse-2"></div><div class="radar-dot"></div></div>',
-          iconSize: [44, 44],
-          iconAnchor: [22, 22]
+        // Standard Emergency Red Pin Marker (Identical to Web Client)
+        var redPinIcon = L.icon({
+          iconUrl: 'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-2x-red.png',
+          shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-shadow.png',
+          iconSize: [28, 45],
+          iconAnchor: [14, 45],
+          popupAnchor: [1, -34],
+          shadowSize: [41, 41]
         });
 
+        // Accuracy Circle centered directly at victim coordinates
         accuracyCircle = L.circle([startLat, startLng], {
           radius: Math.max(Number(startAcc) || 15, 10),
-          color: '#FF2A6D',
-          fillColor: '#FF2A6D',
-          fillOpacity: 0.15,
-          weight: 1.5
+          color: '#E62E5C',
+          fillColor: '#E62E5C',
+          fillOpacity: 0.18,
+          weight: 2
         }).addTo(map);
 
+        // Target Red Pin Marker positioned precisely at victim coordinates
+        marker = L.marker([startLat, startLng], {
+          icon: redPinIcon,
+          zIndexOffset: 1000
+        }).addTo(map);
+
+        var popupHtml = '<div style="font-size:12px;font-family:sans-serif;line-height:1.5;min-width:140px;">' +
+          '<b style="color:#2D142C;font-size:13px;">' + (victimName || 'User') + '</b><br/>' +
+          '<span style="color:#E62E5C;font-weight:800;font-size:10px;">🚨 EMERGENCY SOS</span><br/>' +
+          '<span style="color:#555;font-size:10.5px;font-family:monospace;">' + startLat.toFixed(5) + ', ' + startLng.toFixed(5) + '</span><br/>' +
+          '<span style="color:#777;font-size:10px;">GPS: &plusmn;' + Math.round(startAcc || 15) + 'm</span>' +
+          '</div>';
+        marker.bindPopup(popupHtml).openPopup();
+
+        // Clean movement trajectory trail (only if multiple movement breadcrumbs exist)
         var initialPts = (pendingCoords && pendingCoords.trail ? pendingCoords.trail : (${safeTrail} || [])).map(function(p) {
           return [parseFloat(p.latitude), parseFloat(p.longitude)];
         }).filter(function(pt) {
           return !isNaN(pt[0]) && !isNaN(pt[1]);
         });
 
-        if (initialPts.length === 0 || initialPts[initialPts.length - 1][0] !== startLat) {
-          initialPts.push([startLat, startLng]);
+        if (initialPts.length > 2) {
+          coreTrail = L.polyline(initialPts, {
+            color: '#E62E5C',
+            weight: 3.5,
+            opacity: 0.85,
+            dashArray: '6, 6'
+          }).addTo(map);
         }
-
-        glowTrail = L.polyline(initialPts, {
-          color: '#FF2A6D',
-          weight: 8,
-          opacity: 0.35,
-          lineCap: 'round',
-          lineJoin: 'round'
-        }).addTo(map);
-
-        coreTrail = L.polyline(initialPts, {
-          color: '#FF2A6D',
-          weight: 3.5,
-          opacity: 0.95,
-          dashArray: '8, 6',
-          lineCap: 'round',
-          lineJoin: 'round'
-        }).addTo(map);
-
-        marker = L.marker([startLat, startLng], {
-          icon: radarIcon,
-          zIndexOffset: 1000
-        }).addTo(map);
 
         map.on('dragstart', function() {
           if (isFollowing) {
@@ -367,7 +281,6 @@ function UniversalLiveLeafletMap({ lat, lng, accuracy = 15, victimName = 'Victim
           }
         });
 
-        updateHud(startLat, startLng, startAcc, initialPts.length);
         notifyReady();
       } catch (err) {
         console.error('initMap error:', err && err.message);
@@ -424,7 +337,16 @@ function UniversalLiveLeafletMap({ lat, lng, accuracy = 15, victimName = 'Victim
         map.invalidateSize();
       } catch(e) {}
 
-      if (marker) marker.setLatLng(pos);
+      if (marker) {
+        marker.setLatLng(pos);
+        var updatedPopup = '<div style="font-size:12px;font-family:sans-serif;line-height:1.5;min-width:140px;">' +
+          '<b style="color:#2D142C;font-size:13px;">' + (victimName || 'User') + '</b><br/>' +
+          '<span style="color:#E62E5C;font-weight:800;font-size:10px;">🚨 LIVE SOS LOCATION</span><br/>' +
+          '<span style="color:#555;font-size:10.5px;font-family:monospace;">' + currentLat.toFixed(5) + ', ' + currentLng.toFixed(5) + '</span><br/>' +
+          '<span style="color:#777;font-size:10px;">GPS: &plusmn;' + Math.round(newAcc || 15) + 'm</span>' +
+          '</div>';
+        marker.setPopupContent(updatedPopup);
+      }
       if (accuracyCircle) {
         accuracyCircle.setLatLng(pos);
         accuracyCircle.setRadius(Math.max(Number(newAcc) || 15, 10));
@@ -436,18 +358,20 @@ function UniversalLiveLeafletMap({ lat, lng, accuracy = 15, victimName = 'Victim
         return !isNaN(pt[0]) && !isNaN(pt[1]);
       }) : [];
 
-      if (pts.length === 0 || pts[pts.length - 1][0] !== currentLat) {
-        pts.push(pos);
+      if (coreTrail && pts.length > 2) {
+        coreTrail.setLatLngs(pts);
+      } else if (!coreTrail && pts.length > 2 && map) {
+        coreTrail = L.polyline(pts, {
+          color: '#E62E5C',
+          weight: 3.5,
+          opacity: 0.85,
+          dashArray: '6, 6'
+        }).addTo(map);
       }
-
-      if (glowTrail) glowTrail.setLatLngs(pts);
-      if (coreTrail) coreTrail.setLatLngs(pts);
 
       if (isFollowing && map) {
         map.panTo(pos, { animate: true, duration: 0.8 });
       }
-
-      updateHud(currentLat, currentLng, newAcc || 15, pts.length);
     };
 
     window.toggleFollow = function() {
