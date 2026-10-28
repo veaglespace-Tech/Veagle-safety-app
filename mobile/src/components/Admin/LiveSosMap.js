@@ -76,6 +76,7 @@ class MapErrorBoundary extends Component {
 function UniversalLiveLeafletMap({ lat, lng, accuracy = 15, victimName = 'Victim Member', trail = [] }) {
   const iframeRef = useRef(null);
   const webViewRef = useRef(null);
+  const [webViewFailed, setWebViewFailed] = useState(false);
 
   // Generate initial HTML template once on mount
   const initialHtml = useMemo(() => {
@@ -197,6 +198,7 @@ function UniversalLiveLeafletMap({ lat, lng, accuracy = 15, victimName = 'Victim
       border-color: #FF2A6D;
     }
 
+    .leaflet-control-attribution, .leaflet-control-zoom { display: none !important; }
   </style>
 </head>
 <body>
@@ -243,19 +245,18 @@ function UniversalLiveLeafletMap({ lat, lng, accuracy = 15, victimName = 'Victim
         streetLayer = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
           maxZoom: 19,
           subdomains: ['a', 'b', 'c'],
-          attribution: ''
+          attribution: '&copy; OpenStreetMap'
         });
 
         satLayer = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
           maxZoom: 19,
-          attribution: ''
+          attribution: 'Esri World Imagery'
         });
 
         map = L.map('map', {
           center: [currentLat, currentLng],
           zoom: 16,
           zoomControl: false,
-          attributionControl: false,
           layers: [streetLayer]
         });
 
@@ -527,8 +528,6 @@ function UniversalLiveLeafletMap({ lat, lng, accuracy = 15, victimName = 'Victim
     );
   }
 
-  const [webViewFailed, setWebViewFailed] = useState(false);
-
   if (WebView && !webViewFailed) {
     return (
       <View style={[StyleSheet.absoluteFillObject, { width: '100%', height: '100%' }]}>
@@ -658,24 +657,12 @@ export default function LiveSosMap({
     };
   }, [lat, lng, isValid]);
 
-  // Open native navigation app on device safely (Apple Maps on iOS, Google Maps on Android)
+  // Open native navigation app on device safely
   const openExternalMaps = async () => {
     if (!isValid) return;
     try {
-      const label = encodeURIComponent(victimName || 'Emergency Victim Location');
-      const nativeUrl = Platform.select({
-        ios: `maps:0,0?q=${label}@${lat},${lng}`,
-        android: `geo:${lat},${lng}?q=${lat},${lng}(${label})`,
-        default: `https://www.google.com/maps/search/?api=1&query=${lat},${lng}`,
-      });
-      const webUrl = `https://www.google.com/maps/search/?api=1&query=${lat},${lng}`;
-
-      const can = await Linking.canOpenURL(nativeUrl).catch(() => false);
-      if (can) {
-        await Linking.openURL(nativeUrl).catch(() => Linking.openURL(webUrl).catch(() => {}));
-      } else {
-        await Linking.openURL(webUrl).catch(() => {});
-      }
+      const url = `https://www.google.com/maps/search/?api=1&query=${lat},${lng}`;
+      await Linking.openURL(url).catch(() => {});
     } catch (e) {
       console.log('[LiveSosMap] Open external maps error:', e?.message);
     }
