@@ -347,6 +347,19 @@ export default function ParentDashboardScreen({ navigation }) {
     });
   };
 
+  // Derive real-time counts from current active children to avoid stale false-positive alarms
+  const realActiveSosCount = childrenList.length > 0
+    ? childrenList.filter((c) => Boolean(c.activeSos)).length
+    : (stats.activeSosCount || 0);
+
+  const realInTripCount = childrenList.length > 0
+    ? childrenList.filter((c) => !c.activeSos && Boolean(c.activeJourney)).length
+    : (stats.inTripCount || 0);
+
+  const realSafeCount = childrenList.length > 0
+    ? childrenList.filter((c) => !c.activeSos && !c.activeJourney).length
+    : (stats.safeCount !== undefined ? stats.safeCount : Math.max(0, (stats.totalChildren || 0) - realActiveSosCount - realInTripCount));
+
   if (isLoading && childrenList.length === 0) {
     return (
       <SafeAreaView style={styles.safe}>
@@ -401,21 +414,21 @@ export default function ParentDashboardScreen({ navigation }) {
           <Text style={styles.statNum}>{stats.totalChildren}</Text>
           <Text style={styles.statLabel}>Family Linked</Text>
         </View>
-        <View style={[styles.statBox, stats.activeSosCount > 0 && styles.statBoxDanger]}>
-          <Text style={[styles.statNum, stats.activeSosCount > 0 && { color: '#FF2A6D' }]}>
-            {stats.activeSosCount}
+        <View style={[styles.statBox, realActiveSosCount > 0 && styles.statBoxDanger]}>
+          <Text style={[styles.statNum, realActiveSosCount > 0 && { color: '#FF2A6D' }]}>
+            {realActiveSosCount}
           </Text>
-          <Text style={[styles.statLabel, stats.activeSosCount > 0 && { color: '#FF2A6D', fontWeight: '900' }]}>
+          <Text style={[styles.statLabel, realActiveSosCount > 0 && { color: '#FF2A6D', fontWeight: '900' }]}>
             Active SOS
           </Text>
         </View>
         <View style={styles.statBox}>
-          <Text style={styles.statNum}>{stats.inTripCount}</Text>
+          <Text style={styles.statNum}>{realInTripCount}</Text>
           <Text style={styles.statLabel}>In Transit</Text>
         </View>
         <View style={styles.statBox}>
           <Text style={[styles.statNum, { color: '#059669' }]}>
-            {stats.safeCount !== undefined ? stats.safeCount : Math.max(0, stats.totalChildren - stats.activeSosCount - stats.inTripCount)}
+            {realSafeCount}
           </Text>
           <Text style={styles.statLabel}>Safe & Sound</Text>
         </View>
@@ -436,9 +449,9 @@ export default function ParentDashboardScreen({ navigation }) {
           <Text style={[styles.tabBtnText, activeTab === 'safety' && styles.tabBtnTextActive]}>
             Safety Monitor
           </Text>
-          {stats.activeSosCount > 0 && (
+          {realActiveSosCount > 0 && (
             <View style={styles.tabSosBadge}>
-              <Text style={styles.tabSosBadgeText}>{stats.activeSosCount}</Text>
+              <Text style={styles.tabSosBadgeText}>{realActiveSosCount}</Text>
             </View>
           )}
         </TouchableOpacity>
@@ -483,7 +496,7 @@ export default function ParentDashboardScreen({ navigation }) {
         {activeTab === 'safety' && (
           <View style={styles.tabContent}>
             {/* EMERGENCY SOS BANNER IF ANY CHILD HAS ACTIVE SOS */}
-            {stats.activeSosCount > 0 && (
+            {realActiveSosCount > 0 && (
               <LinearGradient
                 colors={['#FF2A6D', '#FF5C8A', '#E01A4F']}
                 start={{ x: 0, y: 0 }}
@@ -902,22 +915,46 @@ export default function ParentDashboardScreen({ navigation }) {
         animationType={Platform.OS === 'ios' ? 'slide' : 'fade'}
         onRequestClose={() => setTrackingItem(null)}
       >
-        {trackingItem && (
+        {trackingItem && (() => {
+          const isSosChild = Boolean(trackingItem.activeSos);
+          return (
           <SafeAreaView style={styles.modalOverlay}>
             <View style={styles.modalCard}>
               <View style={styles.modalHeader}>
                 <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, flex: 1 }}>
-                  <Ionicons name="navigate-circle" size={22} color="#FF2A6D" />
+                  <Ionicons
+                    name={isSosChild ? "warning" : "shield-checkmark"}
+                    size={22}
+                    color={isSosChild ? "#FF2A6D" : "#10B981"}
+                  />
                   <Text style={styles.modalTitle} numberOfLines={1}>
-                    Tracking: {trackingItem.child?.fullName || 'Child'}
+                    {isSosChild ? '🚨 Live SOS: ' : '📍 Location: '}
+                    {trackingItem.child?.fullName || 'Child'}
                   </Text>
                 </View>
-                <TouchableOpacity onPress={() => setTrackingItem(null)}>
+                <View style={{
+                  paddingHorizontal: 8,
+                  paddingVertical: 3,
+                  borderRadius: 8,
+                  backgroundColor: isSosChild ? '#FFE4EC' : '#ECFDF5',
+                  borderWidth: 1,
+                  borderColor: isSosChild ? '#FF2A6D' : '#10B981',
+                  marginRight: 8,
+                }}>
+                  <Text style={{
+                    fontSize: 10,
+                    fontWeight: '900',
+                    color: isSosChild ? '#FF2A6D' : '#059669',
+                  }}>
+                    {isSosChild ? 'SOS ACTIVE' : 'SAFE & PROTECTED'}
+                  </Text>
+                </View>
+                <TouchableOpacity onPress={() => setTrackingItem(null)} style={{ padding: 4 }}>
                   <Ionicons name="close" size={24} color={COLORS.textDark} />
                 </TouchableOpacity>
               </View>
 
-              {/* LIVE SOS MAP */}
+              {/* LIVE SOS MAP / SAFE LOCATION MAP */}
               <LiveSosMap
                 latitude={
                   trackingItem.activeSos?.latestLocation?.latitude ||
@@ -932,7 +969,7 @@ export default function ParentDashboardScreen({ navigation }) {
                 accuracy={trackingItem.activeSos?.latestLocation?.accuracy || 15}
                 victimName={trackingItem.child?.fullName || 'Child'}
                 history={trackingItem.activeSos?.locationHistory || []}
-                isEmergency={!!trackingItem.activeSos}
+                isEmergency={isSosChild}
                 height={320}
               />
 
@@ -963,7 +1000,8 @@ export default function ParentDashboardScreen({ navigation }) {
               </View>
             </View>
           </SafeAreaView>
-        )}
+          );
+        })()}
       </Modal>
     </SafeAreaView>
   );

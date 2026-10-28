@@ -222,9 +222,9 @@ export const getParentOverview = asyncHandler(async (req, res) => {
   );
 
   const totalChildren = childrenList.length;
-  const activeSosCount = childrenList.filter((c) => c.activeSos || c.child.safetyStatus === 'SOS_ACTIVE').length;
-  const inTripCount = childrenList.filter((c) => c.activeJourney || c.child.safetyStatus === 'JOURNEY_ACTIVE').length;
-  const safeCount = childrenList.filter((c) => !c.activeSos && !c.activeJourney && c.child.safetyStatus === 'SAFE').length;
+  const activeSosCount = childrenList.filter((c) => Boolean(c.activeSos)).length;
+  const inTripCount = childrenList.filter((c) => !c.activeSos && Boolean(c.activeJourney)).length;
+  const safeCount = childrenList.filter((c) => !c.activeSos && !c.activeJourney).length;
 
   res.status(200).json({
     success: true,

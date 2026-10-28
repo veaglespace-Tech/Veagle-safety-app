@@ -56,7 +56,14 @@ class MapErrorBoundary extends Component {
 // ---------------------------------------------------------------------------
 // Interactive Animated Universal Live Leaflet Map (Web & Mobile via WebView)
 // ---------------------------------------------------------------------------
-function UniversalLiveLeafletMap({ lat, lng, accuracy = 15, victimName = 'Victim Member', trail = [] }) {
+function UniversalLiveLeafletMap({
+  lat,
+  lng,
+  accuracy = 15,
+  victimName = 'Victim Member',
+  trail = [],
+  isEmergency = true,
+}) {
   const iframeRef = useRef(null);
   const webViewRef = useRef(null);
   const [webViewFailed, setWebViewFailed] = useState(false);
@@ -70,6 +77,7 @@ function UniversalLiveLeafletMap({ lat, lng, accuracy = 15, victimName = 'Victim
   const initialHtml = useMemo(() => {
     const safeTrail = trailSerialized;
     const safeName = JSON.stringify(victimName || 'User');
+    const isEmerg = Boolean(isEmergency);
 
     return `<!DOCTYPE html>
 <html>
@@ -168,6 +176,7 @@ function UniversalLiveLeafletMap({ lat, lng, accuracy = 15, victimName = 'Victim
     var currentLat = ${lat};
     var currentLng = ${lng};
     var victimName = ${safeName};
+    var isEmergency = ${isEmerg};
     var isFollowing = true;
     var isSatellite = false;
     var map = null;
@@ -221,9 +230,13 @@ function UniversalLiveLeafletMap({ lat, lng, accuracy = 15, victimName = 'Victim
         setTimeout(doInvalidate, 1500);
         window.addEventListener('resize', doInvalidate);
 
-        // Standard Emergency Red Pin Marker (Identical to Web Client)
-        var redPinIcon = L.icon({
-          iconUrl: 'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-2x-red.png',
+        // Emergency Red Pin Marker for SOS, Green/Violet Pin Marker for Safe / Last Known
+        var pinUrl = isEmergency
+          ? 'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-2x-red.png'
+          : 'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-2x-green.png';
+
+        var targetIcon = L.icon({
+          iconUrl: pinUrl,
           shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-shadow.png',
           iconSize: [28, 45],
           iconAnchor: [14, 45],
@@ -231,24 +244,30 @@ function UniversalLiveLeafletMap({ lat, lng, accuracy = 15, victimName = 'Victim
           shadowSize: [41, 41]
         });
 
+        var circleColor = isEmergency ? '#E62E5C' : '#10B981';
+
         // Accuracy Circle centered directly at victim coordinates
         accuracyCircle = L.circle([startLat, startLng], {
           radius: Math.max(Number(startAcc) || 15, 10),
-          color: '#E62E5C',
-          fillColor: '#E62E5C',
-          fillOpacity: 0.18,
+          color: circleColor,
+          fillColor: circleColor,
+          fillOpacity: isEmergency ? 0.18 : 0.12,
           weight: 2
         }).addTo(map);
 
-        // Target Red Pin Marker positioned precisely at victim coordinates
+        // Target Pin Marker positioned precisely at victim coordinates
         marker = L.marker([startLat, startLng], {
-          icon: redPinIcon,
+          icon: targetIcon,
           zIndexOffset: 1000
         }).addTo(map);
 
+        var statusBadge = isEmergency
+          ? '<span style="color:#E62E5C;font-weight:800;font-size:10px;">🚨 EMERGENCY SOS ACTIVE</span>'
+          : '<span style="color:#059669;font-weight:800;font-size:10px;">🛡️ SAFE & PROTECTED</span>';
+
         var popupHtml = '<div style="font-size:12px;font-family:sans-serif;line-height:1.5;min-width:140px;">' +
           '<b style="color:#2D142C;font-size:13px;">' + (victimName || 'User') + '</b><br/>' +
-          '<span style="color:#E62E5C;font-weight:800;font-size:10px;">🚨 EMERGENCY SOS</span><br/>' +
+          statusBadge + '<br/>' +
           '<span style="color:#555;font-size:10.5px;font-family:monospace;">' + startLat.toFixed(5) + ', ' + startLng.toFixed(5) + '</span><br/>' +
           '<span style="color:#777;font-size:10px;">GPS: &plusmn;' + Math.round(startAcc || 15) + 'm</span>' +
           '</div>';
@@ -263,7 +282,7 @@ function UniversalLiveLeafletMap({ lat, lng, accuracy = 15, victimName = 'Victim
 
         if (initialPts.length > 2) {
           coreTrail = L.polyline(initialPts, {
-            color: '#E62E5C',
+            color: circleColor,
             weight: 3.5,
             opacity: 0.85,
             dashArray: '6, 6'
@@ -339,9 +358,12 @@ function UniversalLiveLeafletMap({ lat, lng, accuracy = 15, victimName = 'Victim
 
       if (marker) {
         marker.setLatLng(pos);
+        var liveBadge = isEmergency
+          ? '<span style="color:#E62E5C;font-weight:800;font-size:10px;">🚨 LIVE SOS LOCATION</span>'
+          : '<span style="color:#059669;font-weight:800;font-size:10px;">🛡️ SAFE & PROTECTED</span>';
         var updatedPopup = '<div style="font-size:12px;font-family:sans-serif;line-height:1.5;min-width:140px;">' +
           '<b style="color:#2D142C;font-size:13px;">' + (victimName || 'User') + '</b><br/>' +
-          '<span style="color:#E62E5C;font-weight:800;font-size:10px;">🚨 LIVE SOS LOCATION</span><br/>' +
+          liveBadge + '<br/>' +
           '<span style="color:#555;font-size:10.5px;font-family:monospace;">' + currentLat.toFixed(5) + ', ' + currentLng.toFixed(5) + '</span><br/>' +
           '<span style="color:#777;font-size:10px;">GPS: &plusmn;' + Math.round(newAcc || 15) + 'm</span>' +
           '</div>';
@@ -362,7 +384,7 @@ function UniversalLiveLeafletMap({ lat, lng, accuracy = 15, victimName = 'Victim
         coreTrail.setLatLngs(pts);
       } else if (!coreTrail && pts.length > 2 && map) {
         coreTrail = L.polyline(pts, {
-          color: '#E62E5C',
+          color: isEmergency ? '#E62E5C' : '#10B981',
           weight: 3.5,
           opacity: 0.85,
           dashArray: '6, 6'
@@ -443,7 +465,7 @@ function UniversalLiveLeafletMap({ lat, lng, accuracy = 15, victimName = 'Victim
   </script>
 </body>
 </html>`;
-  }, []);
+  }, [isEmergency, victimName]);
 
   // Real-time update push into iframe (Web) or WebView (Native Android / iOS)
   const pushUpdate = () => {
@@ -740,10 +762,11 @@ export default function LiveSosMap({
             accuracy={accuracy}
             victimName={victimName}
             trail={coordinatesTrail}
+            isEmergency={isEmergency}
           />
         ) : (
           <View style={styles.noMapsFallback}>
-            <Ionicons name="map" size={40} color="#FF2A6D" />
+            <Ionicons name="map" size={40} color={isEmergency ? "#FF2A6D" : "#10B981"} />
             <Text style={styles.coordsText}>
               Lat: {lat.toFixed(5)}, Lng: {lng.toFixed(5)}
             </Text>
@@ -756,9 +779,34 @@ export default function LiveSosMap({
       </MapErrorBoundary>
 
       {/* OVERLAY BADGE */}
-      <View style={styles.badgeOverlay} pointerEvents="none">
-        <View style={styles.pingDot} />
-        <Text style={styles.badgeText}>LIVE GPS STREAM</Text>
+      <View
+        style={[
+          styles.badgeOverlay,
+          !isEmergency && {
+            borderColor: 'rgba(16, 185, 129, 0.4)',
+            backgroundColor: 'rgba(255, 255, 255, 0.96)',
+          },
+        ]}
+        pointerEvents="none"
+      >
+        <View
+          style={[
+            styles.pingDot,
+            !isEmergency && {
+              backgroundColor: '#10B981',
+            },
+          ]}
+        />
+        <Text
+          style={[
+            styles.badgeText,
+            !isEmergency && {
+              color: '#059669',
+            },
+          ]}
+        >
+          {isEmergency ? 'LIVE GPS STREAM' : 'RECORDED LOCATION'}
+        </Text>
       </View>
 
       {/* EXTERNAL MAPS SHORTCUT BUTTON */}
