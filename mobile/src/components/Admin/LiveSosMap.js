@@ -4,25 +4,8 @@ import { Ionicons } from '@expo/vector-icons';
 import { COLORS } from '../../theme/colors';
 
 // ---------------------------------------------------------------------------
-// Native Maps Module Loader (Safe on Web, iOS, and Android)
+// Native WebView Module Loader (Safe on Web, iOS, and Android)
 // ---------------------------------------------------------------------------
-let MapView = null;
-let Marker = null;
-let Polyline = null;
-let Circle = null;
-
-if (Platform.OS !== 'web') {
-  try {
-    const Maps = require('react-native-maps');
-    MapView = Maps.default || Maps;
-    Marker = Maps.Marker;
-    Polyline = Maps.Polyline;
-    Circle = Maps.Circle;
-  } catch (e) {
-    console.log('[LiveSosMap] react-native-maps not available on this platform:', e?.message || e);
-  }
-}
-
 let WebView = null;
 if (Platform.OS !== 'web') {
   try {
@@ -834,60 +817,6 @@ export default function LiveSosMap({
             victimName={victimName}
             trail={coordinatesTrail}
           />
-        ) : MapView ? (
-          <MapView
-            ref={mapRef}
-            style={StyleSheet.absoluteFillObject}
-            initialRegion={{
-              latitude: lat,
-              longitude: lng,
-              latitudeDelta: 0.005,
-              longitudeDelta: 0.005,
-            }}
-            showsUserLocation={false}
-            showsMyLocationButton={false}
-            showsCompass={true}
-            toolbarEnabled={false}
-          >
-            {/* Accuracy Circle */}
-            {Circle && (
-              <Circle
-                center={{ latitude: lat, longitude: lng }}
-                radius={Math.max(Number(accuracy) || 15, 20)}
-                strokeColor="rgba(255, 42, 109, 0.7)"
-                fillColor="rgba(255, 42, 109, 0.15)"
-                strokeWidth={2}
-              />
-            )}
-
-            {/* Movement Trail */}
-            {Polyline && coordinatesTrail.length > 1 && (
-              <Polyline
-                coordinates={coordinatesTrail}
-                strokeColor="#FF2A6D"
-                strokeWidth={4}
-                lineDashPattern={[6, 4]}
-              />
-            )}
-
-            {/* Victim Marker */}
-            {Marker && (
-              <Marker
-                coordinate={{ latitude: lat, longitude: lng }}
-                title={victimName}
-                description={`GPS: ${lat.toFixed(5)}, ${lng.toFixed(5)}`}
-                pinColor="#FF2A6D"
-                tracksViewChanges={false}
-              >
-                <View style={styles.customPinContainer}>
-                  <View style={styles.pulseRing} />
-                  <View style={styles.pinDot}>
-                    <Ionicons name="warning" size={13} color="#FFF" />
-                  </View>
-                </View>
-              </Marker>
-            )}
-          </MapView>
         ) : (
           <View style={styles.noMapsFallback}>
             <Ionicons name="map" size={40} color="#FF2A6D" />

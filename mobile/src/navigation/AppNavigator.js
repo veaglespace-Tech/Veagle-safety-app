@@ -84,6 +84,12 @@ function useBootstrap() {
         // If AsyncStorage fails, fall through to the auth flow
       } finally {
         dispatch(bootstrapComplete());
+        try {
+          const ExpoSplashScreen = require('expo-splash-screen');
+          if (ExpoSplashScreen && typeof ExpoSplashScreen.hideAsync === 'function') {
+            ExpoSplashScreen.hideAsync().catch(() => {});
+          }
+        } catch (e) {}
       }
     })();
   }, [dispatch]);

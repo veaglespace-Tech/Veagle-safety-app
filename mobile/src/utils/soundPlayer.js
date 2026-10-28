@@ -154,10 +154,14 @@ function setupNativePlayer(player, loop = true) {
   } catch (e) {}
 }
 
-// 2. PRELOAD NATIVE AUDIO PLAYER AT STARTUP FOR 0ms ZERO-LATENCY INSTANT START
-async function primeNativePlayer() {
-  if (Platform.OS === 'web') return;
+// 2. LAZY ON-DEMAND NATIVE AUDIO PLAYER (Zero startup overhead, immune to cold-start crashes)
+async function getOrCreateNativePlayer(loop = true) {
+  if (Platform.OS === 'web') return null;
   try {
+    if (activeNativePlayer) {
+      setupNativePlayer(activeNativePlayer, loop);
+      return activeNativePlayer;
+    }
     const { createAudioPlayer, setAudioModeAsync } = await import('expo-audio');
     if (setAudioModeAsync) {
       await setAudioModeAsync({
@@ -168,19 +172,20 @@ async function primeNativePlayer() {
       }).catch(() => {});
     }
     const localSiren = require('../../assets/sounds/alarm_siren.wav');
-    preloadedNativePlayer = createAudioPlayer(localSiren, {
+    const player = createAudioPlayer(localSiren, {
       keepAudioSessionActive: true,
       preferredForwardBufferDuration: 10,
     });
-    if (preloadedNativePlayer) {
-      setupNativePlayer(preloadedNativePlayer, true);
-      activeNativePlayer = preloadedNativePlayer;
+    if (player) {
+      setupNativePlayer(player, loop);
+      activeNativePlayer = player;
     }
-  } catch (e) {
-    // Non-fatal if audio engine initializing asynchronously
+    return activeNativePlayer;
+  } catch (err) {
+    console.warn('[SoundPlayer] Native audio initialization fallback:', err?.message);
+    return null;
   }
 }
-primeNativePlayer();
 
 export const playEmergencySiren = (loop = true) => {
   isPlaying = true;
@@ -302,31 +307,11 @@ export const playEmergencySiren = (loop = true) => {
   // 2. Native Mobile Platform (Android / iOS): Instant local bundled WAV playback (0ms delay)
   return (async () => {
     try {
-      const { createAudioPlayer, setAudioModeAsync } = await import('expo-audio');
-
-      if (setAudioModeAsync) {
-        await setAudioModeAsync({
-          playsInSilentMode: true,
-          staysActiveInBackground: true,
-          interruptionMode: 'doNotMixPersistent',
-          shouldRouteThroughEarpiece: false,
-        }).catch(() => {});
-      }
-
-      if (preloadedNativePlayer) {
-        setupNativePlayer(preloadedNativePlayer, loop);
-        preloadedNativePlayer.play();
-        activeNativePlayer = preloadedNativePlayer;
-        return;
-      }
-
-      const localSiren = require('../../assets/sounds/alarm_siren.wav');
-      const player = createAudioPlayer(localSiren, {
-        keepAudioSessionActive: true,
-        preferredForwardBufferDuration: 10,
-      });
-      if (player) {
-        setupNativePlayer(player, loop);
+      const player = await getOrCreateNativePlayer(loop);
+      if (player && isPlaying) {
+        if (typeof player.seekTo === 'function') {
+          player.seekTo(0);
+        }
         player.play();
         activeNativePlayer = player;
       }
