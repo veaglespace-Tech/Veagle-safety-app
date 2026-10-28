@@ -1,0 +1,17 @@
+# Ignore web client, server, and docs for mobile EAS Build
+client/
+server/
+docs/
+.git/
+*.md
+
+# Build outputs & caches
+.next/
+**/dist/
+**/build/
+**/node_modules/
+**/.expo/
+*.apk
+*.aab
+*.tar.gz
+

@@ -34,3 +34,7 @@ yarn-error.log*
 
 # Firebase credentials
 *serviceAccountKey.json
+
+# Next.js
+.next/
+client/.next/

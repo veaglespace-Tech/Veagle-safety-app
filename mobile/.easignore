@@ -1,0 +1,10 @@
+node_modules/
+.expo/
+dist/
+build/
+web-build/
+*.apk
+*.aab
+*.tar.gz
+.git/
+
