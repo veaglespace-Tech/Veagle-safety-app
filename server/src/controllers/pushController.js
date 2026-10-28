@@ -141,6 +141,52 @@ export const sendEmergencyPushToEmails = async ({ emails, victimName, trackingUr
 };
 
 /**
+ * Register mobile FCM device token for logged-in user
+ */
+export const registerDeviceToken = asyncHandler(async (req, res) => {
+  const { token, platform = 'android' } = req.body;
+  const userId = req.user?.id;
+
+  if (!token || !userId) {
+    return res.status(400).json({ error: 'Device token and authenticated user required' });
+  }
+
+  try {
+    const deviceToken = await prisma.deviceToken.upsert({
+      where: { token },
+      update: { userId, platform, updatedAt: new Date() },
+      create: { userId, token, platform },
+    });
+
+    return res.json({ success: true, message: 'Device token registered', data: deviceToken });
+  } catch (error) {
+    console.error('[DeviceToken] Failed to register token:', error.message);
+    return res.status(500).json({ error: 'Failed to register device token' });
+  }
+});
+
+/**
+ * Remove mobile device token on logout
+ */
+export const removeDeviceToken = asyncHandler(async (req, res) => {
+  const { token } = req.body;
+
+  if (!token) {
+    return res.status(400).json({ error: 'Device token required' });
+  }
+
+  try {
+    await prisma.deviceToken.deleteMany({
+      where: { token },
+    });
+    return res.json({ success: true, message: 'Device token removed' });
+  } catch (error) {
+    console.error('[DeviceToken] Failed to remove token:', error.message);
+    return res.status(500).json({ error: 'Failed to remove device token' });
+  }
+});
+
+/**
  * Get VAPID public key (for client subscription)
  */
 export const getVapidPublicKey = asyncHandler(async (req, res) => {

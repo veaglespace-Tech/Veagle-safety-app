@@ -120,10 +120,12 @@ router.post('/parent/link-child', authenticateToken, parentController.linkChild)
 router.delete('/parent/children/:linkId', authenticateToken, parentController.unlinkChild);
 router.post('/parent/ping-checkin', authenticateToken, parentController.pingChildCheckin);
 
-// Web Push Notifications
+// Push Notifications (Web Push & Mobile FCM Device Tokens)
 router.get('/push/vapid-key', pushController.getVapidPublicKey);
 router.post('/push/subscribe', authenticateToken, pushController.savePushSubscription);
 router.post('/push/subscribe-email', pushController.savePushSubscriptionByEmail);
+router.post('/push/register-device', authenticateToken, pushController.registerDeviceToken);
+router.post('/push/remove-device', authenticateToken, pushController.removeDeviceToken);
 
 // System Settings
 router.get('/settings', settingController.getSettings);

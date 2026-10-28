@@ -55,6 +55,7 @@ model User {
   referredByPartner   ReferralPartner? @relation("ReferredByPartner", fields: [referredByPartnerId], references: [id])
   assignedCoupons     Coupon[]         @relation("AssignedCoupons")
   createdCoupons      Coupon[]         @relation("CreatedCoupons")
+  deviceTokens        DeviceToken[]
 }
 
 model Plan {
@@ -200,6 +201,20 @@ model PushSubscription {
   auth      String
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+}
+
+// Native Mobile FCM Device Push Token (Parents, Admins, Guardians)
+// Wakes phones & triggers high-decibel siren when app is closed / in background
+model DeviceToken {
+  id        Int      @id @default(autoincrement())
+  userId    Int
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  token     String   @unique @db.VarChar(500)
+  platform  String   @default("android") // android, ios
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([userId])
 }
 
 model ContactEnquiry {

@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "567442884477",
+    "project_id": "sakhisuraksha-21ca9",
+    "storage_bucket": "sakhisuraksha-21ca9.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:567442884477:android:8cc42931d55677cb726e14",
+        "android_client_info": {
+          "package_name": "com.veaglesafety.app"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyBLtmcO_SGkcKDKEDxuMiYll8MooIpvpF0"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

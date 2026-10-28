@@ -39,7 +39,8 @@
         "backgroundColor": "#FFF0F3"
       },
       "package": "com.veaglesafety.app",
-      "versionCode": 11,
+      "googleServicesFile": "./google-services.json",
+      "versionCode": 14,
       "permissions": [
         "android.permission.ACCESS_FINE_LOCATION",
         "android.permission.ACCESS_COARSE_LOCATION",
@@ -59,6 +60,14 @@
       "favicon": "./assets/favicon.png"
     },
     "plugins": [
+      [
+        "expo-notifications",
+        {
+          "icon": "./assets/logo_attractive.png",
+          "color": "#FF2A6D",
+          "sounds": ["./assets/sounds/alarm_siren.wav"]
+        }
+      ],
       [
         "expo-splash-screen",
         {
