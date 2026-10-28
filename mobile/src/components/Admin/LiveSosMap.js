@@ -91,8 +91,29 @@ function UniversalLiveLeafletMap({ lat, lng, accuracy = 15, victimName = 'Victim
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css" />
   <style>
     * { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
-    html, body { width: 100%; height: 100%; margin: 0; padding: 0; overflow: hidden; background: #FAF5F7; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
-    #map { position: absolute; top: 0; left: 0; right: 0; bottom: 0; width: 100%; height: 100%; z-index: 1; background: #FAF5F7; }
+    html, body {
+      width: 100%;
+      height: 100%;
+      margin: 0;
+      padding: 0;
+      overflow: hidden;
+      background: #FAF5F7;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      -webkit-user-select: none;
+      user-select: none;
+    }
+    #map {
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      width: 100%;
+      height: 100%;
+      z-index: 1;
+      background: #FAF5F7;
+      touch-action: pan-x pan-y pinch-zoom;
+    }
     
     .radar-container {
       position: relative;
@@ -162,6 +183,8 @@ function UniversalLiveLeafletMap({ lat, lng, accuracy = 15, victimName = 'Victim
       box-shadow: 0 2px 8px rgba(0,0,0,0.1);
       transition: all 0.2s ease;
       user-select: none;
+      -webkit-user-select: none;
+      touch-action: manipulation;
     }
     .btn-chip:hover, .btn-chip:active {
       background: #FFF;
@@ -574,6 +597,9 @@ function UniversalLiveLeafletMap({ lat, lng, accuracy = 15, victimName = 'Victim
           scrollEnabled={false}
           overScrollMode="never"
           androidHardwareAccelerationDisabled={false}
+          useWebKit={true}
+          allowsInlineMediaPlayback={true}
+          dataDetectorTypes="none"
           onError={(syntheticEvent) => {
             console.log('[LiveSosMap WebView] Load warning:', syntheticEvent?.nativeEvent?.description);
           }}
@@ -679,14 +705,23 @@ export default function LiveSosMap({
     };
   }, [lat, lng, isValid]);
 
-  // Open native navigation app on device safely without intent crash
+  // Open native navigation app on device safely (Apple Maps on iOS, Google Maps on Android)
   const openExternalMaps = async () => {
     if (!isValid) return;
     try {
-      const url = `https://www.google.com/maps/search/?api=1&query=${lat},${lng}`;
-      const can = await Linking.canOpenURL(url).catch(() => false);
+      const label = encodeURIComponent(victimName || 'Emergency Victim Location');
+      const nativeUrl = Platform.select({
+        ios: `maps:0,0?q=${label}@${lat},${lng}`,
+        android: `geo:${lat},${lng}?q=${lat},${lng}(${label})`,
+        default: `https://www.google.com/maps/search/?api=1&query=${lat},${lng}`,
+      });
+      const webUrl = `https://www.google.com/maps/search/?api=1&query=${lat},${lng}`;
+
+      const can = await Linking.canOpenURL(nativeUrl).catch(() => false);
       if (can) {
-        await Linking.openURL(url).catch(() => {});
+        await Linking.openURL(nativeUrl).catch(() => Linking.openURL(webUrl).catch(() => {}));
+      } else {
+        await Linking.openURL(webUrl).catch(() => {});
       }
     } catch (e) {
       console.log('[LiveSosMap] Open external maps error:', e?.message);
