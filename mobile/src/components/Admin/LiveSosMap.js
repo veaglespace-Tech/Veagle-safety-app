@@ -495,6 +495,12 @@ function UniversalLiveLeafletMap({ lat, lng, accuracy = 15, victimName = 'Victim
           scalesPageToFit={true}
           mixedContentMode="always"
           androidHardwareAccelerationDisabled={false}
+          bounces={false}
+          scrollEnabled={false}
+          overScrollMode="never"
+          useWebKit={true}
+          allowsInlineMediaPlayback={true}
+          dataDetectorTypes="none"
           showsHorizontalScrollIndicator={false}
           showsVerticalScrollIndicator={false}
           onMessage={(event) => {

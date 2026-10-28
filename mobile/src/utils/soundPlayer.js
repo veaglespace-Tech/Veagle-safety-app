@@ -26,6 +26,12 @@ let watchdogInterval = null;
 let cachedSirenUri = null;
 let activeNativePlayer = null;
 let preloadedNativePlayer = null;
+let Haptics = null;
+if (Platform.OS !== 'web') {
+  try {
+    Haptics = require('expo-haptics');
+  } catch (e) {}
+}
 
 // Helper to write string into DataView
 function writeString(view, offset, string) {
@@ -179,10 +185,13 @@ primeNativePlayer();
 export const playEmergencySiren = (loop = true) => {
   isPlaying = true;
 
-  // Instant Vibration (0ms)
+  // Instant Vibration (0ms) & iOS Taptic feedback
   try {
     if (Platform.OS !== 'web') {
       Vibration.vibrate([0, 500, 200, 500], true);
+      if (Platform.OS === 'ios' && Haptics?.notificationAsync) {
+        Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error).catch(() => {});
+      }
     }
   } catch (e) {}
 
@@ -195,10 +204,13 @@ export const playEmergencySiren = (loop = true) => {
       return;
     }
 
-    // 1. Maintain vibration on mobile
+    // 1. Maintain vibration on mobile & iOS Haptics
     if (Platform.OS !== 'web') {
       try {
         Vibration.vibrate([0, 500, 200, 500], true);
+        if (Platform.OS === 'ios' && Haptics?.impactAsync) {
+          Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy).catch(() => {});
+        }
       } catch (e) {}
     }
 

@@ -21,11 +21,15 @@
       "infoPlist": {
         "NSLocationWhenInUseUsageDescription": "SakhiSuraksha requires your location to determine your real-time position so it can be instantly shared with your trusted Guardians and Organization Administrators during an active SOS emergency.",
         "NSLocationAlwaysAndWhenInUseUsageDescription": "SakhiSuraksha requires background location access to continuously broadcast your live position to emergency contacts even when your phone is locked or the app is minimized during an active SOS event. This continuous tracking is critical for your safety.",
+        "NSLocationAlwaysUsageDescription": "SakhiSuraksha requires background location access to safeguard you and share live coordinates with your guardians during active emergencies.",
         "UIBackgroundModes": [
           "location",
           "fetch",
           "audio"
         ],
+        "NSAppTransportSecurity": {
+          "NSAllowsArbitraryLoads": true
+        },
         "ITSAppUsesNonExemptEncryption": false
       }
     },
