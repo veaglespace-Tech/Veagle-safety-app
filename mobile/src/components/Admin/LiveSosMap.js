@@ -23,6 +23,16 @@ if (Platform.OS !== 'web') {
   }
 }
 
+let WebView = null;
+if (Platform.OS !== 'web') {
+  try {
+    const WV = require('react-native-webview');
+    WebView = WV.WebView || WV.default || WV;
+  } catch (e) {
+    console.log('[LiveSosMap] react-native-webview not available on this platform:', e?.message || e);
+  }
+}
+
 // ---------------------------------------------------------------------------
 // Map Error Boundary — Guarantees the app NEVER crashes from map render errors
 // ---------------------------------------------------------------------------
@@ -61,10 +71,11 @@ class MapErrorBoundary extends Component {
 }
 
 // ---------------------------------------------------------------------------
-// Interactive Animated Web Live Leaflet Map
+// Interactive Animated Universal Live Leaflet Map (Web & Mobile via WebView)
 // ---------------------------------------------------------------------------
-function WebLiveLeafletMap({ lat, lng, accuracy = 15, victimName = 'Victim Member', trail = [] }) {
+function UniversalLiveLeafletMap({ lat, lng, accuracy = 15, victimName = 'Victim Member', trail = [] }) {
   const iframeRef = useRef(null);
+  const webViewRef = useRef(null);
 
   // Generate initial HTML template once on mount
   const initialHtml = useMemo(() => {
@@ -76,9 +87,9 @@ function WebLiveLeafletMap({ lat, lng, accuracy = 15, victimName = 'Victim Membe
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
-  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" crossorigin="" />
   <style>
-    * { margin: 0; padding: 0; box-sizing: border-box; }
+    * { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
     html, body, #map { width: 100%; height: 100%; overflow: hidden; background: #FAF5F7; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
     
     .radar-container {
@@ -150,7 +161,7 @@ function WebLiveLeafletMap({ lat, lng, accuracy = 15, victimName = 'Victim Membe
       transition: all 0.2s ease;
       user-select: none;
     }
-    .btn-chip:hover {
+    .btn-chip:hover, .btn-chip:active {
       background: #FFF;
       transform: translateY(-1px);
       box-shadow: 0 4px 12px rgba(255, 42, 109, 0.2);
@@ -207,7 +218,7 @@ function WebLiveLeafletMap({ lat, lng, accuracy = 15, victimName = 'Victim Membe
     <span id="hud-coords">--</span>
   </div>
 
-  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" crossorigin=""></script>
   <script>
     var currentLat = ${lat};
     var currentLng = ${lng};
@@ -367,24 +378,39 @@ function WebLiveLeafletMap({ lat, lng, accuracy = 15, victimName = 'Victim Membe
       }
     });
 
-    try {
-      window.parent.postMessage({ type: 'LEAFLET_READY' }, '*');
-    } catch(err) {}
+    document.addEventListener('message', function(e) {
+      try {
+        var data = typeof e.data === 'string' ? JSON.parse(e.data) : e.data;
+        if (data && data.type === 'UPDATE_LOCATION') {
+          window.updateLiveLocation(data.lat, data.lng, data.accuracy, data.trail);
+        }
+      } catch(err) {}
+    });
+
+    function notifyReady() {
+      try {
+        if (window.ReactNativeWebView && typeof window.ReactNativeWebView.postMessage === 'function') {
+          window.ReactNativeWebView.postMessage(JSON.stringify({ type: 'LEAFLET_READY' }));
+        } else if (window.parent) {
+          window.parent.postMessage({ type: 'LEAFLET_READY' }, '*');
+        }
+      } catch(err) {}
+    }
+    notifyReady();
+    setTimeout(notifyReady, 400);
   </script>
 </body>
 </html>`;
   }, []);
 
-  // Real-time update push into iframe without reloads
-  useEffect(() => {
-    const iframe = iframeRef.current;
-    if (!iframe) return;
-
-    const pushUpdate = () => {
-      try {
-        if (iframe.contentWindow && typeof iframe.contentWindow.updateLiveLocation === 'function') {
+  // Real-time update push into iframe (Web) or WebView (Native Android / iOS)
+  const pushUpdate = () => {
+    try {
+      if (Platform.OS === 'web') {
+        const iframe = iframeRef.current;
+        if (iframe?.contentWindow?.updateLiveLocation) {
           iframe.contentWindow.updateLiveLocation(lat, lng, accuracy, trail);
-        } else if (iframe.contentWindow) {
+        } else if (iframe?.contentWindow) {
           iframe.contentWindow.postMessage({
             type: 'UPDATE_LOCATION',
             lat,
@@ -393,9 +419,23 @@ function WebLiveLeafletMap({ lat, lng, accuracy = 15, victimName = 'Victim Membe
             trail,
           }, '*');
         }
-      } catch (e) {}
-    };
+      } else if (webViewRef.current) {
+        const script = `
+          (function() {
+            try {
+              if (typeof window.updateLiveLocation === 'function') {
+                window.updateLiveLocation(${lat}, ${lng}, ${accuracy || 15}, ${JSON.stringify(trail || [])});
+              }
+            } catch(e) {}
+          })();
+          true;
+        `;
+        webViewRef.current.injectJavaScript(script);
+      }
+    } catch (e) {}
+  };
 
+  useEffect(() => {
     pushUpdate();
 
     const handleMessage = (e) => {
@@ -421,25 +461,61 @@ function WebLiveLeafletMap({ lat, lng, accuracy = 15, victimName = 'Victim Membe
     };
   }, [lat, lng, accuracy, trail]);
 
-  return (
-    <View style={StyleSheet.absoluteFillObject}>
-      {React.createElement('iframe', {
-        ref: iframeRef,
-        title: `Live Map - ${victimName}`,
-        width: '100%',
-        height: '100%',
-        style: { border: 0, borderRadius: 20 },
-        srcDoc: initialHtml,
-        onLoad: () => {
-          try {
-            if (iframeRef.current?.contentWindow?.updateLiveLocation) {
-              iframeRef.current.contentWindow.updateLiveLocation(lat, lng, accuracy, trail);
-            }
-          } catch (e) {}
-        },
-      })}
-    </View>
-  );
+  if (Platform.OS === 'web') {
+    return (
+      <View style={StyleSheet.absoluteFillObject}>
+        {React.createElement('iframe', {
+          ref: iframeRef,
+          title: `Live Map - ${victimName}`,
+          width: '100%',
+          height: '100%',
+          style: { border: 0, borderRadius: 20 },
+          srcDoc: initialHtml,
+          onLoad: () => {
+            pushUpdate();
+            setTimeout(pushUpdate, 300);
+          },
+        })}
+      </View>
+    );
+  }
+
+  if (WebView) {
+    return (
+      <View style={StyleSheet.absoluteFillObject}>
+        <WebView
+          ref={webViewRef}
+          originWhitelist={['*']}
+          source={{ html: initialHtml }}
+          style={{ flex: 1, backgroundColor: '#FAF5F7' }}
+          containerStyle={{ flex: 1, borderRadius: 20, overflow: 'hidden' }}
+          javaScriptEnabled={true}
+          domStorageEnabled={true}
+          allowFileAccess={true}
+          scalesPageToFit={true}
+          mixedContentMode="always"
+          androidHardwareAccelerationDisabled={false}
+          showsHorizontalScrollIndicator={false}
+          showsVerticalScrollIndicator={false}
+          onMessage={(event) => {
+            try {
+              const data = JSON.parse(event.nativeEvent.data);
+              if (data && data.type === 'LEAFLET_READY') {
+                pushUpdate();
+              }
+            } catch (e) {}
+          }}
+          onLoadEnd={() => {
+            pushUpdate();
+            setTimeout(pushUpdate, 300);
+            setTimeout(pushUpdate, 800);
+          }}
+        />
+      </View>
+    );
+  }
+
+  return null;
 }
 
 // ---------------------------------------------------------------------------
@@ -561,8 +637,8 @@ export default function LiveSosMap({
   return (
     <View style={[styles.container, { height }, style]}>
       <MapErrorBoundary onOpenMaps={openExternalMaps}>
-        {Platform.OS === 'web' ? (
-          <WebLiveLeafletMap
+        {Platform.OS === 'web' || WebView ? (
+          <UniversalLiveLeafletMap
             lat={lat}
             lng={lng}
             accuracy={accuracy}
