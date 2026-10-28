@@ -198,7 +198,35 @@ function UniversalLiveLeafletMap({ lat, lng, accuracy = 15, victimName = 'Victim
       border-color: #FF2A6D;
     }
 
-    .leaflet-control-attribution, .leaflet-control-zoom { display: none !important; }
+    .telemetry-hud {
+      position: absolute;
+      bottom: 12px;
+      left: 12px;
+      z-index: 1000;
+      background: rgba(42, 8, 38, 0.9);
+      color: #FFF;
+      padding: 6px 14px;
+      border-radius: 20px;
+      font-size: 11px;
+      font-weight: 800;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      box-shadow: 0 3px 10px rgba(0,0,0,0.25);
+      border: 1px solid rgba(255, 42, 109, 0.3);
+      backdrop-filter: blur(4px);
+    }
+    .live-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: #34D399;
+      animation: pulseBlink 1.4s infinite;
+    }
+    @keyframes pulseBlink {
+      0%, 100% { opacity: 1; transform: scale(1); }
+      50% { opacity: 0.3; transform: scale(0.85); }
+    }
   </style>
 </head>
 <body>
@@ -207,6 +235,13 @@ function UniversalLiveLeafletMap({ lat, lng, accuracy = 15, victimName = 'Victim
   <div class="ctrl-box">
     <button class="btn-chip active" id="btn-follow" onclick="toggleFollow()">🎯 Lock Target</button>
     <button class="btn-chip" id="btn-satellite" onclick="toggleSatellite()">🗺️ Satellite</button>
+  </div>
+
+  <div class="telemetry-hud">
+    <div class="live-dot"></div>
+    <span id="hud-label">LIVE TRACKING ACTIVE</span>
+    <span style="opacity:0.35">|</span>
+    <span id="hud-coords">--</span>
   </div>
 
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
@@ -234,6 +269,13 @@ function UniversalLiveLeafletMap({ lat, lng, accuracy = 15, victimName = 'Victim
     var streetLayer = null, satLayer = null;
     var radarIcon = null, accuracyCircle = null, glowTrail = null, coreTrail = null, marker = null;
 
+    function updateHud(latVal, lngVal, accVal, count) {
+      var el = document.getElementById('hud-coords');
+      if (el) {
+        el.innerText = latVal.toFixed(5) + ', ' + lngVal.toFixed(5) + ' (±' + Math.round(accVal) + 'm)';
+      }
+    }
+
     function initMap() {
       if (typeof L === 'undefined') {
         setTimeout(initMap, 100);
@@ -259,6 +301,8 @@ function UniversalLiveLeafletMap({ lat, lng, accuracy = 15, victimName = 'Victim
           zoomControl: false,
           layers: [streetLayer]
         });
+
+        L.control.zoom({ position: 'bottomright' }).addTo(map);
 
         // Force Leaflet container recalculation on Android WebView
         map.invalidateSize();
@@ -325,6 +369,7 @@ function UniversalLiveLeafletMap({ lat, lng, accuracy = 15, victimName = 'Victim
           }
         });
 
+        updateHud(currentLat, currentLng, ${accuracy || 15}, initialPts.length);
         notifyReady();
       } catch (err) {
         console.error('initMap error:', err && err.message);
@@ -378,6 +423,8 @@ function UniversalLiveLeafletMap({ lat, lng, accuracy = 15, victimName = 'Victim
       if (isFollowing && map) {
         map.panTo(pos, { animate: true, duration: 0.8 });
       }
+
+      updateHud(currentLat, currentLng, newAcc || 15, pts.length);
     };
 
     window.toggleFollow = function() {
@@ -657,12 +704,24 @@ export default function LiveSosMap({
     };
   }, [lat, lng, isValid]);
 
-  // Open native navigation app on device safely
+  // Open native navigation app on device safely (Apple Maps on iOS, Google Maps on Android)
   const openExternalMaps = async () => {
     if (!isValid) return;
     try {
-      const url = `https://www.google.com/maps/search/?api=1&query=${lat},${lng}`;
-      await Linking.openURL(url).catch(() => {});
+      const label = encodeURIComponent(victimName || 'Emergency Victim Location');
+      const nativeUrl = Platform.select({
+        ios: `maps:0,0?q=${label}@${lat},${lng}`,
+        android: `geo:${lat},${lng}?q=${lat},${lng}(${label})`,
+        default: `https://www.google.com/maps/search/?api=1&query=${lat},${lng}`,
+      });
+      const webUrl = `https://www.google.com/maps/search/?api=1&query=${lat},${lng}`;
+
+      const can = await Linking.canOpenURL(nativeUrl).catch(() => false);
+      if (can) {
+        await Linking.openURL(nativeUrl).catch(() => Linking.openURL(webUrl).catch(() => {}));
+      } else {
+        await Linking.openURL(webUrl).catch(() => {});
+      }
     } catch (e) {
       console.log('[LiveSosMap] Open external maps error:', e?.message);
     }
@@ -861,18 +920,17 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     backgroundColor: 'rgba(255, 255, 255, 0.95)',
-    paddingHorizontal: 10,
-    paddingVertical: 5,
+    paddingHorizontal: 9,
+    paddingVertical: 4,
     borderRadius: 14,
     borderWidth: 1,
     borderColor: '#FCE0E9',
-    gap: 6,
+    gap: 5,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.1,
+    shadowOpacity: 0.08,
     shadowRadius: 3,
-    elevation: 4,
-    zIndex: 10,
+    elevation: 2,
   },
   pingDot: {
     width: 7,
@@ -893,31 +951,30 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     backgroundColor: '#FF2A6D',
-    paddingHorizontal: 12,
-    paddingVertical: 7,
-    borderRadius: 14,
-    gap: 5,
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    borderRadius: 12,
+    gap: 4,
     shadowColor: '#FF2A6D',
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.25,
     shadowRadius: 4,
-    elevation: 4,
-    zIndex: 10,
+    elevation: 3,
   },
   gmapsText: {
     color: '#FFF',
-    fontSize: 10,
+    fontSize: 9.5,
     fontWeight: '900',
     letterSpacing: 0.4,
   },
   fullscreenButton: {
     position: 'absolute',
     top: 10,
-    left: 145,
+    right: 10,
     backgroundColor: 'rgba(255, 255, 255, 0.95)',
-    width: 28,
-    height: 28,
-    borderRadius: 14,
+    width: 30,
+    height: 30,
+    borderRadius: 10,
     alignItems: 'center',
     justifyContent: 'center',
     borderWidth: 1,
@@ -926,8 +983,7 @@ const styles = StyleSheet.create({
     shadowOffset: { width: 0, height: 1 },
     shadowOpacity: 0.08,
     shadowRadius: 3,
-    elevation: 4,
-    zIndex: 10,
+    elevation: 2,
   },
   coordsFooter: {
     position: 'absolute',
@@ -935,22 +991,16 @@ const styles = StyleSheet.create({
     left: 10,
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: 'rgba(255, 255, 255, 0.95)',
-    paddingHorizontal: 10,
-    paddingVertical: 6,
-    borderRadius: 14,
-    gap: 5,
+    backgroundColor: 'rgba(255, 255, 255, 0.92)',
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 10,
+    gap: 4,
     borderWidth: 1,
     borderColor: '#FCE0E9',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.1,
-    shadowRadius: 3,
-    elevation: 4,
-    zIndex: 10,
   },
   coordsFooterText: {
-    fontSize: 10,
+    fontSize: 9.5,
     fontWeight: '800',
     color: COLORS.textDark,
   },
