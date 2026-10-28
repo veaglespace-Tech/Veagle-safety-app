@@ -480,7 +480,9 @@ function UniversalLiveLeafletMap({ lat, lng, accuracy = 15, victimName = 'Victim
     );
   }
 
-  if (WebView) {
+  const [webViewFailed, setWebViewFailed] = useState(false);
+
+  if (WebView && !webViewFailed) {
     return (
       <View style={StyleSheet.absoluteFillObject}>
         <WebView
@@ -488,21 +490,22 @@ function UniversalLiveLeafletMap({ lat, lng, accuracy = 15, victimName = 'Victim
           originWhitelist={['*']}
           source={{ html: initialHtml }}
           style={{ flex: 1, backgroundColor: '#FAF5F7' }}
-          containerStyle={{ flex: 1, borderRadius: 20, overflow: 'hidden' }}
           javaScriptEnabled={true}
           domStorageEnabled={true}
-          allowFileAccess={true}
+          androidHardwareAccelerationDisabled={true}
+          androidLayerType="software"
           scalesPageToFit={true}
           mixedContentMode="always"
-          androidHardwareAccelerationDisabled={false}
-          bounces={false}
-          scrollEnabled={false}
-          overScrollMode="never"
-          useWebKit={true}
-          allowsInlineMediaPlayback={true}
-          dataDetectorTypes="none"
           showsHorizontalScrollIndicator={false}
           showsVerticalScrollIndicator={false}
+          bounces={false}
+          onError={() => setWebViewFailed(true)}
+          onHttpError={() => {}}
+          onRenderProcessGone={(event) => {
+            console.warn('[WebView] Render process gone, switching to safe fallback');
+            setWebViewFailed(true);
+            return true;
+          }}
           onMessage={(event) => {
             try {
               const data = JSON.parse(event.nativeEvent.data);
@@ -521,7 +524,15 @@ function UniversalLiveLeafletMap({ lat, lng, accuracy = 15, victimName = 'Victim
     );
   }
 
-  return null;
+  return (
+    <View style={styles.noMapsFallback}>
+      <Ionicons name="navigate-circle" size={38} color="#FF2A6D" />
+      <Text style={styles.fallbackTitle}>Live GPS Telemetry Stream</Text>
+      <Text style={styles.coordsText}>
+        {lat.toFixed(5)}, {lng.toFixed(5)} (&plusmn;{accuracy}m)
+      </Text>
+    </View>
+  );
 }
 
 // ---------------------------------------------------------------------------
@@ -587,20 +598,18 @@ export default function LiveSosMap({
     };
   }, [lat, lng, isValid]);
 
-  // Open native navigation app on device (Apple Maps on iOS, Google Maps intent on Android, Web Maps on Browser)
-  const openExternalMaps = () => {
+  // Open native navigation app on device safely without intent crash
+  const openExternalMaps = async () => {
     if (!isValid) return;
-    const label = encodeURIComponent(victimName || 'Emergency Victim Location');
-    const url = Platform.select({
-      ios: `maps:0,0?q=${label}@${lat},${lng}`,
-      android: `geo:${lat},${lng}?q=${lat},${lng}(${label})`,
-      default: `https://www.google.com/maps/search/?api=1&query=${lat},${lng}`,
-    });
-
-    Linking.openURL(url).catch(() => {
-      // Universal fallback to Google Maps web URL if native intent fails
-      Linking.openURL(`https://www.google.com/maps/search/?api=1&query=${lat},${lng}`).catch(() => {});
-    });
+    try {
+      const url = `https://www.google.com/maps/search/?api=1&query=${lat},${lng}`;
+      const can = await Linking.canOpenURL(url).catch(() => false);
+      if (can) {
+        await Linking.openURL(url).catch(() => {});
+      }
+    } catch (e) {
+      console.log('[LiveSosMap] Open external maps error:', e?.message);
+    }
   };
 
   // Strictly sanitize trail points (filter out corrupt GPS points)
@@ -720,7 +729,7 @@ export default function LiveSosMap({
       </MapErrorBoundary>
 
       {/* OVERLAY BADGE */}
-      <View style={styles.badgeOverlay}>
+      <View style={styles.badgeOverlay} pointerEvents="none">
         <View style={styles.pingDot} />
         <Text style={styles.badgeText}>LIVE GPS STREAM</Text>
       </View>
@@ -747,7 +756,7 @@ export default function LiveSosMap({
       )}
 
       {/* COORDINATES FOOTER */}
-      <View style={styles.coordsFooter}>
+      <View style={styles.coordsFooter} pointerEvents="none">
         <Ionicons name="location" size={11} color="#FF2A6D" />
         <Text style={styles.coordsFooterText}>
           {lat.toFixed(5)}, {lng.toFixed(5)} • &plusmn;{accuracy}m
