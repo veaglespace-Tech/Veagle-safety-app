@@ -33,6 +33,7 @@ export default function OrganizationDashboardScreen({ navigation }) {
   const [trackingMember, setTrackingMember] = useState(null);
 
   const socketRef = useRef(null);
+  const playedAlertIdsRef = useRef(new Set());
 
   // ── Data fetch ─────────────────────────────────────────────────────────────
 
@@ -209,15 +210,26 @@ export default function OrganizationDashboardScreen({ navigation }) {
   // ── Siren management ───────────────────────────────────────────────────────
   // Plays when any org member has an active, un-muted SOS
 
+  // Plays once when any org member has an active, un-muted SOS, stops immediately on mute
   useEffect(() => {
-    const hasActiveSos   = members.some((m) => !!m.activeSos);
-    const hasUnmutedSos  = members.some(
-      (m) => m.activeSos && !mutedSosIds.includes(String(m.activeSos.id)),
+    const activeSosMembers = members.filter((m) => !!m.activeSos);
+    let shouldAlertOnce = false;
+
+    activeSosMembers.forEach((m) => {
+      const sosId = String(m.activeSos.id);
+      if (!mutedSosIds.includes(sosId) && !playedAlertIdsRef.current.has(sosId)) {
+        playedAlertIdsRef.current.add(sosId);
+        shouldAlertOnce = true;
+      }
+    });
+
+    const hasUnmutedSos = activeSosMembers.some(
+      (m) => !mutedSosIds.includes(String(m.activeSos.id))
     );
 
-    if (hasActiveSos && hasUnmutedSos) {
-      playEmergencySiren().catch(() => {});
-    } else {
+    if (shouldAlertOnce && hasUnmutedSos) {
+      playEmergencySiren(false).catch(() => {});
+    } else if (!hasUnmutedSos) {
       stopEmergencySiren().catch(() => {});
     }
   }, [members, mutedSosIds]);

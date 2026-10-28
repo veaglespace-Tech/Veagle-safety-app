@@ -53,6 +53,7 @@ export default function ParentDashboardScreen({ navigation }) {
   const [pingingChildId, setPingingChildId] = useState(null);
 
   const socketRef = useRef(null);
+  const playedAlertIdsRef = useRef(new Set());
 
   // Fetch Parent Overview Data
   const fetchData = useCallback(async (showIndicator = true) => {
@@ -217,15 +218,26 @@ export default function ParentDashboardScreen({ navigation }) {
     };
   }, [fetchData, user]);
 
-  // Audio Siren Management
+  // Audio Siren Management - Alerts once per new unmuted SOS and stops immediately on mute
   useEffect(() => {
-    const hasUnmutedSos = childrenList.some(
-      (item) => item.activeSos && !mutedSosIds.includes(String(item.activeSos.id))
+    const activeSosItems = childrenList.filter((item) => item.activeSos);
+    let shouldAlertOnce = false;
+
+    activeSosItems.forEach((item) => {
+      const sosId = String(item.activeSos.id);
+      if (!mutedSosIds.includes(sosId) && !playedAlertIdsRef.current.has(sosId)) {
+        playedAlertIdsRef.current.add(sosId);
+        shouldAlertOnce = true;
+      }
+    });
+
+    const hasAnyUnmuted = activeSosItems.some(
+      (item) => !mutedSosIds.includes(String(item.activeSos.id))
     );
 
-    if (hasUnmutedSos) {
-      playEmergencySiren().catch(() => {});
-    } else {
+    if (shouldAlertOnce && hasAnyUnmuted) {
+      playEmergencySiren(false).catch(() => {});
+    } else if (!hasAnyUnmuted) {
       stopEmergencySiren().catch(() => {});
     }
   }, [childrenList, mutedSosIds]);
@@ -660,12 +672,15 @@ export default function ParentDashboardScreen({ navigation }) {
                         <TouchableOpacity
                           style={[styles.actionBtnMute, isMuted && styles.actionBtnUnmute]}
                           onPress={() => {
+                            const sosId = String(item.activeSos.id);
                             if (isMuted) {
-                              playEmergencySiren(true);
+                              playedAlertIdsRef.current.delete(sosId);
+                              playEmergencySiren(false);
                             } else {
+                              playedAlertIdsRef.current.add(sosId);
                               stopEmergencySiren();
                             }
-                            dispatch(toggleSosMute(item.activeSos.id));
+                            dispatch(toggleSosMute(sosId));
                           }}
                           activeOpacity={0.8}
                         >

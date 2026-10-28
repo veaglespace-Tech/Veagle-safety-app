@@ -42,6 +42,7 @@ export default function AdminDashboardScreen({ navigation }) {
   const [isResolving, setIsResolving] = useState(false);
 
   const socketRef = useRef(null);
+  const playedAlertIdsRef = useRef(new Set());
 
   // Fetch Super Admin Overview from /admin/overview & sync with registered accounts
   const fetchOverviewData = useCallback(async (showIndicator = true) => {
@@ -85,16 +86,26 @@ export default function AdminDashboardScreen({ navigation }) {
     }
   }, []);
 
-  // Siren synchronization
+  // Siren synchronization - Alerts once per unmuted SOS and stops immediately on mute
   useEffect(() => {
     const activeSosList = overview?.activeSos || [];
-    const hasUnmutedSos = activeSosList.some(
+    let shouldAlertOnce = false;
+
+    activeSosList.forEach((sos) => {
+      const sosId = String(sos.id);
+      if (!mutedSosIds.includes(sosId) && !playedAlertIdsRef.current.has(sosId)) {
+        playedAlertIdsRef.current.add(sosId);
+        shouldAlertOnce = true;
+      }
+    });
+
+    const hasAnyUnmuted = activeSosList.some(
       (sos) => !mutedSosIds.includes(String(sos.id))
     );
 
-    if (hasUnmutedSos && activeSosList.length > 0) {
-      playEmergencySiren().catch(() => {});
-    } else {
+    if (shouldAlertOnce && hasAnyUnmuted) {
+      playEmergencySiren(false).catch(() => {});
+    } else if (!hasAnyUnmuted) {
       stopEmergencySiren().catch(() => {});
     }
   }, [overview?.activeSos, mutedSosIds]);

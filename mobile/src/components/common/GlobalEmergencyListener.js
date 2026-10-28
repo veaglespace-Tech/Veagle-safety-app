@@ -10,16 +10,22 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { API_URL } from '../../utils/constants';
 import { COLORS } from '../../theme/colors';
 import { playEmergencySiren, stopEmergencySiren } from '../../utils/soundPlayer';
-import { clearSosState, checkActiveSos } from '../../redux/slices/sosSlice';
+import { clearSosState, checkActiveSos, muteSos, toggleSosMute } from '../../redux/slices/sosSlice';
 import { adminApi } from '../../api/adminApi';
 
 export default function GlobalEmergencyListener() {
   const dispatch = useDispatch();
   const { user } = useSelector(state => state.auth);
+  const mutedSosIds = useSelector(state => state.sos?.mutedSosIds || []);
   const [alarmData, setAlarmData] = useState(null);
   const [isSirenPlaying, setIsSirenPlaying] = useState(false);
   const socketRef = useRef(null);
   const dismissedSosIdsRef = useRef(new Set());
+  const mutedSosIdsRef = useRef(mutedSosIds);
+
+  useEffect(() => {
+    mutedSosIdsRef.current = mutedSosIds;
+  }, [mutedSosIds]);
 
   useEffect(() => {
     if (!user) return;
@@ -88,7 +94,7 @@ export default function GlobalEmergencyListener() {
     // 🚨 WHEN ANYONE TRIGGERS SOS:
     socket.on('SOS_ALARM_BROADCAST', (data) => {
       const sosId = data?.sosId || data?.id || data?.sosSessionId;
-      if (sosId && dismissedSosIdsRef.current.has(String(sosId))) {
+      if (sosId && (dismissedSosIdsRef.current.has(String(sosId)) || (mutedSosIdsRef.current && mutedSosIdsRef.current.includes(String(sosId))))) {
         return;
       }
 
@@ -111,7 +117,7 @@ export default function GlobalEmergencyListener() {
 
       setAlarmData(data);
       setIsSirenPlaying(true);
-      playEmergencySiren(true);
+      playEmergencySiren(false);
     });
 
     // 🛑 WHEN SOS IS RESOLVED / STOPPED:
@@ -166,11 +172,14 @@ export default function GlobalEmergencyListener() {
   }, [user, dispatch]);
 
   const handleToggleSiren = () => {
+    const sosId = alarmData?.sosId || alarmData?.id || alarmData?.sosSessionId;
     if (isSirenPlaying) {
       stopEmergencySiren();
       setIsSirenPlaying(false);
+      if (sosId) dispatch(muteSos(String(sosId)));
     } else {
-      playEmergencySiren(true);
+      if (sosId) dispatch(toggleSosMute(String(sosId)));
+      playEmergencySiren(false);
       setIsSirenPlaying(true);
     }
   };
@@ -178,9 +187,10 @@ export default function GlobalEmergencyListener() {
   const handleDismiss = () => {
     stopEmergencySiren();
     setIsSirenPlaying(false);
-    const sosId = alarmData?.sosId || alarmData?.id;
+    const sosId = alarmData?.sosId || alarmData?.id || alarmData?.sosSessionId;
     if (sosId) {
       dismissedSosIdsRef.current.add(String(sosId));
+      dispatch(muteSos(String(sosId)));
     }
     setAlarmData(null);
   };

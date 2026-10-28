@@ -135,13 +135,13 @@ if (Platform.OS === 'web' && typeof window !== 'undefined') {
 }
 
 // Helper to configure native player with reliable looping & status listeners
-function setupNativePlayer(player, loop = true) {
+function setupNativePlayer(player, loop = false) {
   if (!player) return;
   try {
     player.loop = loop;
     if (typeof player.addListener === 'function') {
       player.addListener('playbackStatusUpdate', (status) => {
-        if (isPlaying && (status?.didJustFinish || (!status?.playing && status?.isLoaded && !status?.isBuffering))) {
+        if (loop && isPlaying && (status?.didJustFinish || (!status?.playing && status?.isLoaded && !status?.isBuffering))) {
           try {
             if (typeof player.seekTo === 'function') {
               player.seekTo(0);
@@ -155,7 +155,7 @@ function setupNativePlayer(player, loop = true) {
 }
 
 // 2. LAZY ON-DEMAND NATIVE AUDIO PLAYER (Zero startup overhead, immune to cold-start crashes)
-async function getOrCreateNativePlayer(loop = true) {
+async function getOrCreateNativePlayer(loop = false) {
   if (Platform.OS === 'web') return null;
   try {
     if (activeNativePlayer) {
@@ -187,62 +187,69 @@ async function getOrCreateNativePlayer(loop = true) {
   }
 }
 
-export const playEmergencySiren = (loop = true) => {
+export const playEmergencySiren = (loop = false) => {
   isPlaying = true;
 
-  // Instant Vibration (0ms) & iOS Taptic feedback
+  // Instant Vibration & iOS Taptic feedback (single cycle if loop=false, repeating if loop=true)
   try {
     if (Platform.OS !== 'web') {
-      Vibration.vibrate([0, 500, 200, 500], true);
+      Vibration.cancel();
+      Vibration.vibrate([0, 500, 200, 500], loop);
       if (Platform.OS === 'ios' && Haptics?.notificationAsync) {
         Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error).catch(() => {});
       }
     }
   } catch (e) {}
 
-  // Continuous watchdog loop: keeps siren and vibration alive across low-end devices and background states
-  if (watchdogInterval) clearInterval(watchdogInterval);
-  watchdogInterval = setInterval(() => {
-    if (!isPlaying) {
-      clearInterval(watchdogInterval);
-      watchdogInterval = null;
-      return;
-    }
+  if (watchdogInterval) {
+    clearInterval(watchdogInterval);
+    watchdogInterval = null;
+  }
 
-    // 1. Maintain vibration on mobile & iOS Haptics
-    if (Platform.OS !== 'web') {
-      try {
-        Vibration.vibrate([0, 500, 200, 500], true);
-        if (Platform.OS === 'ios' && Haptics?.impactAsync) {
-          Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy).catch(() => {});
-        }
-      } catch (e) {}
-    }
+  // Watchdog loop ONLY when repeating loop is explicitly requested
+  if (loop) {
+    watchdogInterval = setInterval(() => {
+      if (!isPlaying) {
+        clearInterval(watchdogInterval);
+        watchdogInterval = null;
+        return;
+      }
 
-    // 2. Maintain native player playback
-    if (activeNativePlayer && Platform.OS !== 'web') {
-      try {
-        if (!activeNativePlayer.playing) {
-          if (typeof activeNativePlayer.seekTo === 'function') {
-            activeNativePlayer.seekTo(0);
+      // 1. Maintain vibration on mobile & iOS Haptics
+      if (Platform.OS !== 'web') {
+        try {
+          Vibration.vibrate([0, 500, 200, 500], true);
+          if (Platform.OS === 'ios' && Haptics?.impactAsync) {
+            Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy).catch(() => {});
           }
-          activeNativePlayer.play();
-        }
-      } catch (e) {}
-    }
+        } catch (e) {}
+      }
 
-    // 3. Maintain web audio element
-    if (Platform.OS === 'web') {
-      try {
-        if (htmlAudioElement && htmlAudioElement.paused) {
-          htmlAudioElement.play().catch(() => {});
-        }
-        if (audioCtx && audioCtx.state === 'suspended') {
-          audioCtx.resume().catch(() => {});
-        }
-      } catch (e) {}
-    }
-  }, 1500);
+      // 2. Maintain native player playback
+      if (activeNativePlayer && Platform.OS !== 'web') {
+        try {
+          if (!activeNativePlayer.playing) {
+            if (typeof activeNativePlayer.seekTo === 'function') {
+              activeNativePlayer.seekTo(0);
+            }
+            activeNativePlayer.play();
+          }
+        } catch (e) {}
+      }
+
+      // 3. Maintain web audio element
+      if (Platform.OS === 'web') {
+        try {
+          if (htmlAudioElement && htmlAudioElement.paused) {
+            htmlAudioElement.play().catch(() => {});
+          }
+          if (audioCtx && audioCtx.state === 'suspended') {
+            audioCtx.resume().catch(() => {});
+          }
+        } catch (e) {}
+      }
+    }, 1500);
+  }
 
   // 1. Web Platform: Instant Dual-Engine
   if (Platform.OS === 'web') {

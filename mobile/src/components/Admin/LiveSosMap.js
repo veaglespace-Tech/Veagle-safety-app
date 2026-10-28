@@ -271,11 +271,11 @@ function UniversalLiveLeafletMap({ lat, lng, accuracy = 15, victimName = 'Victim
       if (map) return;
 
       try {
-        // High-reliability CartoDB Voyager tiles (fast globally, no rate-limiting)
-        streetLayer = L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', {
+        // Standard 100% Free OpenStreetMap raster tiles (Zero API key required, reliable worldwide)
+        streetLayer = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
           maxZoom: 19,
-          subdomains: 'abcd',
-          attribution: '&copy; CartoDB &copy; OpenStreetMap'
+          subdomains: ['a', 'b', 'c'],
+          attribution: '&copy; OpenStreetMap contributors'
         });
 
         satLayer = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
