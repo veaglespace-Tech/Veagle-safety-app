@@ -881,7 +881,12 @@ export default function ParentDashboardScreen({ navigation }) {
       </Modal>
 
       {/* 5. FULLSCREEN / MODAL LIVE MAP TRACKING */}
-      <Modal visible={!!trackingItem} transparent animationType={Platform.OS === 'ios' ? 'slide' : 'fade'}>
+      <Modal
+        visible={!!trackingItem}
+        transparent
+        animationType={Platform.OS === 'ios' ? 'slide' : 'fade'}
+        onRequestClose={() => setTrackingItem(null)}
+      >
         {trackingItem && (
           <SafeAreaView style={styles.modalOverlay}>
             <View style={styles.modalCard}>

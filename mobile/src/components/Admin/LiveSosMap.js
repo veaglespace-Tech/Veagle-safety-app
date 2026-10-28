@@ -79,8 +79,13 @@ function UniversalLiveLeafletMap({ lat, lng, accuracy = 15, victimName = 'Victim
   const [webViewFailed, setWebViewFailed] = useState(false);
 
   // Generate initial HTML template once on mount
+  const trailSerialized = useMemo(() => {
+    if (!Array.isArray(trail) || trail.length === 0) return '[]';
+    return JSON.stringify(trail);
+  }, [trail]);
+
   const initialHtml = useMemo(() => {
-    const safeTrail = JSON.stringify(trail || []);
+    const safeTrail = trailSerialized;
     const safeName = JSON.stringify(victimName || 'User');
 
     return `<!DOCTYPE html>
@@ -88,8 +93,7 @@ function UniversalLiveLeafletMap({ lat, lng, accuracy = 15, victimName = 'Victim
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
-  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
-  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css" />
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" onerror="this.onerror=null;this.href='https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css';" />
   <style>
     * { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
     html, body {
@@ -244,7 +248,6 @@ function UniversalLiveLeafletMap({ lat, lng, accuracy = 15, victimName = 'Victim
     <span id="hud-coords">--</span>
   </div>
 
-  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
   <script>
     (function() {
       var oldLog = console.log, oldErr = console.error;
@@ -268,11 +271,12 @@ function UniversalLiveLeafletMap({ lat, lng, accuracy = 15, victimName = 'Victim
     var map = null;
     var streetLayer = null, satLayer = null;
     var radarIcon = null, accuracyCircle = null, glowTrail = null, coreTrail = null, marker = null;
+    var pendingCoords = null;
 
     function updateHud(latVal, lngVal, accVal, count) {
       var el = document.getElementById('hud-coords');
-      if (el) {
-        el.innerText = latVal.toFixed(5) + ', ' + lngVal.toFixed(5) + ' (±' + Math.round(accVal) + 'm)';
+      if (el && typeof latVal === 'number' && typeof lngVal === 'number') {
+        el.innerText = latVal.toFixed(5) + ', ' + lngVal.toFixed(5) + ' (±' + Math.round(accVal || 15) + 'm)';
       }
     }
 
@@ -284,10 +288,11 @@ function UniversalLiveLeafletMap({ lat, lng, accuracy = 15, victimName = 'Victim
       if (map) return;
 
       try {
-        streetLayer = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        // High-reliability CartoDB Voyager tiles (fast globally, no rate-limiting)
+        streetLayer = L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', {
           maxZoom: 19,
-          subdomains: ['a', 'b', 'c'],
-          attribution: '&copy; OpenStreetMap'
+          subdomains: 'abcd',
+          attribution: '&copy; CartoDB &copy; OpenStreetMap'
         });
 
         satLayer = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
@@ -295,8 +300,12 @@ function UniversalLiveLeafletMap({ lat, lng, accuracy = 15, victimName = 'Victim
           attribution: 'Esri World Imagery'
         });
 
+        var startLat = pendingCoords ? pendingCoords.lat : currentLat;
+        var startLng = pendingCoords ? pendingCoords.lng : currentLng;
+        var startAcc = pendingCoords ? pendingCoords.acc : (${accuracy || 15});
+
         map = L.map('map', {
-          center: [currentLat, currentLng],
+          center: [startLat, startLng],
           zoom: 16,
           zoomControl: false,
           layers: [streetLayer]
@@ -304,12 +313,18 @@ function UniversalLiveLeafletMap({ lat, lng, accuracy = 15, victimName = 'Victim
 
         L.control.zoom({ position: 'bottomright' }).addTo(map);
 
-        // Force Leaflet container recalculation on Android WebView
-        map.invalidateSize();
-        setTimeout(function() { if (map) map.invalidateSize(); }, 150);
-        setTimeout(function() { if (map) map.invalidateSize(); }, 400);
-        setTimeout(function() { if (map) map.invalidateSize(); }, 800);
-        setTimeout(function() { if (map) map.invalidateSize(); }, 1500);
+        // Force Leaflet container recalculation on modal opening
+        function doInvalidate() {
+          if (map) {
+            try { map.invalidateSize(); } catch(e) {}
+          }
+        }
+        doInvalidate();
+        setTimeout(doInvalidate, 100);
+        setTimeout(doInvalidate, 300);
+        setTimeout(doInvalidate, 700);
+        setTimeout(doInvalidate, 1500);
+        window.addEventListener('resize', doInvalidate);
 
         radarIcon = L.divIcon({
           className: 'radar-div-icon',
@@ -318,22 +333,22 @@ function UniversalLiveLeafletMap({ lat, lng, accuracy = 15, victimName = 'Victim
           iconAnchor: [22, 22]
         });
 
-        accuracyCircle = L.circle([currentLat, currentLng], {
-          radius: ${accuracy || 15},
+        accuracyCircle = L.circle([startLat, startLng], {
+          radius: Math.max(Number(startAcc) || 15, 10),
           color: '#FF2A6D',
           fillColor: '#FF2A6D',
           fillOpacity: 0.15,
           weight: 1.5
         }).addTo(map);
 
-        var initialPts = (${safeTrail} || []).map(function(p) {
+        var initialPts = (pendingCoords && pendingCoords.trail ? pendingCoords.trail : (${safeTrail} || [])).map(function(p) {
           return [parseFloat(p.latitude), parseFloat(p.longitude)];
         }).filter(function(pt) {
           return !isNaN(pt[0]) && !isNaN(pt[1]);
         });
 
-        if (initialPts.length === 0 || initialPts[initialPts.length - 1][0] !== currentLat) {
-          initialPts.push([currentLat, currentLng]);
+        if (initialPts.length === 0 || initialPts[initialPts.length - 1][0] !== startLat) {
+          initialPts.push([startLat, startLng]);
         }
 
         glowTrail = L.polyline(initialPts, {
@@ -353,7 +368,7 @@ function UniversalLiveLeafletMap({ lat, lng, accuracy = 15, victimName = 'Victim
           lineJoin: 'round'
         }).addTo(map);
 
-        marker = L.marker([currentLat, currentLng], {
+        marker = L.marker([startLat, startLng], {
           icon: radarIcon,
           zIndexOffset: 1000
         }).addTo(map);
@@ -369,37 +384,62 @@ function UniversalLiveLeafletMap({ lat, lng, accuracy = 15, victimName = 'Victim
           }
         });
 
-        updateHud(currentLat, currentLng, ${accuracy || 15}, initialPts.length);
+        updateHud(startLat, startLng, startAcc, initialPts.length);
         notifyReady();
       } catch (err) {
         console.error('initMap error:', err && err.message);
       }
     }
 
-    if (typeof L !== 'undefined') {
-      initMap();
-    } else {
-      var cdnFallback = document.createElement('script');
-      cdnFallback.src = 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js';
-      cdnFallback.onload = function() { initMap(); };
-      cdnFallback.onerror = function() {
-        var jsdelivr = document.createElement('script');
-        jsdelivr.src = 'https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.min.js';
-        jsdelivr.onload = function() { initMap(); };
-        document.head.appendChild(jsdelivr);
-      };
-      document.head.appendChild(cdnFallback);
-      setTimeout(initMap, 200);
+    // Dynamic robust multi-CDN Leaflet loader
+    function loadLeaflet(done) {
+      if (typeof L !== 'undefined') return done();
+      var cdnList = [
+        'https://unpkg.com/leaflet@1.9.4/dist/leaflet.js',
+        'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js',
+        'https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.min.js'
+      ];
+      var idx = 0;
+      function next() {
+        if (typeof L !== 'undefined') return done();
+        if (idx >= cdnList.length) {
+          console.error('All Leaflet CDNs exhausted');
+          return;
+        }
+        var s = document.createElement('script');
+        s.src = cdnList[idx++];
+        s.onload = function() { done(); };
+        s.onerror = function() { next(); };
+        document.head.appendChild(s);
+      }
+      next();
     }
 
+    loadLeaflet(function() {
+      initMap();
+    });
+
     window.updateLiveLocation = function(newLat, newLng, newAcc, trailData) {
-      currentLat = parseFloat(newLat);
-      currentLng = parseFloat(newLng);
+      var parsedLat = parseFloat(newLat);
+      var parsedLng = parseFloat(newLng);
+      if (isNaN(parsedLat) || isNaN(parsedLng)) return;
+
+      currentLat = parsedLat;
+      currentLng = parsedLng;
       var pos = [currentLat, currentLng];
 
-      if (map) {
+      pendingCoords = {
+        lat: currentLat,
+        lng: currentLng,
+        acc: newAcc,
+        trail: trailData
+      };
+
+      if (!map) return;
+
+      try {
         map.invalidateSize();
-      }
+      } catch(e) {}
 
       if (marker) marker.setLatLng(pos);
       if (accuracyCircle) {
@@ -519,7 +559,7 @@ function UniversalLiveLeafletMap({ lat, lng, accuracy = 15, victimName = 'Victim
           (function() {
             try {
               if (typeof window.updateLiveLocation === 'function') {
-                window.updateLiveLocation(${lat}, ${lng}, ${accuracy || 15}, ${JSON.stringify(trail || [])});
+                window.updateLiveLocation(${lat}, ${lng}, ${accuracy || 15}, ${trailSerialized});
               }
             } catch(e) {}
           })();
@@ -562,7 +602,7 @@ function UniversalLiveLeafletMap({ lat, lng, accuracy = 15, victimName = 'Victim
       clearTimeout(t2);
       clearTimeout(t3);
     };
-  }, [lat, lng, accuracy, trail]);
+  }, [lat, lng, accuracy, trailSerialized]);
 
   if (Platform.OS === 'web') {
     return (
@@ -591,9 +631,9 @@ function UniversalLiveLeafletMap({ lat, lng, accuracy = 15, victimName = 'Victim
         <WebView
           ref={webViewRef}
           originWhitelist={['*']}
-          source={{ html: initialHtml }}
+          source={{ html: initialHtml, baseUrl: 'https://unpkg.com' }}
           style={{ flex: 1, width: '100%', height: '100%', backgroundColor: '#FAF5F7' }}
-          containerStyle={{ flex: 1, width: '100%', height: '100%', borderRadius: 20, overflow: 'hidden' }}
+          containerStyle={{ flex: 1, width: '100%', height: '100%' }}
           javaScriptEnabled={true}
           domStorageEnabled={true}
           scalesPageToFit={false}
@@ -609,7 +649,7 @@ function UniversalLiveLeafletMap({ lat, lng, accuracy = 15, victimName = 'Victim
             },
             android: {
               androidHardwareAccelerationDisabled: false,
-              androidLayerType: 'hardware',
+              androidLayerType: 'none',
               mixedContentMode: 'always',
             },
           })}

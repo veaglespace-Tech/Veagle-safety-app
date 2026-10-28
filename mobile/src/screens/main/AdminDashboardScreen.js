@@ -762,7 +762,12 @@ export default function AdminDashboardScreen({ navigation }) {
       </ScrollView>
 
       {/* FULLSCREEN / DETAILED LIVE TRACKING MODAL */}
-      <Modal visible={!!trackingSos} transparent animationType={Platform.OS === 'ios' ? 'slide' : 'fade'}>
+      <Modal
+        visible={!!trackingSos}
+        transparent
+        animationType={Platform.OS === 'ios' ? 'slide' : 'fade'}
+        onRequestClose={() => setTrackingSos(null)}
+      >
         {trackingSos && (
           <SafeAreaView style={styles.modalOverlay}>
             <View style={styles.modalContent}>
