@@ -87,10 +87,12 @@ function UniversalLiveLeafletMap({ lat, lng, accuracy = 15, victimName = 'Victim
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
-  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" crossorigin="" onerror="this.onerror=null;this.href='https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css';" />
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css" />
   <style>
     * { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
-    html, body, #map { width: 100%; height: 100%; overflow: hidden; background: #FAF5F7; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
+    html, body { width: 100%; height: 100%; margin: 0; padding: 0; overflow: hidden; background: #FAF5F7; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
+    #map { position: absolute; top: 0; left: 0; right: 0; bottom: 0; width: 100%; height: 100%; z-index: 1; background: #FAF5F7; }
     
     .radar-container {
       position: relative;
@@ -218,14 +220,30 @@ function UniversalLiveLeafletMap({ lat, lng, accuracy = 15, victimName = 'Victim
     <span id="hud-coords">--</span>
   </div>
 
-  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" crossorigin="" onerror="var s=document.createElement('script');s.src='https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js';s.onload=function(){initLeafletApp();};document.head.appendChild(s);"></script>
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
   <script>
+    (function() {
+      var oldLog = console.log, oldErr = console.error;
+      function bridge(lvl, args) {
+        try {
+          var str = Array.prototype.slice.call(args).join(' ');
+          if (window.ReactNativeWebView && window.ReactNativeWebView.postMessage) {
+            window.ReactNativeWebView.postMessage(JSON.stringify({ type: 'CONSOLE', lvl: lvl, msg: str }));
+          }
+        } catch(e) {}
+      }
+      console.log = function() { bridge('log', arguments); if (oldLog) oldLog.apply(console, arguments); };
+      console.error = function() { bridge('error', arguments); if (oldErr) oldErr.apply(console, arguments); };
+    })();
+
     var currentLat = ${lat};
     var currentLng = ${lng};
     var victimName = ${safeName};
     var isFollowing = true;
     var isSatellite = false;
-    var map, streetLayer, satLayer, radarIcon, accuracyCircle, glowTrail, coreTrail, marker;
+    var map = null;
+    var streetLayer = null, satLayer = null;
+    var radarIcon = null, accuracyCircle = null, glowTrail = null, coreTrail = null, marker = null;
 
     function updateHud(latVal, lngVal, accVal, count) {
       var el = document.getElementById('hud-coords');
@@ -234,106 +252,130 @@ function UniversalLiveLeafletMap({ lat, lng, accuracy = 15, victimName = 'Victim
       }
     }
 
-    function initLeafletApp() {
+    function initMap() {
       if (typeof L === 'undefined') {
-        setTimeout(initLeafletApp, 100);
+        setTimeout(initMap, 100);
         return;
       }
-      if (window.leafletInitialized) return;
-      window.leafletInitialized = true;
+      if (map) return;
 
-      streetLayer = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-        maxZoom: 19,
-        attribution: '&copy; OpenStreetMap'
-      });
+      try {
+        streetLayer = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+          maxZoom: 19,
+          subdomains: ['a', 'b', 'c'],
+          attribution: '&copy; OpenStreetMap'
+        });
 
-      satLayer = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
-        maxZoom: 19,
-        attribution: 'Esri World Imagery'
-      });
+        satLayer = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
+          maxZoom: 19,
+          attribution: 'Esri World Imagery'
+        });
 
-      map = L.map('map', {
-        center: [currentLat, currentLng],
-        zoom: 16,
-        zoomControl: false,
-        layers: [streetLayer]
-      });
+        map = L.map('map', {
+          center: [currentLat, currentLng],
+          zoom: 16,
+          zoomControl: false,
+          layers: [streetLayer]
+        });
 
-      L.control.zoom({ position: 'bottomright' }).addTo(map);
+        L.control.zoom({ position: 'bottomright' }).addTo(map);
 
-      radarIcon = L.divIcon({
-        className: 'radar-div-icon',
-        html: '<div class="radar-container"><div class="radar-pulse"></div><div class="radar-pulse-2"></div><div class="radar-dot"></div></div>',
-        iconSize: [44, 44],
-        iconAnchor: [22, 22]
-      });
+        // Force Leaflet container recalculation on Android WebView
+        map.invalidateSize();
+        setTimeout(function() { if (map) map.invalidateSize(); }, 150);
+        setTimeout(function() { if (map) map.invalidateSize(); }, 400);
+        setTimeout(function() { if (map) map.invalidateSize(); }, 800);
+        setTimeout(function() { if (map) map.invalidateSize(); }, 1500);
 
-      accuracyCircle = L.circle([currentLat, currentLng], {
-        radius: ${accuracy || 15},
-        color: '#FF2A6D',
-        fillColor: '#FF2A6D',
-        fillOpacity: 0.15,
-        weight: 1.5
-      }).addTo(map);
+        radarIcon = L.divIcon({
+          className: 'radar-div-icon',
+          html: '<div class="radar-container"><div class="radar-pulse"></div><div class="radar-pulse-2"></div><div class="radar-dot"></div></div>',
+          iconSize: [44, 44],
+          iconAnchor: [22, 22]
+        });
 
-      var initialPts = (${safeTrail} || []).map(function(p) {
-        return [parseFloat(p.latitude), parseFloat(p.longitude)];
-      }).filter(function(pt) {
-        return !isNaN(pt[0]) && !isNaN(pt[1]);
-      });
+        accuracyCircle = L.circle([currentLat, currentLng], {
+          radius: ${accuracy || 15},
+          color: '#FF2A6D',
+          fillColor: '#FF2A6D',
+          fillOpacity: 0.15,
+          weight: 1.5
+        }).addTo(map);
 
-      if (initialPts.length === 0 || initialPts[initialPts.length - 1][0] !== currentLat) {
-        initialPts.push([currentLat, currentLng]);
-      }
+        var initialPts = (${safeTrail} || []).map(function(p) {
+          return [parseFloat(p.latitude), parseFloat(p.longitude)];
+        }).filter(function(pt) {
+          return !isNaN(pt[0]) && !isNaN(pt[1]);
+        });
 
-      glowTrail = L.polyline(initialPts, {
-        color: '#FF2A6D',
-        weight: 8,
-        opacity: 0.35,
-        lineCap: 'round',
-        lineJoin: 'round'
-      }).addTo(map);
-
-      coreTrail = L.polyline(initialPts, {
-        color: '#FF2A6D',
-        weight: 3.5,
-        opacity: 0.95,
-        dashArray: '8, 6',
-        lineCap: 'round',
-        lineJoin: 'round'
-      }).addTo(map);
-
-      marker = L.marker([currentLat, currentLng], {
-        icon: radarIcon,
-        zIndexOffset: 1000
-      }).addTo(map);
-
-      map.on('dragstart', function() {
-        if (isFollowing) {
-          isFollowing = false;
-          var btn = document.getElementById('btn-follow');
-          if (btn) {
-            btn.classList.remove('active');
-            btn.innerText = '🎯 Free Pan';
-          }
+        if (initialPts.length === 0 || initialPts[initialPts.length - 1][0] !== currentLat) {
+          initialPts.push([currentLat, currentLng]);
         }
-      });
 
-      updateHud(currentLat, currentLng, ${accuracy || 15}, initialPts.length);
-      notifyReady();
+        glowTrail = L.polyline(initialPts, {
+          color: '#FF2A6D',
+          weight: 8,
+          opacity: 0.35,
+          lineCap: 'round',
+          lineJoin: 'round'
+        }).addTo(map);
+
+        coreTrail = L.polyline(initialPts, {
+          color: '#FF2A6D',
+          weight: 3.5,
+          opacity: 0.95,
+          dashArray: '8, 6',
+          lineCap: 'round',
+          lineJoin: 'round'
+        }).addTo(map);
+
+        marker = L.marker([currentLat, currentLng], {
+          icon: radarIcon,
+          zIndexOffset: 1000
+        }).addTo(map);
+
+        map.on('dragstart', function() {
+          if (isFollowing) {
+            isFollowing = false;
+            var btn = document.getElementById('btn-follow');
+            if (btn) {
+              btn.classList.remove('active');
+              btn.innerText = '🎯 Free Pan';
+            }
+          }
+        });
+
+        updateHud(currentLat, currentLng, ${accuracy || 15}, initialPts.length);
+        notifyReady();
+      } catch (err) {
+        console.error('initMap error:', err && err.message);
+      }
     }
 
     if (typeof L !== 'undefined') {
-      initLeafletApp();
+      initMap();
     } else {
-      window.addEventListener('load', initLeafletApp);
-      setTimeout(initLeafletApp, 250);
+      var cdnFallback = document.createElement('script');
+      cdnFallback.src = 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js';
+      cdnFallback.onload = function() { initMap(); };
+      cdnFallback.onerror = function() {
+        var jsdelivr = document.createElement('script');
+        jsdelivr.src = 'https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.min.js';
+        jsdelivr.onload = function() { initMap(); };
+        document.head.appendChild(jsdelivr);
+      };
+      document.head.appendChild(cdnFallback);
+      setTimeout(initMap, 200);
     }
 
     window.updateLiveLocation = function(newLat, newLng, newAcc, trailData) {
       currentLat = parseFloat(newLat);
       currentLng = parseFloat(newLng);
       var pos = [currentLat, currentLng];
+
+      if (map) {
+        map.invalidateSize();
+      }
 
       if (marker) marker.setLatLng(pos);
       if (accuracyCircle) {
@@ -513,33 +555,40 @@ function UniversalLiveLeafletMap({ lat, lng, accuracy = 15, victimName = 'Victim
 
   if (WebView && !webViewFailed) {
     return (
-      <View style={StyleSheet.absoluteFillObject}>
+      <View style={[StyleSheet.absoluteFillObject, { width: '100%', height: '100%' }]}>
         <WebView
           ref={webViewRef}
           originWhitelist={['*']}
-          source={{ html: initialHtml, baseUrl: 'https://unpkg.com' }}
-          style={{ flex: 1, backgroundColor: '#FAF5F7' }}
+          source={{ html: initialHtml }}
+          style={{ flex: 1, width: '100%', height: '100%', backgroundColor: '#FAF5F7', opacity: 0.99 }}
+          containerStyle={{ flex: 1, width: '100%', height: '100%', borderRadius: 20, overflow: 'hidden' }}
           javaScriptEnabled={true}
           domStorageEnabled={true}
-          androidHardwareAccelerationDisabled={true}
-          androidLayerType="software"
-          scalesPageToFit={true}
+          allowFileAccess={true}
+          allowUniversalAccessFromFileURLs={true}
           mixedContentMode="always"
+          scalesPageToFit={false}
           showsHorizontalScrollIndicator={false}
           showsVerticalScrollIndicator={false}
           bounces={false}
+          scrollEnabled={false}
+          overScrollMode="never"
+          androidHardwareAccelerationDisabled={false}
           onError={(syntheticEvent) => {
-            console.log('[WebView] Load warning:', syntheticEvent?.nativeEvent?.description);
+            console.log('[LiveSosMap WebView] Load warning:', syntheticEvent?.nativeEvent?.description);
           }}
           onHttpError={() => {}}
           onRenderProcessGone={(event) => {
-            console.warn('[WebView] Render process gone, switching to safe fallback');
+            console.warn('[LiveSosMap WebView] Render process gone, switching to safe fallback');
             setWebViewFailed(true);
             return true;
           }}
           onMessage={(event) => {
             try {
               const data = JSON.parse(event.nativeEvent.data);
+              if (data && data.type === 'CONSOLE') {
+                console.log('[LiveSosMap WebView ' + data.lvl + ']', data.msg);
+              }
               if (data && data.type === 'LEAFLET_READY') {
                 pushUpdate();
               }
@@ -547,8 +596,9 @@ function UniversalLiveLeafletMap({ lat, lng, accuracy = 15, victimName = 'Victim
           }}
           onLoadEnd={() => {
             pushUpdate();
-            setTimeout(pushUpdate, 300);
-            setTimeout(pushUpdate, 800);
+            setTimeout(pushUpdate, 150);
+            setTimeout(pushUpdate, 500);
+            setTimeout(pushUpdate, 1000);
           }}
         />
       </View>
