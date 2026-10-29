@@ -1,9 +1,38 @@
 import { Platform } from 'react-native';
 import * as Notifications from 'expo-notifications';
+import * as TaskManager from 'expo-task-manager';
 import { apiClient } from '../api/apiClient';
 import { playEmergencySiren } from '../utils/soundPlayer';
 
-// Configure top-level notification presentation behaviour
+export const BACKGROUND_NOTIFICATION_TASK = 'BACKGROUND-EMERGENCY-SOS-TASK';
+
+// 1. Define headless background task that executes even when app is killed/swiped away
+try {
+  TaskManager.defineTask(BACKGROUND_NOTIFICATION_TASK, async ({ data, error, executionInfo }) => {
+    if (error) {
+      console.warn('[BackgroundTask] Execution error:', error.message);
+      return;
+    }
+    const notification = data?.notification;
+    const isSos = notification?.data?.type === 'SOS_TRIGGERED' ||
+      notification?.title?.includes('SOS') ||
+      data?.type === 'SOS_TRIGGERED';
+
+    if (isSos) {
+      console.log('🚨 [BackgroundTask] Emergency SOS received in background! Playing siren for 60s...');
+      try {
+        await playEmergencySiren(true, 60);
+      } catch (err) {}
+    }
+  });
+
+  // Register background notification task
+  Notifications.registerTaskAsync(BACKGROUND_NOTIFICATION_TASK).catch(() => {});
+} catch (e) {
+  console.warn('[BackgroundTask] DefineTask notice:', e?.message);
+}
+
+// 2. Configure top-level notification presentation behaviour for foreground / unlocked state
 Notifications.setNotificationHandler({
   handleNotification: async (notification) => {
     const isSos = notification?.request?.content?.data?.type === 'SOS_TRIGGERED' ||
@@ -124,4 +153,3 @@ export async function unregisterPushDeviceToken() {
     }
   } catch (e) {}
 }
-
