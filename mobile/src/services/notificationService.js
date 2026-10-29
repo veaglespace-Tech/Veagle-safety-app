@@ -1,10 +1,12 @@
 import { Platform } from 'react-native';
 import * as Notifications from 'expo-notifications';
 import * as TaskManager from 'expo-task-manager';
+import Constants from 'expo-constants';
 import { apiClient } from '../api/apiClient';
 import { playEmergencySiren } from '../utils/soundPlayer';
 
 export const BACKGROUND_NOTIFICATION_TASK = 'BACKGROUND-EMERGENCY-SOS-TASK';
+const EAS_PROJECT_ID = '05652986-18cc-4084-889d-7b4b19bbbc36';
 
 // 1. Define headless background task that executes even when app is killed/swiped away
 try {
@@ -26,7 +28,6 @@ try {
     }
   });
 
-  // Register background notification task
   Notifications.registerTaskAsync(BACKGROUND_NOTIFICATION_TASK).catch(() => {});
 } catch (e) {
   console.warn('[BackgroundTask] DefineTask notice:', e?.message);
@@ -54,14 +55,19 @@ Notifications.setNotificationHandler({
 
 /**
  * Configure Android Emergency Siren Notification Channel
- * Bypasses DND, sets MAX importance, and triggers high-decibel alarm
+ * Bypasses DND, sets MAX importance, and triggers high-decibel alarm for 60 seconds
  */
 export async function setupNotificationChannels() {
   if (Platform.OS === 'android') {
     try {
+      // Recreate channel if already cached so Android OS binds the fresh 60s alarm_siren.wav
+      try {
+        await Notifications.deleteNotificationChannelAsync('emergency_sos_siren_channel');
+      } catch (delErr) {}
+
       await Notifications.setNotificationChannelAsync('emergency_sos_siren_channel', {
         name: 'Emergency SOS Siren Alert',
-        description: 'Critical life-safety alarms that sound immediately even when phone is locked or on silent.',
+        description: 'Critical life-safety alarms that sound immediately for 60 seconds even when phone is locked or on silent.',
         importance: Notifications.AndroidImportance.MAX,
         vibrationPattern: [0, 500, 200, 500, 200, 500],
         sound: 'alarm_siren.wav',
@@ -75,7 +81,12 @@ export async function setupNotificationChannels() {
           contentType: Notifications.AndroidAudioContentType.SONIFICATION,
         },
       });
-      console.log('✅ [NotificationService] Emergency SOS Siren Channel configured');
+      console.log('✅ [NotificationService] Emergency SOS Siren Channel configured (60s alarm)');
+
+      // Ensure background notification task is active
+      try {
+        await Notifications.registerTaskAsync(BACKGROUND_NOTIFICATION_TASK);
+      } catch (taskErr) {}
     } catch (e) {
       console.warn('[NotificationService] Channel setup notice:', e?.message);
     }
@@ -83,7 +94,8 @@ export async function setupNotificationChannels() {
 }
 
 /**
- * Request notification permissions and register push device token with server
+ * Request notification permissions and register push device tokens with server
+ * Registers BOTH Native FCM token (for Firebase Admin) AND Expo push token (for Expo Push Service)
  * @param {string} authToken - Logged-in user auth JWT token
  */
 export async function registerPushDeviceToken(authToken) {
@@ -102,30 +114,43 @@ export async function registerPushDeviceToken(authToken) {
       return null;
     }
 
-    let pushToken = null;
+    const tokensToRegister = [];
+
+    // 1. Fetch Native FCM Device Token (Matches google-services.json & server Firebase Admin SDK)
     try {
-      const expoToken = await Notifications.getExpoPushTokenAsync({
-        projectId: '1fbff418-6a14-4ad6-870c-9ba1fb381634',
-      });
-      pushToken = expoToken?.data;
-    } catch (e) {
+      const deviceToken = await Notifications.getDevicePushTokenAsync();
+      if (deviceToken?.data && typeof deviceToken.data === 'string' && deviceToken.data.length > 10) {
+        tokensToRegister.push(deviceToken.data);
+      }
+    } catch (fcmErr) {
+      console.warn('[NotificationService] Native FCM device token error:', fcmErr?.message);
+    }
+
+    // 2. Fetch Expo Push Token (Matches Expo push service)
+    try {
+      const projectId = Constants?.expoConfig?.extra?.eas?.projectId || EAS_PROJECT_ID;
+      const expoToken = await Notifications.getExpoPushTokenAsync({ projectId });
+      if (expoToken?.data && typeof expoToken.data === 'string' && !tokensToRegister.includes(expoToken.data)) {
+        tokensToRegister.push(expoToken.data);
+      }
+    } catch (expoErr) {
+      console.warn('[NotificationService] Expo push token error:', expoErr?.message);
+    }
+
+    // Register each acquired token with the backend server
+    for (const t of tokensToRegister) {
       try {
-        const deviceToken = await Notifications.getDevicePushTokenAsync();
-        pushToken = deviceToken?.data;
-      } catch (err2) {
-        console.warn('[NotificationService] Token fetch error:', err2?.message);
+        await apiClient.post('/push/register-device', {
+          token: t,
+          platform: Platform.OS,
+        });
+        console.log('✅ [NotificationService] Push token registered on server:', t.substring(0, 25) + '...');
+      } catch (postErr) {
+        console.warn('[NotificationService] Push token upload error:', postErr?.message);
       }
     }
 
-    if (pushToken && authToken) {
-      await apiClient.post('/push/register-device', {
-        token: pushToken,
-        platform: Platform.OS,
-      });
-      console.log('✅ [NotificationService] Push token registered on server for background sirens:', pushToken.substring(0, 30));
-    }
-
-    return pushToken;
+    return tokensToRegister[0] || null;
   } catch (error) {
     console.warn('[NotificationService] Device registration notice:', error?.message);
     return null;
@@ -133,23 +158,29 @@ export async function registerPushDeviceToken(authToken) {
 }
 
 /**
- * Remove device push token upon logout
+ * Remove device push tokens upon logout
  */
 export async function unregisterPushDeviceToken() {
   try {
-    let pushToken = null;
-    try {
-      const expoToken = await Notifications.getExpoPushTokenAsync({
-        projectId: '1fbff418-6a14-4ad6-870c-9ba1fb381634',
-      });
-      pushToken = expoToken?.data;
-    } catch (e) {
-      const deviceToken = await Notifications.getDevicePushTokenAsync();
-      pushToken = deviceToken?.data;
-    }
+    const tokensToRemove = [];
 
-    if (pushToken) {
-      await apiClient.post('/push/remove-device', { token: pushToken });
+    try {
+      const deviceToken = await Notifications.getDevicePushTokenAsync();
+      if (deviceToken?.data) tokensToRemove.push(deviceToken.data);
+    } catch (e) {}
+
+    try {
+      const projectId = Constants?.expoConfig?.extra?.eas?.projectId || EAS_PROJECT_ID;
+      const expoToken = await Notifications.getExpoPushTokenAsync({ projectId });
+      if (expoToken?.data && !tokensToRemove.includes(expoToken.data)) {
+        tokensToRemove.push(expoToken.data);
+      }
+    } catch (e) {}
+
+    for (const t of tokensToRemove) {
+      try {
+        await apiClient.post('/push/remove-device', { token: t });
+      } catch (err) {}
     }
   } catch (e) {}
 }

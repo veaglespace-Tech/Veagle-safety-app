@@ -17,8 +17,9 @@
     },
     "production": {
       "autoIncrement": false,
+      "credentialsSource": "local",
       "android": {
-        "buildType": "apk"
+        "buildType": "app-bundle"
       }
     }
   },
