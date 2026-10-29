@@ -10,7 +10,7 @@ Notifications.setNotificationHandler({
       notification?.request?.content?.title?.includes('SOS');
 
     if (isSos) {
-      playEmergencySiren(false).catch(() => {});
+      playEmergencySiren(true, 60).catch(() => {});
     }
 
     return {

@@ -23,6 +23,7 @@ if (Platform.OS === 'web' && typeof window !== 'undefined') {
 }
 let intervalId = null;
 let watchdogInterval = null;
+let autoStopTimeout = null;
 let cachedSirenUri = null;
 let activeNativePlayer = null;
 let preloadedNativePlayer = null;
@@ -187,8 +188,20 @@ async function getOrCreateNativePlayer(loop = false) {
   }
 }
 
-export const playEmergencySiren = (loop = false) => {
+export const playEmergencySiren = (loop = true, durationSeconds = 60) => {
   isPlaying = true;
+
+  if (autoStopTimeout) {
+    clearTimeout(autoStopTimeout);
+    autoStopTimeout = null;
+  }
+
+  // Automatically stop the siren after requested duration (default 60 seconds)
+  if (durationSeconds && durationSeconds > 0) {
+    autoStopTimeout = setTimeout(() => {
+      stopEmergencySiren();
+    }, durationSeconds * 1000);
+  }
 
   // Instant Vibration & iOS Taptic feedback (single cycle if loop=false, repeating if loop=true)
   try {
@@ -330,6 +343,11 @@ export const playEmergencySiren = (loop = false) => {
 
 export const stopEmergencySiren = () => {
   isPlaying = false;
+
+  if (autoStopTimeout) {
+    clearTimeout(autoStopTimeout);
+    autoStopTimeout = null;
+  }
 
   if (watchdogInterval) {
     clearInterval(watchdogInterval);
