@@ -140,10 +140,14 @@ export async function registerPushDeviceToken(authToken) {
     // Register each acquired token with the backend server
     for (const t of tokensToRegister) {
       try {
-        await apiClient.post('/push/register-device', {
-          token: t,
-          platform: Platform.OS,
-        });
+        await apiClient.post(
+          '/push/register-device',
+          {
+            token: t,
+            platform: Platform.OS,
+          },
+          authToken ? { headers: { Authorization: `Bearer ${authToken}` } } : undefined
+        );
         console.log('✅ [NotificationService] Push token registered on server:', t.substring(0, 25) + '...');
       } catch (postErr) {
         console.warn('[NotificationService] Push token upload error:', postErr?.message);

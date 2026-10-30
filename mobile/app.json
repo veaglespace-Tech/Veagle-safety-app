@@ -53,7 +53,8 @@
         "android.permission.WAKE_LOCK",
         "android.permission.INTERNET",
         "android.permission.CHANGE_NETWORK_STATE",
-        "android.permission.ACCESS_NETWORK_STATE"
+        "android.permission.ACCESS_NETWORK_STATE",
+        "android.permission.POST_NOTIFICATIONS"
       ]
     },
     "web": {
