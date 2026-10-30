@@ -12,6 +12,7 @@ import { store } from '../../redux/store';
 import {
   checkLocationPermissions,
   hasAgreedDisclosure,
+  hasPromptedBackground,
   requestPermissionsAfterConsent,
   handleDisclosureDecline,
 } from '../../services/permissionService';
@@ -56,21 +57,24 @@ export default function SOSHeroButton() {
         const message = `🚨 SAKHI EMERGENCY SOS ALERT!\n\nVictim: ${victimName}\nPhone: ${victimPhone}\n\n📍 GPS Coordinates:\nLat: ${curLat}, Lng: ${curLng}\n\n👉 Live Location Tracking:\n${trackingUrl}\n\n🌐 Google Maps:\n${googleMapsUrl}\n\nPlease take immediate action!`;
         const waMsg = encodeURIComponent(message);
         
-        Linking.openURL(`whatsapp://send?phone=${cleanPhone}&text=${waMsg}`).catch(() => {
-          Linking.openURL(`https://api.whatsapp.com/send?phone=${cleanPhone}&text=${waMsg}`).catch(() => {
-            console.log('WhatsApp could not be opened');
+        // Delay opening external apps by 1.5 seconds so Android OS enters Foreground Service state first
+        setTimeout(() => {
+          Linking.openURL(`whatsapp://send?phone=${cleanPhone}&text=${waMsg}`).catch(() => {
+            Linking.openURL(`https://api.whatsapp.com/send?phone=${cleanPhone}&text=${waMsg}`).catch(() => {
+              console.log('WhatsApp could not be opened');
+            });
           });
-        });
+        }, 1500);
 
-        // 2. Schedule the phone call to 112 (National Emergency Helpline) 2 seconds later so both actions occur
+        // 2. Schedule the phone call to 112 (National Emergency Helpline) 3.5 seconds later so both actions occur
         setTimeout(() => {
           Linking.openURL('tel:112').catch(err => console.log('Error opening dialer', err));
-        }, 2000);
+        }, 3500);
       } else {
         // If no emergency contact phone is found, dial standard emergency number (112 for India)
         setTimeout(() => {
           Linking.openURL(`tel:112`).catch(err => console.log('Error opening dialer', err));
-        }, 500);
+        }, 1500);
       }
     }
     prevActiveSession.current = activeSession;
@@ -125,11 +129,22 @@ export default function SOSHeroButton() {
     const result = await requestPermissionsAfterConsent();
     if (result.foregroundGranted) {
       dispatch(setLocationStatus('LIVE'));
-      Alert.alert(
-        'Location Access Granted',
-        'Your safety permissions are active. Press and hold the SOS button for 3 seconds to trigger an emergency alert.',
-        [{ text: 'OK' }]
-      );
+      if (!result.backgroundGranted && Platform.OS === 'android') {
+        Alert.alert(
+          'Background Safety Access',
+          'To ensure live tracking continues even when the app is closed or your phone is locked, please choose "Allow all the time" in location permissions.',
+          [
+            { text: 'Later', style: 'cancel' },
+            { text: 'Open Settings', onPress: () => Linking.openSettings().catch(() => {}) }
+          ]
+        );
+      } else {
+        Alert.alert(
+          'Safety Permissions Active',
+          'Background safety permissions are active. Press and hold the SOS button for 3 seconds to trigger an emergency alert.',
+          [{ text: 'OK' }]
+        );
+      }
     } else {
       dispatch(setLocationStatus('DENIED'));
     }
@@ -157,8 +172,10 @@ export default function SOSHeroButton() {
 
     // Check permissions before initiating the hold
     const perms = await checkLocationPermissions();
-    if (!perms.foregroundGranted) {
-      // GOOGLE PLAY STRICT RULE: Custom Prominent Disclosure MUST IMMEDIATELY precede the native prompt
+    const bgPrompted = await hasPromptedBackground();
+
+    // If foreground is missing, or if background/notifications have not been prompted yet, show disclosure
+    if (!perms.foregroundGranted || (!perms.backgroundGranted && !bgPrompted) || (!perms.notificationsGranted && !bgPrompted)) {
       setShowDisclosure(true);
       return;
     }

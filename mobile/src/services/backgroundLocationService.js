@@ -125,3 +125,4 @@ export async function stopBackgroundLocationTracking() {
     console.warn('[BackgroundLocation] Stop error:', err?.message);
   }
 }
+

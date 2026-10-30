@@ -26,7 +26,7 @@ export function useLocationDisclosure() {
     pendingActionsRef.current = { onProceed, onCancel };
 
     const status = await checkLocationPermissions();
-    if (status.foregroundGranted) {
+    if (status.foregroundGranted && status.backgroundGranted) {
       // Permissions already granted — proceed immediately without prompting
       if (typeof onProceed === 'function') {
         onProceed(status);
