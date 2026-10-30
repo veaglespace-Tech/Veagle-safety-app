@@ -968,7 +968,7 @@ export default function ParentDashboardScreen({ navigation }) {
                 }
                 accuracy={trackingItem.activeSos?.latestLocation?.accuracy || 15}
                 victimName={trackingItem.child?.fullName || 'Child'}
-                history={trackingItem.activeSos?.locationHistory || []}
+                history={trackingItem.activeSos?.locations || trackingItem.activeSos?.locationHistory || []}
                 isEmergency={isSosChild}
                 height={320}
               />

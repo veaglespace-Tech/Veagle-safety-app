@@ -181,7 +181,7 @@ function UniversalLiveLeafletMap({
     var isSatellite = false;
     var map = null;
     var streetLayer = null, satLayer = null;
-    var accuracyCircle = null, coreTrail = null, marker = null;
+    var accuracyCircle = null, glowTrail = null, coreTrail = null, marker = null;
     var pendingCoords = null;
 
     function initMap() {
@@ -273,19 +273,35 @@ function UniversalLiveLeafletMap({
           '</div>';
         marker.bindPopup(popupHtml).openPopup();
 
-        // Clean movement trajectory trail (only if multiple movement breadcrumbs exist)
+        // Clean movement trajectory trail
         var initialPts = (pendingCoords && pendingCoords.trail ? pendingCoords.trail : (${safeTrail} || [])).map(function(p) {
           return [parseFloat(p.latitude), parseFloat(p.longitude)];
         }).filter(function(pt) {
           return !isNaN(pt[0]) && !isNaN(pt[1]);
         });
 
-        if (initialPts.length > 2) {
+        if (initialPts.length === 0 || initialPts[initialPts.length - 1][0] !== startLat || initialPts[initialPts.length - 1][1] !== startLng) {
+          initialPts.push([startLat, startLng]);
+        }
+
+        var trailColor = isEmergency ? '#FF2A6D' : '#10B981';
+
+        if (initialPts.length >= 2) {
+          glowTrail = L.polyline(initialPts, {
+            color: trailColor,
+            weight: 8,
+            opacity: 0.35,
+            lineCap: 'round',
+            lineJoin: 'round'
+          }).addTo(map);
+
           coreTrail = L.polyline(initialPts, {
-            color: circleColor,
-            weight: 3.5,
-            opacity: 0.85,
-            dashArray: '6, 6'
+            color: trailColor,
+            weight: 4,
+            opacity: 0.95,
+            dashArray: '8, 6',
+            lineCap: 'round',
+            lineJoin: 'round'
           }).addTo(map);
         }
 
@@ -380,15 +396,37 @@ function UniversalLiveLeafletMap({
         return !isNaN(pt[0]) && !isNaN(pt[1]);
       }) : [];
 
-      if (coreTrail && pts.length > 2) {
-        coreTrail.setLatLngs(pts);
-      } else if (!coreTrail && pts.length > 2 && map) {
-        coreTrail = L.polyline(pts, {
-          color: isEmergency ? '#E62E5C' : '#10B981',
-          weight: 3.5,
-          opacity: 0.85,
-          dashArray: '6, 6'
-        }).addTo(map);
+      if (pts.length === 0 || pts[pts.length - 1][0] !== currentLat || pts[pts.length - 1][1] !== currentLng) {
+        pts.push(pos);
+      }
+
+      var trailColor = isEmergency ? '#FF2A6D' : '#10B981';
+
+      if (pts.length >= 2) {
+        if (glowTrail) {
+          glowTrail.setLatLngs(pts);
+        } else if (map) {
+          glowTrail = L.polyline(pts, {
+            color: trailColor,
+            weight: 8,
+            opacity: 0.35,
+            lineCap: 'round',
+            lineJoin: 'round'
+          }).addTo(map);
+        }
+
+        if (coreTrail) {
+          coreTrail.setLatLngs(pts);
+        } else if (map) {
+          coreTrail = L.polyline(pts, {
+            color: trailColor,
+            weight: 4,
+            opacity: 0.95,
+            dashArray: '8, 6',
+            lineCap: 'round',
+            lineJoin: 'round'
+          }).addTo(map);
+        }
       }
 
       if (isFollowing && map) {
