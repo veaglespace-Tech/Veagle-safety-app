@@ -181,7 +181,7 @@ function UniversalLiveLeafletMap({
     var isSatellite = false;
     var map = null;
     var streetLayer = null, satLayer = null;
-    var accuracyCircle = null, glowTrail = null, coreTrail = null, marker = null;
+    var accuracyCircle = null, coreTrail = null, marker = null;
     var pendingCoords = null;
 
     function initMap() {
@@ -230,10 +230,10 @@ function UniversalLiveLeafletMap({
         setTimeout(doInvalidate, 1500);
         window.addEventListener('resize', doInvalidate);
 
-        // Emergency Red Pin Marker for SOS, Green/Violet Pin Marker for Safe / Last Known
+        // Emergency Red Pin Marker for SOS, Violet Pin Marker for Normal (Identical to Web)
         var pinUrl = isEmergency
           ? 'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-2x-red.png'
-          : 'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-2x-green.png';
+          : 'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-2x-violet.png';
 
         var targetIcon = L.icon({
           iconUrl: pinUrl,
@@ -244,14 +244,12 @@ function UniversalLiveLeafletMap({
           shadowSize: [41, 41]
         });
 
-        var circleColor = isEmergency ? '#E62E5C' : '#10B981';
-
-        // Accuracy Circle centered directly at victim coordinates
+        // Accuracy Circle centered directly at victim coordinates (Identical to Web)
         accuracyCircle = L.circle([startLat, startLng], {
           radius: Math.max(Number(startAcc) || 15, 10),
-          color: circleColor,
-          fillColor: circleColor,
-          fillOpacity: isEmergency ? 0.18 : 0.12,
+          color: isEmergency ? '#E62E5C' : '#4f46e5',
+          fillColor: isEmergency ? '#E62E5C' : '#818cf8',
+          fillOpacity: 0.25,
           weight: 2
         }).addTo(map);
 
@@ -261,45 +259,27 @@ function UniversalLiveLeafletMap({
           zIndexOffset: 1000
         }).addTo(map);
 
-        var statusBadge = isEmergency
-          ? '<span style="color:#E62E5C;font-weight:800;font-size:10px;">🚨 EMERGENCY SOS ACTIVE</span>'
-          : '<span style="color:#059669;font-weight:800;font-size:10px;">🛡️ SAFE & PROTECTED</span>';
-
-        var popupHtml = '<div style="font-size:12px;font-family:sans-serif;line-height:1.5;min-width:140px;">' +
-          '<b style="color:#2D142C;font-size:13px;">' + (victimName || 'User') + '</b><br/>' +
-          statusBadge + '<br/>' +
-          '<span style="color:#555;font-size:10.5px;font-family:monospace;">' + startLat.toFixed(5) + ', ' + startLng.toFixed(5) + '</span><br/>' +
-          '<span style="color:#777;font-size:10px;">GPS: &plusmn;' + Math.round(startAcc || 15) + 'm</span>' +
+        var popupHtml = '<div style="font-size:11px;min-width:150px;line-height:1.6">' +
+          '<b>' + (victimName || 'User') + '</b><br/>' +
+          '<span style="font-family:monospace;font-size:10px">Lat: ' + startLat.toFixed(5) + ', Lng: ' + startLng.toFixed(5) + '</span><br/>' +
+          '<span>GPS: &plusmn;' + Math.round(startAcc || 15) + 'm</span>' +
+          (isEmergency ? '<br/><b style="color:#E62E5C">🚨 EMERGENCY SOS</b>' : '') +
           '</div>';
         marker.bindPopup(popupHtml).openPopup();
 
-        // Clean movement trajectory trail
+        // Clean movement trajectory trail (Identical to Web)
         var initialPts = (pendingCoords && pendingCoords.trail ? pendingCoords.trail : (${safeTrail} || [])).map(function(p) {
           return [parseFloat(p.latitude), parseFloat(p.longitude)];
         }).filter(function(pt) {
           return !isNaN(pt[0]) && !isNaN(pt[1]);
         });
 
-        if (initialPts.length === 0 || initialPts[initialPts.length - 1][0] !== startLat || initialPts[initialPts.length - 1][1] !== startLng) {
-          initialPts.push([startLat, startLng]);
-        }
-
-        var trailColor = isEmergency ? '#FF2A6D' : '#10B981';
-
-        if (initialPts.length >= 2) {
-          glowTrail = L.polyline(initialPts, {
-            color: trailColor,
-            weight: 8,
-            opacity: 0.35,
-            lineCap: 'round',
-            lineJoin: 'round'
-          }).addTo(map);
-
+        if (initialPts.length > 1) {
           coreTrail = L.polyline(initialPts, {
-            color: trailColor,
+            color: isEmergency ? '#E62E5C' : '#6366f1',
             weight: 4,
-            opacity: 0.95,
-            dashArray: '8, 6',
+            opacity: 0.85,
+            dashArray: isEmergency ? '6, 6' : undefined,
             lineCap: 'round',
             lineJoin: 'round'
           }).addTo(map);
@@ -374,14 +354,11 @@ function UniversalLiveLeafletMap({
 
       if (marker) {
         marker.setLatLng(pos);
-        var liveBadge = isEmergency
-          ? '<span style="color:#E62E5C;font-weight:800;font-size:10px;">🚨 LIVE SOS LOCATION</span>'
-          : '<span style="color:#059669;font-weight:800;font-size:10px;">🛡️ SAFE & PROTECTED</span>';
-        var updatedPopup = '<div style="font-size:12px;font-family:sans-serif;line-height:1.5;min-width:140px;">' +
-          '<b style="color:#2D142C;font-size:13px;">' + (victimName || 'User') + '</b><br/>' +
-          liveBadge + '<br/>' +
-          '<span style="color:#555;font-size:10.5px;font-family:monospace;">' + currentLat.toFixed(5) + ', ' + currentLng.toFixed(5) + '</span><br/>' +
-          '<span style="color:#777;font-size:10px;">GPS: &plusmn;' + Math.round(newAcc || 15) + 'm</span>' +
+        var updatedPopup = '<div style="font-size:11px;min-width:150px;line-height:1.6">' +
+          '<b>' + (victimName || 'User') + '</b><br/>' +
+          '<span style="font-family:monospace;font-size:10px">Lat: ' + currentLat.toFixed(5) + ', Lng: ' + currentLng.toFixed(5) + '</span><br/>' +
+          '<span>GPS: &plusmn;' + Math.round(newAcc || 15) + 'm</span>' +
+          (isEmergency ? '<br/><b style="color:#E62E5C">🚨 EMERGENCY SOS</b>' : '') +
           '</div>';
         marker.setPopupContent(updatedPopup);
       }
@@ -396,33 +373,15 @@ function UniversalLiveLeafletMap({
         return !isNaN(pt[0]) && !isNaN(pt[1]);
       }) : [];
 
-      if (pts.length === 0 || pts[pts.length - 1][0] !== currentLat || pts[pts.length - 1][1] !== currentLng) {
-        pts.push(pos);
-      }
-
-      var trailColor = isEmergency ? '#FF2A6D' : '#10B981';
-
-      if (pts.length >= 2) {
-        if (glowTrail) {
-          glowTrail.setLatLngs(pts);
-        } else if (map) {
-          glowTrail = L.polyline(pts, {
-            color: trailColor,
-            weight: 8,
-            opacity: 0.35,
-            lineCap: 'round',
-            lineJoin: 'round'
-          }).addTo(map);
-        }
-
+      if (pts.length > 1) {
         if (coreTrail) {
           coreTrail.setLatLngs(pts);
         } else if (map) {
           coreTrail = L.polyline(pts, {
-            color: trailColor,
+            color: isEmergency ? '#E62E5C' : '#6366f1',
             weight: 4,
-            opacity: 0.95,
-            dashArray: '8, 6',
+            opacity: 0.85,
+            dashArray: isEmergency ? '6, 6' : undefined,
             lineCap: 'round',
             lineJoin: 'round'
           }).addTo(map);
@@ -754,7 +713,18 @@ export default function LiveSosMap({
   };
 
   // Strictly sanitize trail points (filter out corrupt GPS points)
-  const safePropTrail = (history || [])
+  let rawHistory = Array.isArray(history) ? [...history] : [];
+
+  // If server sent history in descending order (newest first), reverse to chronological order (oldest -> newest)
+  if (
+    rawHistory.length >= 2 &&
+    ((rawHistory[0].recordedAt && rawHistory[rawHistory.length - 1].recordedAt && new Date(rawHistory[0].recordedAt) > new Date(rawHistory[rawHistory.length - 1].recordedAt)) ||
+     (rawHistory[0].createdAt && rawHistory[rawHistory.length - 1].createdAt && new Date(rawHistory[0].createdAt) > new Date(rawHistory[rawHistory.length - 1].createdAt)))
+  ) {
+    rawHistory.reverse();
+  }
+
+  const safePropTrail = rawHistory
     .filter((pt) => pt && pt.latitude !== undefined && pt.longitude !== undefined)
     .map((pt) => ({
       latitude: typeof pt.latitude === 'number' ? pt.latitude : parseFloat(pt.latitude),
@@ -775,7 +745,7 @@ export default function LiveSosMap({
   const coordinatesTrail = safePropTrail.length > 0 ? safePropTrail : [...internalTrailRef.current];
 
   // Append latest point if not already present
-  if (isValid && (!coordinatesTrail.length || coordinatesTrail[coordinatesTrail.length - 1].latitude !== lat)) {
+  if (isValid && (!coordinatesTrail.length || coordinatesTrail[coordinatesTrail.length - 1].latitude !== lat || coordinatesTrail[coordinatesTrail.length - 1].longitude !== lng)) {
     coordinatesTrail.push({ latitude: lat, longitude: lng });
   }
 

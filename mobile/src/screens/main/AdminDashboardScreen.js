@@ -548,7 +548,7 @@ export default function AdminDashboardScreen({ navigation }) {
                     longitude={selectedSos.locations?.[0]?.longitude || selectedSos.longitude}
                     accuracy={selectedSos.locations?.[0]?.accuracy || 15}
                     victimName={selectedSos.user?.fullName || 'Victim Member'}
-                    history={selectedSos.locations || []}
+                    history={selectedSos.locations ? [...selectedSos.locations].reverse() : []}
                     isEmergency={true}
                     height={280}
                     onFullscreen={() => setTrackingSos(selectedSos)}
@@ -842,7 +842,7 @@ export default function AdminDashboardScreen({ navigation }) {
                   longitude={trackingSos.locations?.[0]?.longitude || trackingSos.longitude}
                   accuracy={trackingSos.locations?.[0]?.accuracy || 15}
                   victimName={trackingSos.user?.fullName || 'Victim Member'}
-                  history={trackingSos.locationHistory || trackingSos.locations || []}
+                  history={trackingSos.locations ? [...trackingSos.locations].reverse() : (trackingSos.locationHistory || [])}
                   isEmergency={true}
                   height={320}
                 />
