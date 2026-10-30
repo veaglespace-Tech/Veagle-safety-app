@@ -6,7 +6,7 @@ import { apiClient } from '../api/apiClient';
 import { playEmergencySiren } from '../utils/soundPlayer';
 
 export const BACKGROUND_NOTIFICATION_TASK = 'BACKGROUND-EMERGENCY-SOS-TASK';
-const EAS_PROJECT_ID = '05652986-18cc-4084-889d-7b4b19bbbc36';
+const EAS_PROJECT_ID = '7ab3fa26-39e9-4fc7-82af-b3857b4157f6';
 
 // 1. Define headless background task that executes even when app is killed/swiped away
 try {

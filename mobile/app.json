@@ -2,13 +2,13 @@
   "expo": {
     "name": "SakhiSuraksha",
     "slug": "veagle-safety",
-    "owner": "veaglespace",
+    "owner": "veaglespace2",
     "extra": {
       "eas": {
-        "projectId": "05652986-18cc-4084-889d-7b4b19bbbc36"
+        "projectId": "7ab3fa26-39e9-4fc7-82af-b3857b4157f6"
       }
     },
-    "version": "1.0.6",
+    "version": "1.0.7",
     "orientation": "portrait",
     "icon": "./assets/logo_attractive.png",
     "userInterfaceStyle": "light",
@@ -40,7 +40,7 @@
       },
       "package": "com.veaglesafety.app",
       "googleServicesFile": "./google-services.json",
-      "versionCode": 15,
+      "versionCode": 16,
       "permissions": [
         "android.permission.ACCESS_FINE_LOCATION",
         "android.permission.ACCESS_COARSE_LOCATION",

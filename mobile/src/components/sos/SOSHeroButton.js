@@ -58,9 +58,9 @@ export default function SOSHeroButton() {
           });
         });
 
-        // 2. Schedule the phone call 2 seconds later so both actions occur
+        // 2. Schedule the phone call to 112 (National Emergency Helpline) 2 seconds later so both actions occur
         setTimeout(() => {
-          Linking.openURL(`tel:${cleanPhone}`).catch(err => console.log('Error opening dialer', err));
+          Linking.openURL('tel:112').catch(err => console.log('Error opening dialer', err));
         }, 2000);
       } else {
         // If no emergency contact phone is found, dial standard emergency number (112 for India)
