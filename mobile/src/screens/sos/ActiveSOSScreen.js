@@ -11,6 +11,7 @@ import { resolveEmergencySos, toggleAlarm } from '../../redux/slices/sosSlice';
 import { LinearGradient } from 'expo-linear-gradient';
 import { COLORS } from '../../theme/colors';
 import { playEmergencySiren, stopEmergencySiren } from '../../utils/soundPlayer';
+import { stopBackgroundLocationTracking } from '../../services/backgroundLocationService';
 import LiveSosMap from '../../components/Admin/LiveSosMap';
 
 export default function ActiveSOSScreen({ navigation }) {
@@ -29,6 +30,7 @@ export default function ActiveSOSScreen({ navigation }) {
   useEffect(() => {
     if (!activeSession) {
       stopEmergencySiren();
+      stopBackgroundLocationTracking();
       if (navigation.canGoBack()) {
         navigation.goBack();
       } else {
@@ -68,6 +70,7 @@ export default function ActiveSOSScreen({ navigation }) {
 
   const handleMarkSafe = async () => {
     stopEmergencySiren();
+    stopBackgroundLocationTracking();
     try {
       await dispatch(resolveEmergencySos(activeSession.id)).unwrap();
       setShowConfirmModal(false);

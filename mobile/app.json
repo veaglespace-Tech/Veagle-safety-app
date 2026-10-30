@@ -8,7 +8,7 @@
         "projectId": "7ab3fa26-39e9-4fc7-82af-b3857b4157f6"
       }
     },
-    "version": "1.0.8",
+    "version": "1.0.9",
     "orientation": "portrait",
     "icon": "./assets/logo_attractive.png",
     "userInterfaceStyle": "light",
@@ -40,7 +40,7 @@
       },
       "package": "com.veaglesafety.app",
       "googleServicesFile": "./google-services.json",
-      "versionCode": 17,
+      "versionCode": 18,
       "permissions": [
         "android.permission.ACCESS_FINE_LOCATION",
         "android.permission.ACCESS_COARSE_LOCATION",

@@ -3,6 +3,7 @@ import * as Location from 'expo-location';
 import { useDispatch, useSelector } from 'react-redux';
 import { setLocation, setLocationStatus } from '../redux/slices/locationSlice';
 import { sosApi } from '../api/sosApi';
+import { startBackgroundLocationTracking, stopBackgroundLocationTracking } from '../services/backgroundLocationService';
 
 /**
  * Background GPS location tracker
@@ -82,7 +83,13 @@ export function useLocation() {
 
   // 1. High-frequency watcher active ONLY during emergency SOS session
   useEffect(() => {
-    if (!activeSession) return;
+    if (!activeSession) {
+      stopBackgroundLocationTracking();
+      return;
+    }
+
+    // Launch Android persistent foreground service (keeps tracking even when app is killed/swiped away!)
+    startBackgroundLocationTracking(activeSession.id);
 
     let mounted = true;
     let highPrecisionSub = null;

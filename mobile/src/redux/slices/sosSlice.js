@@ -1,10 +1,14 @@
 import { createSlice, createAsyncThunk } from '@reduxjs/toolkit';
 import { sosApi } from '../../api/sosApi';
+import { startBackgroundLocationTracking, stopBackgroundLocationTracking } from '../../services/backgroundLocationService';
 
 // Identical thunks as web app's sosSlice
 export const startEmergencySos = createAsyncThunk('sos/startEmergencySos', async (payload, { rejectWithValue }) => {
   try {
     const data = await sosApi.startSos(payload);
+    if (data.sosSession?.id) {
+      startBackgroundLocationTracking(data.sosSession.id).catch(() => {});
+    }
     return data.sosSession;
   } catch (err) {
     return rejectWithValue(err.response?.data?.error || 'Failed to activate Emergency SOS');
@@ -14,6 +18,7 @@ export const startEmergencySos = createAsyncThunk('sos/startEmergencySos', async
 export const resolveEmergencySos = createAsyncThunk('sos/resolveEmergencySos', async (sosSessionId, { rejectWithValue }) => {
   try {
     const data = await sosApi.resolveSos(sosSessionId);
+    stopBackgroundLocationTracking().catch(() => {});
     return data.session;
   } catch (err) {
     return rejectWithValue(err.response?.data?.error || 'Failed to resolve Emergency SOS');

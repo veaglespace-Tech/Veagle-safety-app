@@ -15,6 +15,7 @@ import {
   requestPermissionsAfterConsent,
   handleDisclosureDecline,
 } from '../../services/permissionService';
+import { startBackgroundLocationTracking } from '../../services/backgroundLocationService';
 import ProminentDisclosureModal from '../common/ProminentDisclosureModal';
 
 import { useNavigation } from '@react-navigation/native';
@@ -35,6 +36,9 @@ export default function SOSHeroButton() {
   useEffect(() => {
     if (activeSession && !prevActiveSession.current) {
       // SOS just successfully triggered!
+      if (activeSession.id) {
+        startBackgroundLocationTracking(activeSession.id);
+      }
       
       const user = store.getState().auth.user;
       const phoneToCall = user?.emergencyContactPhone || user?.parentPhone; // Fallback if needed

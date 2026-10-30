@@ -10,6 +10,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { API_URL } from '../../utils/constants';
 import { COLORS } from '../../theme/colors';
 import { playEmergencySiren, stopEmergencySiren } from '../../utils/soundPlayer';
+import { stopBackgroundLocationTracking } from '../../services/backgroundLocationService';
 import { clearSosState, checkActiveSos, muteSos, toggleSosMute } from '../../redux/slices/sosSlice';
 import { adminApi } from '../../api/adminApi';
 
@@ -123,6 +124,7 @@ export default function GlobalEmergencyListener() {
     // 🛑 WHEN SOS IS RESOLVED / STOPPED:
     socket.on('SOS_ALARM_STOP', () => {
       stopEmergencySiren();
+      stopBackgroundLocationTracking();
       setIsSirenPlaying(false);
       setAlarmData(null);
       dispatch(clearSosState());
