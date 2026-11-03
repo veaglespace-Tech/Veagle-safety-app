@@ -55,7 +55,8 @@ function UserAuthForm() {
   }, [searchParams]);
 
   // Registration Fields State
-  const [selectedRole, setSelectedRole] = useState('USER'); // USER, PARENT, ORGANIZATION
+  const [selectedRole, setSelectedRole] = useState('USER'); // USER, ORGANIZATION
+  const [loginRole, setLoginRole] = useState('USER'); // USER, PARENT
   const [fullName, setFullName] = useState('');
   const [email, setEmail] = useState('');
   const [phone, setPhone] = useState('');
@@ -176,10 +177,20 @@ function UserAuthForm() {
     setValidationError('');
 
     if (isLogin) {
-      if (!email || !password) {
-        setValidationError('Email and Password are required.');
-        return false;
+      if (loginRole === 'PARENT') {
+        const cleanPhone = email ? email.replace(/\D/g, '') : '';
+        const phoneRegex = /^[6-9]\d{9}$/;
+        if (!cleanPhone || !phoneRegex.test(cleanPhone)) {
+          setValidationError('Please enter a valid 10-digit Parent mobile number starting with 6, 7, 8, or 9.');
+          return false;
+        }
+      } else {
+        if (!email.trim() || !password) {
+          setValidationError('Email/Mobile and Password are required.');
+          return false;
+        }
       }
+
       if (parseInt(userCaptcha) !== captchaNum1 + captchaNum2) {
         setValidationError('Incorrect verification calculation.');
         generateCaptcha();
@@ -387,11 +398,10 @@ function UserAuthForm() {
               <button
                 type="button"
                 onClick={() => toggleMode(true)}
-                className={`flex-1 py-3 rounded-xl text-xs font-black transition-all duration-300 flex items-center justify-center space-x-2 ${
-                  isLogin
+                className={`flex-1 py-3 rounded-xl text-xs font-black transition-all duration-300 flex items-center justify-center space-x-2 ${isLogin
                     ? 'bg-gradient-to-r from-[#FF5C8A] to-[#FF2A6D] text-white shadow-[0_4px_16px_rgba(255,42,109,0.35)] scale-[1.02]'
                     : 'text-[#684E67] hover:text-[#2A0826]'
-                }`}
+                  }`}
               >
                 <Lock className="w-3.5 h-3.5" />
                 <span>SIGN IN</span>
@@ -399,11 +409,10 @@ function UserAuthForm() {
               <button
                 type="button"
                 onClick={() => toggleMode(false)}
-                className={`flex-1 py-3 rounded-xl text-xs font-black transition-all duration-300 flex items-center justify-center space-x-2 ${
-                  !isLogin
+                className={`flex-1 py-3 rounded-xl text-xs font-black transition-all duration-300 flex items-center justify-center space-x-2 ${!isLogin
                     ? 'bg-gradient-to-r from-[#FF5C8A] to-[#FF2A6D] text-white shadow-[0_4px_16px_rgba(255,42,109,0.35)] scale-[1.02]'
                     : 'text-[#684E67] hover:text-[#2A0826]'
-                }`}
+                  }`}
               >
                 <UserPlus className="w-3.5 h-3.5" />
                 <span>CREATE ACCOUNT</span>
@@ -476,43 +485,28 @@ function UserAuthForm() {
                       </label>
                       <span className="text-[10px] font-bold text-[#684E67]">
                         {selectedRole === 'USER' && '👩 For Girls & Women'}
-                        {selectedRole === 'PARENT' && '👨‍👩‍👧 For Parents & Guardians'}
                         {selectedRole === 'ORGANIZATION' && '🏢 For Colleges & Offices'}
                       </span>
                     </div>
-                    <div className="grid grid-cols-3 gap-2 bg-[#FFF0F3] p-1.5 rounded-2xl border-1.5 border-[#FFCCE1]">
+                    <div className="grid grid-cols-2 gap-2 bg-[#FFF0F3] p-1.5 rounded-2xl border-1.5 border-[#FFCCE1]">
                       <button
                         type="button"
                         onClick={() => setSelectedRole('USER')}
-                        className={`py-2 px-2 text-xs font-black rounded-xl transition-all flex items-center justify-center space-x-1.5 cursor-pointer ${
-                          selectedRole === 'USER'
+                        className={`py-2 px-2 text-xs font-black rounded-xl transition-all flex items-center justify-center space-x-1.5 cursor-pointer ${selectedRole === 'USER'
                             ? 'bg-gradient-to-r from-[#FF5C8A] to-[#FF2A6D] text-white shadow-sm'
                             : 'text-[#684E67] hover:text-[#FF2A6D]'
-                        }`}
+                          }`}
                       >
                         <UserIcon className="w-3.5 h-3.5" />
                         <span className="truncate">Personal</span>
                       </button>
                       <button
                         type="button"
-                        onClick={() => setSelectedRole('PARENT')}
-                        className={`py-2 px-2 text-xs font-black rounded-xl transition-all flex items-center justify-center space-x-1.5 cursor-pointer ${
-                          selectedRole === 'PARENT'
-                            ? 'bg-gradient-to-r from-[#FF5C8A] to-[#FF2A6D] text-white shadow-sm'
-                            : 'text-[#684E67] hover:text-[#FF2A6D]'
-                        }`}
-                      >
-                        <Users className="w-3.5 h-3.5" />
-                        <span className="truncate">Parent</span>
-                      </button>
-                      <button
-                        type="button"
                         onClick={() => setSelectedRole('ORGANIZATION')}
-                        className={`py-2 px-2 text-xs font-black rounded-xl transition-all flex items-center justify-center space-x-1.5 cursor-pointer ${
-                          selectedRole === 'ORGANIZATION'
+                        className={`py-2 px-2 text-xs font-black rounded-xl transition-all flex items-center justify-center space-x-1.5 cursor-pointer ${selectedRole === 'ORGANIZATION'
                             ? 'bg-gradient-to-r from-[#FF5C8A] to-[#FF2A6D] text-white shadow-sm'
                             : 'text-[#684E67] hover:text-[#FF2A6D]'
-                        }`}
+                          }`}
                       >
                         <Building className="w-3.5 h-3.5" />
                         <span className="truncate">Org</span>
@@ -526,11 +520,6 @@ function UserAuthForm() {
                         {selectedRole === 'USER' && (
                           <>
                             <strong>Individual Safety Member:</strong> 24/7 Live SOS, Trip Tracking, Guardian Alarms & ₹24 Yearly Protection Plan.
-                          </>
-                        )}
-                        {selectedRole === 'PARENT' && (
-                          <>
-                            <strong>Parent Guardian Portal:</strong> Free portal for parents to monitor daughter/child location & receive instant siren alarms.
                           </>
                         )}
                         {selectedRole === 'ORGANIZATION' && (
@@ -547,9 +536,7 @@ function UserAuthForm() {
                     <label className="block text-[#684E67] font-extrabold mb-1">
                       {selectedRole === 'ORGANIZATION'
                         ? 'Organization / Institution Name *'
-                        : selectedRole === 'PARENT'
-                          ? 'Parent Full Name *'
-                          : 'Full Name *'}
+                        : 'Full Name *'}
                     </label>
                     <div className="relative">
                       {selectedRole === 'ORGANIZATION' ? (
@@ -563,9 +550,7 @@ function UserAuthForm() {
                         placeholder={
                           selectedRole === 'ORGANIZATION'
                             ? 'e.g. St. Marys Academy / Apex Corp'
-                            : selectedRole === 'PARENT'
-                              ? 'e.g. Rajesh Sharma'
-                              : 'e.g. Priya Sharma'
+                            : 'e.g. Priya Sharma'
                         }
                         value={fullName}
                         onChange={(e) => setFullName(e.target.value)}
@@ -813,57 +798,130 @@ function UserAuthForm() {
                   )}
                 </div>
               ) : (
-                /* LOGIN FORM - SINGLE UNIFIED SIGN IN FORM */
+                /* LOGIN FORM - ROLE SELECTOR (MEMBER VS PARENT) */
                 <div className="space-y-4">
-                  <div>
-                    <label className="block text-[#684E67] font-extrabold mb-1">
-                      Registered Email or Mobile Phone Number *
-                    </label>
-                    <div className="relative">
-                      <Mail className="w-4 h-4 text-[#684E67] absolute left-3.5 top-1/2 -translate-y-1/2" />
-                      <input
-                        type="text"
-                        required
-                        placeholder="email@example.com or 10-digit mobile number"
-                        value={email}
-                        onChange={(e) => setEmail(e.target.value)}
-                        className="w-full pl-10 pr-4 py-3 bg-[#FFF0F3] border-1.5 border-[#FFCCE1] rounded-xl text-[#2A0826] font-bold focus:border-[#FF2A6D] focus:bg-white transition-all outline-none"
-                      />
+                  {/* LOGIN TYPE TOGGLE */}
+                  <div className="space-y-2">
+                    <div className="flex items-center justify-between">
+                      <label className="block text-[11px] font-black uppercase text-[#FF2A6D] tracking-wider text-left">
+                        Sign In As
+                      </label>
+                      <span className="text-[10px] font-bold text-[#684E67]">
+                        {loginRole === 'PARENT' ? '👨‍👩‍👧 Instant Phone Login' : '👩 Standard Safety Account'}
+                      </span>
                     </div>
-                  </div>
-
-                  <div>
-                    <div className="flex justify-between items-center mb-1">
-                      <label className="block text-[#684E67] font-extrabold">Password *</label>
+                    <div className="grid grid-cols-2 gap-2 bg-[#FFF0F3] p-1.5 rounded-2xl border-1.5 border-[#FFCCE1]">
                       <button
                         type="button"
-                        onClick={() => setIsForgotMode(true)}
-                        className="text-[10px] font-black text-[#FF2A6D] hover:underline"
+                        onClick={() => {
+                          setLoginRole('USER');
+                          setValidationError('');
+                        }}
+                        className={`py-2 px-2 text-xs font-black rounded-xl transition-all flex items-center justify-center space-x-1.5 cursor-pointer ${loginRole === 'USER'
+                            ? 'bg-gradient-to-r from-[#FF5C8A] to-[#FF2A6D] text-white shadow-sm'
+                            : 'text-[#684E67] hover:text-[#FF2A6D]'
+                          }`}
                       >
-                        Forgot Password?
+                        <UserIcon className="w-3.5 h-3.5" />
+                        <span className="truncate">Member / Org</span>
                       </button>
-                    </div>
-                    <div className="relative">
-                      <Lock className="w-4 h-4 text-[#684E67] absolute left-3.5 top-1/2 -translate-y-1/2" />
-                      <input
-                        type={showPass ? 'text' : 'password'}
-                        required
-                        placeholder="••••••••"
-                        value={password}
-                        onChange={(e) => setPassword(e.target.value)}
-                        className="w-full pl-10 pr-12 py-3 bg-[#FFF0F3] border-1.5 border-[#FFCCE1] rounded-xl text-[#2A0826] font-bold focus:border-[#FF2A6D] focus:bg-white transition-all outline-none"
-                      />
                       <button
                         type="button"
-                        onClick={() => setShowPass(!showPass)}
-                        className="absolute right-3.5 top-1/2 -translate-y-1/2 text-[#684E67] hover:text-[#FF2A6D] transition-colors"
+                        onClick={() => {
+                          setLoginRole('PARENT');
+                          setValidationError('');
+                        }}
+                        className={`py-2 px-2 text-xs font-black rounded-xl transition-all flex items-center justify-center space-x-1.5 cursor-pointer ${loginRole === 'PARENT'
+                            ? 'bg-gradient-to-r from-[#FF5C8A] to-[#FF2A6D] text-white shadow-sm'
+                            : 'text-[#684E67] hover:text-[#FF2A6D]'
+                          }`}
                       >
-                        {showPass ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                        <Users className="w-3.5 h-3.5" />
+                        <span className="truncate">Parent / Guardian</span>
                       </button>
                     </div>
+
+                    {loginRole === 'PARENT' && (
+                      <div className="bg-[#FFF0F3] p-2.5 rounded-xl border border-[#FFCCE1] text-[11px] font-bold text-[#684E67] flex items-center space-x-2">
+                        <span className="w-2 h-2 rounded-full bg-[#00C853] shrink-0" />
+                        <span>
+                          <strong>Parent Portal:</strong> Enter your 10-digit mobile number and solve the verification sum to log in directly. No password needed.
+                        </span>
+                      </div>
+                    )}
                   </div>
 
-                  {/* CAPTCHA */}
+                  {loginRole === 'PARENT' ? (
+                    <div>
+                      <label className="block text-[#684E67] font-extrabold mb-1">
+                        Parent Mobile Phone Number *
+                      </label>
+                      <div className="relative">
+                        <Phone className="w-4 h-4 text-[#684E67] absolute left-3.5 top-1/2 -translate-y-1/2" />
+                        <input
+                          type="tel"
+                          required
+                          maxLength={10}
+                          placeholder="Enter 10-digit mobile number"
+                          value={email}
+                          onChange={(e) => setEmail(e.target.value.replace(/\D/g, ''))}
+                          className="w-full pl-10 pr-4 py-3 bg-[#FFF0F3] border-1.5 border-[#FFCCE1] rounded-xl text-[#2A0826] font-mono font-bold focus:border-[#FF2A6D] focus:bg-white transition-all outline-none"
+                        />
+                      </div>
+                    </div>
+                  ) : (
+                    <>
+                      <div>
+                        <label className="block text-[#684E67] font-extrabold mb-1">
+                          Registered Email or Mobile Phone Number *
+                        </label>
+                        <div className="relative">
+                          <Mail className="w-4 h-4 text-[#684E67] absolute left-3.5 top-1/2 -translate-y-1/2" />
+                          <input
+                            type="text"
+                            required
+                            placeholder="email@example.com or 10-digit mobile number"
+                            value={email}
+                            onChange={(e) => setEmail(e.target.value)}
+                            className="w-full pl-10 pr-4 py-3 bg-[#FFF0F3] border-1.5 border-[#FFCCE1] rounded-xl text-[#2A0826] font-bold focus:border-[#FF2A6D] focus:bg-white transition-all outline-none"
+                          />
+                        </div>
+                      </div>
+
+                      <div>
+                        <div className="flex justify-between items-center mb-1">
+                          <label className="block text-[#684E67] font-extrabold">Password *</label>
+                          <button
+                            type="button"
+                            onClick={() => setIsForgotMode(true)}
+                            className="text-[10px] font-black text-[#FF2A6D] hover:underline"
+                          >
+                            Forgot Password?
+                          </button>
+                        </div>
+                        <div className="relative">
+                          <Lock className="w-4 h-4 text-[#684E67] absolute left-3.5 top-1/2 -translate-y-1/2" />
+                          <input
+                            type={showPass ? 'text' : 'password'}
+                            required
+                            placeholder="••••••••"
+                            value={password}
+                            onChange={(e) => setPassword(e.target.value)}
+                            className="w-full pl-10 pr-12 py-3 bg-[#FFF0F3] border-1.5 border-[#FFCCE1] rounded-xl text-[#2A0826] font-bold focus:border-[#FF2A6D] focus:bg-white transition-all outline-none"
+                          />
+                          <button
+                            type="button"
+                            onClick={() => setShowPass(!showPass)}
+                            className="absolute right-3.5 top-1/2 -translate-y-1/2 text-[#684E67] hover:text-[#FF2A6D] transition-colors"
+                          >
+                            {showPass ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                          </button>
+                        </div>
+                      </div>
+                    </>
+                  )}
+
+                  {/* CAPTCHA / VERIFICATION SUM */}
                   <div>
                     <label className="block text-[#684E67] font-extrabold mb-1">
                       Verification: What is {captchaNum1} + {captchaNum2}? *
@@ -872,7 +930,7 @@ function UserAuthForm() {
                       <input
                         type="number"
                         required
-                        placeholder="Answer"
+                        placeholder="Enter sum"
                         value={userCaptcha}
                         onChange={(e) => setUserCaptcha(e.target.value)}
                         className="w-full px-4 py-3 bg-[#FFF0F3] border-1.5 border-[#FFCCE1] rounded-xl text-[#2A0826] font-bold focus:border-[#FF2A6D] focus:bg-white transition-all outline-none"
@@ -893,11 +951,9 @@ function UserAuthForm() {
                   {mounted && isLoading
                     ? 'PROCESSING...'
                     : isLogin
-                      ? selectedRole === 'ORGANIZATION'
-                        ? 'SIGN IN TO ORGANIZATION'
-                        : selectedRole === 'PARENT'
-                          ? 'SIGN IN TO PARENT PORTAL'
-                          : 'SIGN IN TO DASHBOARD'
+                      ? loginRole === 'PARENT'
+                        ? 'SIGN IN TO PARENT PORTAL'
+                        : 'SIGN IN TO DASHBOARD'
                       : 'REGISTER & PROCEED TO OTP'}
                 </span>
                 <ArrowRight className="w-4 h-4 text-white" />

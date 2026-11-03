@@ -24,7 +24,7 @@ export const registerSchema = z.object({
 
 export const loginSchema = z.object({
   email: z.string().min(1, "Email or Phone is required").trim(),
-  password: z.string().min(1, "Password is required"),
+  password: z.string().optional().or(z.literal('')),
   isAdminLogin: z.boolean().optional(),
 });
 

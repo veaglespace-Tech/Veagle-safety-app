@@ -1,4 +1,5 @@
 import { prisma } from '../config/prisma.js';
+import { syncParentProfileAndLink } from '../services/parentService.js';
 
 export const getContacts = async (req, res) => {
   try {
@@ -47,6 +48,19 @@ export const addContact = async (req, res) => {
       });
     }
 
+    // Automatically sync parent profile and create active ParentChildLink
+    try {
+      await syncParentProfileAndLink({
+        childId: req.user?.id,
+        parentPhone: phone,
+        parentName: name,
+        parentEmail: email,
+        relationship: relationship || 'Parent',
+      });
+    } catch (parentSyncErr) {
+      console.warn('[addContact] syncParentProfileAndLink notice:', parentSyncErr.message);
+    }
+
     return res.status(201).json({ message: 'Trusted contact added', contact });
   } catch (error) {
     return res.status(500).json({ error: 'Failed to add contact' });
@@ -93,6 +107,20 @@ export const updateContact = async (req, res) => {
         ...(email !== undefined && { email: email ? email.trim() : '' }),
       },
     });
+
+    if (phone) {
+      try {
+        await syncParentProfileAndLink({
+          childId: req.user?.id,
+          parentPhone: phone,
+          parentName: name || updated.name,
+          parentEmail: email !== undefined ? email : updated.email,
+          relationship: relationship || updated.relationship || 'Parent',
+        });
+      } catch (parentSyncErr) {
+        console.warn('[updateContact] syncParentProfileAndLink notice:', parentSyncErr.message);
+      }
+    }
 
     return res.json({ message: 'Trusted contact updated successfully', contact: updated });
   } catch (error) {

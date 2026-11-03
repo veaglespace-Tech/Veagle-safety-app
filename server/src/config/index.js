@@ -20,10 +20,12 @@ export const config = {
     expiresIn: '30d',
   },
   emailService: {
-    host: process.env.SMTP_HOST || 'smtp.gmail.com',
-    port: Number(process.env.SMTP_PORT) || 587,
+    host: process.env.SMTP_HOST || 'smtp.hostinger.com',
+    port: Number(process.env.SMTP_PORT) || 465,
+    secure: process.env.SMTP_SECURE === 'true' || Number(process.env.SMTP_PORT) === 465,
     user: process.env.EMAIL || process.env.SMTP_USER || '',
     pass: process.env.EMAIL_PASS || process.env.SMTP_PASS || '',
+    backupAccountsRaw: process.env.SMTP_BACKUP_ACCOUNTS || '',
   },
   payu: {
     baseUrl: process.env.PAYU_BASE_URL || 'https://test.payu.in/_payment',

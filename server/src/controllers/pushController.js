@@ -169,17 +169,25 @@ export const registerDeviceToken = asyncHandler(async (req, res) => {
  * Remove mobile device token on logout
  */
 export const removeDeviceToken = asyncHandler(async (req, res) => {
-  const { token } = req.body;
+  const { token } = req.body || {};
+  const userId = req.user?.id || req.user?.userId;
 
-  if (!token) {
-    return res.status(400).json({ error: 'Device token required' });
+  if (!token && !userId) {
+    return res.status(400).json({ error: 'Device token or authenticated user session required' });
   }
 
   try {
-    await prisma.deviceToken.deleteMany({
-      where: { token },
+    const deleteConditions = [];
+    if (token) deleteConditions.push({ token });
+    if (userId) deleteConditions.push({ userId });
+
+    const result = await prisma.deviceToken.deleteMany({
+      where: {
+        OR: deleteConditions,
+      },
     });
-    return res.json({ success: true, message: 'Device token removed' });
+    console.log(`[DeviceToken] Removed ${result.count} device token(s) (token: ${Boolean(token)}, user: ${userId || 'N/A'})`);
+    return res.json({ success: true, message: 'Device token removed successfully', count: result.count });
   } catch (error) {
     console.error('[DeviceToken] Failed to remove token:', error.message);
     return res.status(500).json({ error: 'Failed to remove device token' });

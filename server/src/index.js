@@ -103,12 +103,16 @@ const listen = (port) =>
   });
 
 import { startSosPeriodicWorker } from './services/sosPeriodicWorker.js';
+import { initFirebase } from './services/fcmService.js';
 
 // Start Server Routine
 const startServer = async () => {
   console.log("prisma connecting...");
   await prisma.$connect();
   console.log("prisma connected");
+
+  // Initialize Firebase Admin SDK for mobile push notifications
+  initFirebase();
 
   initSocketIO(server);
   startSosPeriodicWorker();

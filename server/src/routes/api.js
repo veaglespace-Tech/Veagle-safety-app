@@ -27,7 +27,7 @@ router.post('/auth/register', validate(registerSchema), authController.register)
 router.post('/auth/verify-email', validate(verifyEmailSchema), authController.verifyEmail);
 router.post('/auth/resend-otp', authController.resendOtp);
 router.post('/auth/login', validate(loginSchema), authController.login);
-router.post('/auth/logout', authController.logout);
+router.post('/auth/logout', optionalAuthToken, authController.logout);
 router.get('/auth/me', authenticateToken, authController.getProfile);
 router.put('/auth/settings', authenticateToken, authController.updateSettings);
 router.post('/auth/send-email-change-otp', authenticateToken, authController.sendEmailChangeOtp);
@@ -125,7 +125,7 @@ router.get('/push/vapid-key', pushController.getVapidPublicKey);
 router.post('/push/subscribe', authenticateToken, pushController.savePushSubscription);
 router.post('/push/subscribe-email', pushController.savePushSubscriptionByEmail);
 router.post('/push/register-device', authenticateToken, pushController.registerDeviceToken);
-router.post('/push/remove-device', authenticateToken, pushController.removeDeviceToken);
+router.post('/push/remove-device', optionalAuthToken, pushController.removeDeviceToken);
 
 // System Settings
 router.get('/settings', settingController.getSettings);

@@ -3,8 +3,16 @@ import axios from 'axios';
 const envServerUrl = typeof process !== 'undefined' ? (process.env?.NEXT_PUBLIC_SERVER_URL || process.env?.NEXT_PUBLIC_API_URL?.replace(/\/api$/, '')) : null;
 const envApiUrl = typeof process !== 'undefined' ? process.env?.NEXT_PUBLIC_API_URL : null;
 
-export const SERVER_URL = envServerUrl || 'http://localhost:5000';
-export const API_URL = typeof window !== 'undefined' ? (envApiUrl || `${window.location.origin}/api`) : (envApiUrl || `${SERVER_URL}/api`);
+export const SERVER_URL =
+  envServerUrl ||
+  (typeof window !== 'undefined' && window.location.hostname === 'localhost'
+    ? 'http://localhost:5000'
+    : 'https://sakhisuraksha.veaglespace.com');
+export const API_URL =
+  envApiUrl ||
+  (typeof window !== 'undefined'
+    ? `${window.location.origin}/api`
+    : `${SERVER_URL}/api`);
 
 export const api = axios.create({
   baseURL: API_URL,

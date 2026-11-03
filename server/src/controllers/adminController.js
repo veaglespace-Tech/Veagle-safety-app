@@ -26,7 +26,7 @@ export const getAdminOverview = asyncHandler(async (req, res) => {
     },
   });
 
-  const totalUsers = await prisma.user.count();
+  const totalUsers = await prisma.user.count({ where: { role: 'USER' } });
   const activeSubscriptions = await prisma.user.count({ where: { subscriptionStatus: 'ACTIVE' } });
 
   // Calculate revenue statistics from SUCCESS payment transactions
@@ -373,40 +373,6 @@ export const adminResolveSos = asyncHandler(async (req, res) => {
   const { sosSessionId, note } = req.body;
   const targetId = parseInt(sosSessionId, 10);
 
-  if (!targetId || isNaN(targetId)) {
-    return res.status(400).json({ error: 'A valid numeric sosSessionId is required' });
-  }
-
-  // 1. Check existing session
-  const existing = await prisma.sosSession.findUnique({
-    where: { id: targetId },
-    include: {
-      user: true,
-      locations: { orderBy: { recordedAt: 'desc' }, take: 1 },
-    },
-  });
-
-  if (!existing) {
-    return res.status(404).json({ error: `SOS Session #${targetId} not found` });
-  }
-
-  if (existing.status === 'RESOLVED') {
-    const io = getIO();
-    if (io) {
-      const stopPayload = {
-        sosId: targetId,
-        victimName: existing.user?.fullName || 'Sakhi Member',
-      };
-      io.emit('SOS_ALARM_STOP', stopPayload);
-      io.to('admin-ops').emit('SOS_ALARM_STOP', stopPayload);
-      io.to('super-admin').emit('SOS_ALARM_STOP', stopPayload);
-    }
-    return res.status(200).json({
-      message: `Emergency SOS Incident #${targetId} is already marked as RESOLVED and SAFE.`,
-      session: existing,
-    });
-  }
-
   const session = await prisma.sosSession.update({
     where: { id: targetId },
     data: {
@@ -457,45 +423,25 @@ export const adminResolveSos = asyncHandler(async (req, res) => {
   }
 
   for (const email of recipientEmails) {
-    try {
-      sendSosSafeAlert({
-        recipientEmail: email,
-        userName: session.user?.fullName || 'Sakhi Member',
-        userPhone: session.user?.phone || 'N/A',
-        userPhoto: session.user?.profilePhoto || null,
-        googleMapsUrl,
-        latitude,
-        longitude,
-        resolvedAt: session.resolvedAt,
-      });
-    } catch (e) {}
+    sendSosSafeAlert({
+      recipientEmail: email,
+      userName: session.user?.fullName || 'Sakhi Member',
+      userPhone: session.user?.phone || 'N/A',
+      userPhoto: session.user?.profilePhoto || null,
+      googleMapsUrl,
+      latitude,
+      longitude,
+      resolvedAt: session.resolvedAt,
+    });
   }
 
-  // Broadcast Alarm Stop Event via Socket.io to all clients and rooms
+  // Broadcast Alarm Stop Event via Socket.io
   const io = getIO();
   if (io) {
-    const stopPayload = {
+    io.emit('SOS_ALARM_STOP', {
       sosId: targetId,
       victimName: session.user?.fullName || 'Sakhi Member',
-    };
-    io.emit('SOS_ALARM_STOP', stopPayload);
-    io.to('admin-ops').emit('SOS_ALARM_STOP', stopPayload);
-    io.to('super-admin').emit('SOS_ALARM_STOP', stopPayload);
-    if (session.shareToken) {
-      io.to(`track:${session.shareToken}`).emit('SOS_ALARM_STOP', stopPayload);
-    }
-    if (session.user?.email) {
-      io.to(`user:${session.user.email.trim().toLowerCase()}`).emit('SOS_ALARM_STOP', stopPayload);
-    }
-    if (session.user?.phone) {
-      const clean = session.user.phone.replace(/\D/g, '');
-      if (clean) {
-        io.to(`user:${clean}`).emit('SOS_ALARM_STOP', stopPayload);
-        if (clean.length >= 10) {
-          io.to(`user:${clean.slice(-10)}`).emit('SOS_ALARM_STOP', stopPayload);
-        }
-      }
-    }
+    });
   }
 
   return res.status(200).json({

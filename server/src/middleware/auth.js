@@ -30,7 +30,12 @@ export const optionalAuthToken = (req, res, next) => {
   if (token) {
     try {
       const decoded = jwt.verify(token, config.jwtSecret);
-      req.user = decoded;
+      const resolvedId = decoded.id || decoded.userId;
+      req.user = {
+        ...decoded,
+        id: resolvedId,
+        userId: resolvedId,
+      };
     } catch (err) {
       // Ignore token verification errors for optional auth (e.g. pending registration flow)
     }
@@ -68,12 +73,11 @@ export const requireActiveSubscription = async (req, res, next) => {
 
     const expDate = user.subscriptionExpiresAt ? new Date(user.subscriptionExpiresAt) : null;
     const isExpired =
-      user.subscriptionStatus === 'EXPIRED' ||
-      user.subscriptionStatus === 'PENDING' ||
+      user.subscriptionStatus !== 'ACTIVE' ||
       (expDate && expDate < new Date());
 
     if (isExpired) {
-      return res.status(402).json({ error: 'Payment Required: Your subscription plan has expired. Please renew to access this feature.' });
+      return res.status(402).json({ error: 'Payment Required: An active subscription is required to access this feature. Please complete payment.' });
     }
 
     next();

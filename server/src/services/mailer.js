@@ -1,18 +1,11 @@
 import nodemailer from 'nodemailer';
 import { config } from '../config/index.js';
+import { sendMailWithFailover, getActiveSenderEmail } from './emailFailoverService.js';
 
-const transporter = nodemailer.createTransport({
-  host: config.emailService.host || 'smtp.gmail.com',
-  port: config.emailService.port || 587,
-  secure: false, // TLS
-  auth: config.emailService.user ? {
-    user: config.emailService.user,
-    pass: config.emailService.pass,
-  } : undefined,
-  tls: {
-    rejectUnauthorized: false,
-  },
-});
+// Unified transporter proxy that routes through the Hostinger failover pool (sos01 -> sos05)
+const transporter = {
+  sendMail: (options) => sendMailWithFailover(options),
+};
 
 /**
  * Send Email Verification OTP
@@ -129,6 +122,7 @@ export const sendSosEmergencyAlert = async ({
   latitude,
   longitude,
   sosId,
+  cc,
 }) => {
   try {
     const mapUrl = googleMapsUrl || `https://www.google.com/maps?q=${latitude},${longitude}`;
@@ -137,6 +131,7 @@ export const sendSosEmergencyAlert = async ({
     const info = await transporter.sendMail({
       from: `"🚨 Sakhi Suraksha Emergency Command" <${config.emailService.user || 'sos@sakhisuraksha.org'}>`,
       to: recipientEmail,
+      ...(cc && { cc }),
       subject: `🚨 CRITICAL EMERGENCY SOS ALERT: ${userName} Needs Help Immediately!`,
       attachments: avatar.attachments,
       html: `

@@ -3,6 +3,7 @@ import { prisma } from '../config/prisma.js';
 import { config } from '../config/index.js';
 import { asyncHandler } from '../middleware/asyncHandler.js';
 import { generatePayUHash, verifyPayUResponseHash } from '../utils/payu.js';
+import { syncParentProfileAndLink } from '../services/parentService.js';
 
 if (!global.pendingRegistrations) {
   global.pendingRegistrations = new Map();
@@ -141,6 +142,18 @@ export const initiatePayUPayment = asyncHandler(async (req, res) => {
             });
           } catch (e) {
             console.log('[Register Notice] Primary contact creation skipped:', e.message);
+          }
+
+          try {
+            await syncParentProfileAndLink({
+              childId: activeUser.id,
+              parentPhone: decodedRegistration.emergencyContactPhone,
+              parentName: decodedRegistration.emergencyContactName,
+              parentEmail: decodedRegistration.parentEmail || '',
+              relationship: 'Parent',
+            });
+          } catch (syncErr) {
+            console.warn('[Payment Notice] syncParentProfileAndLink notice:', syncErr.message);
           }
         }
       } else {
@@ -342,6 +355,18 @@ export const handlePayUSuccess = asyncHandler(async (req, res) => {
             });
           } catch (e) {
             console.log('[Register Notice] Primary contact creation skipped:', e.message);
+          }
+
+          try {
+            await syncParentProfileAndLink({
+              childId: user.id,
+              parentPhone: decodedRegistration.emergencyContactPhone,
+              parentName: decodedRegistration.emergencyContactName,
+              parentEmail: decodedRegistration.parentEmail || '',
+              relationship: 'Parent',
+            });
+          } catch (syncErr) {
+            console.warn('[Payment Notice] syncParentProfileAndLink notice:', syncErr.message);
           }
         }
       }

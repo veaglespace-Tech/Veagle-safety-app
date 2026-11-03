@@ -80,31 +80,54 @@ export const startSos = async (req, res) => {
     const trackingUrl = `${clientBaseUrl}/live-track/${session.shareToken}`;
     const googleMapsUrl = `https://www.google.com/maps?q=${latitude},${longitude}`;
 
-    // 1. Collect Recipient Emails (User + Admin + Parent Emergency Email + Guardian Contacts)
-    const recipientEmails = collectEmergencyRecipients(currentUser, contacts);
-
-    // Also add linked Parent & Organization emails to emergency dispatch list
+    // 1. Collect Recipient Emails (Primary TO: Guardians, Parents, Emergency Contact)
+    const primaryEmails = new Set();
+    
+    // Linked parents
     parentLinks.forEach((link) => {
-      if (link.parent?.email) recipientEmails.push(link.parent.email.trim().toLowerCase());
+      if (link.parent?.email) primaryEmails.add(link.parent.email.trim().toLowerCase());
     });
-
-    if (currentUser?.organization?.email) {
-      recipientEmails.push(currentUser.organization.email.trim().toLowerCase());
+    // Parent email on profile
+    if (currentUser?.parentEmail) {
+      primaryEmails.add(currentUser.parentEmail.trim().toLowerCase());
+    }
+    // Trusted guardian contacts
+    contacts.forEach((c) => {
+      if (c.email) primaryEmails.add(c.email.trim().toLowerCase());
+    });
+    // User's own email
+    if (currentUser?.email) {
+      primaryEmails.add(currentUser.email.trim().toLowerCase());
     }
 
-    // Add all Super Admins to the dispatch list so they are notified
+    // CC Emails: Organization Admin + Super Admins + System Admin
+    const ccEmails = new Set();
+    if (currentUser?.organization?.email) {
+      ccEmails.add(currentUser.organization.email.trim().toLowerCase());
+    }
+
     const superAdmins = await prisma.user.findMany({
       where: { role: 'SUPER_ADMIN' },
       select: { email: true }
     }).catch(() => []);
     
     superAdmins.forEach((admin) => {
-      if (admin.email) recipientEmails.push(admin.email.trim().toLowerCase());
+      if (admin.email) ccEmails.add(admin.email.trim().toLowerCase());
     });
 
-    // 2. Dispatch High-Priority Emergency Emails concurrently
+    const defaultAdminEmail = process.env.ADMIN_EMAIL || 'abhijeetambhore4@gmail.com';
+    if (defaultAdminEmail) {
+      ccEmails.add(defaultAdminEmail.trim().toLowerCase());
+    }
+
+    const ccList = Array.from(ccEmails);
+
+    // 2. Dispatch High-Priority Emergency Emails
+    const toList = Array.from(primaryEmails);
+    const primaryRecipients = toList.length > 0 ? toList : (ccList.length > 0 ? [ccList[0]] : []);
+
     await Promise.all(
-      Array.from(new Set(recipientEmails)).map(async (email) => {
+      primaryRecipients.map(async (email) => {
         try {
           await sendSosEmergencyAlert({
             recipientEmail: email,
@@ -118,6 +141,7 @@ export const startSos = async (req, res) => {
             latitude,
             longitude,
             sosId: session.id,
+            cc: ccList.filter(c => c !== email),
           });
 
           await prisma.sosAlert.create({
@@ -138,13 +162,42 @@ export const startSos = async (req, res) => {
     const baseMessageText = `🚨 SAKHI EMERGENCY SOS ALERT!\n\nVictim: ${currentUser?.fullName || 'Sakhi Member'}\nPhone: ${currentUser?.phone || ''}\n\n📍 GPS Coordinates:\nLat: ${latitude}, Lng: ${longitude}\n\n👉 Live Location Map:\n${trackingUrl}\n\n🌐 Google Maps:\n${googleMapsUrl}`;
     const whatsappShareUrl = `https://api.whatsapp.com/send?text=${encodeURIComponent(baseMessageText)}`;
 
-    const whatsappAlerts = contacts.map((contact) => {
+    const allAlertRecipients = [];
+    // Add linked parents first
+    parentLinks.forEach((link) => {
+      if (link.parent?.phone) {
+        allAlertRecipients.push({
+          name: link.parent.fullName || 'Parent',
+          phone: link.parent.phone,
+          isParent: true,
+        });
+      }
+    });
+    // Add emergency contact phone if specified on user profile
+    if (currentUser?.emergencyContactPhone) {
+      allAlertRecipients.push({
+        name: currentUser.emergencyContactName || 'Emergency Contact',
+        phone: currentUser.emergencyContactPhone,
+        isParent: true,
+      });
+    }
+    // Add trusted contacts
+    contacts.forEach((c) => {
+      allAlertRecipients.push({
+        name: c.name,
+        phone: c.phone,
+        isParent: false,
+      });
+    });
+
+    const whatsappAlerts = allAlertRecipients.map((contact) => {
       const cleanPhone = (contact.phone || '').replace(/\D/g, '');
       const whatsappUrl = `https://api.whatsapp.com/send?phone=${cleanPhone}&text=${encodeURIComponent(baseMessageText)}`;
 
       return {
         contactName: contact.name,
         phone: contact.phone,
+        isParent: contact.isParent,
         whatsappUrl,
       };
     });
@@ -226,7 +279,7 @@ export const startSos = async (req, res) => {
     }
 
     // 5. Send Web Push Notifications to all trusted contacts' devices
-    const contactEmailsList = Array.from(recipientEmails);
+    const contactEmailsList = Array.from(primaryEmails);
     await sendEmergencyPushToEmails({
       emails: contactEmailsList,
       victimName: currentUser?.fullName || 'Sakhi Suraksha User',
@@ -476,7 +529,20 @@ export const resolveSos = async (req, res) => {
     const isOwner = existingSession.userId === userId;
     const isAdmin = req.user?.role === 'SUPER_ADMIN' || req.user?.role === 'ADMIN';
 
-    if (!isOwner && !isAdmin) {
+    // Allow linked parents to resolve/stop the running SOS session
+    let isLinkedParent = false;
+    if (!isOwner && !isAdmin && userId) {
+      const parentLink = await prisma.parentChildLink.findFirst({
+        where: {
+          parentId: userId,
+          childId: existingSession.userId,
+          status: 'ACTIVE',
+        },
+      });
+      if (parentLink) isLinkedParent = true;
+    }
+
+    if (!isOwner && !isAdmin && !isLinkedParent) {
       return res.status(403).json({ error: 'Unauthorized to resolve this SOS session' });
     }
 
@@ -485,7 +551,7 @@ export const resolveSos = async (req, res) => {
       data: {
         status: 'RESOLVED',
         resolvedAt: new Date(),
-        resolutionNote: resolutionNote || 'Resolved by user',
+        resolutionNote: resolutionNote || (isLinkedParent ? 'Resolved by Guardian/Parent' : 'Resolved by user'),
       },
       include: {
         user: {

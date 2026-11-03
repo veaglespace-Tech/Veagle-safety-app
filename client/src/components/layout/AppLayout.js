@@ -106,8 +106,7 @@ export const AppLayout = ({ children, fullScreen = false }) => {
     if (currentUser?.role === 'USER') {
       const expDate = currentUser.subscriptionExpiresAt ? new Date(currentUser.subscriptionExpiresAt) : null;
       if (
-        currentUser.subscriptionStatus === 'EXPIRED' ||
-        currentUser.subscriptionStatus === 'PENDING' ||
+        currentUser.subscriptionStatus !== 'ACTIVE' ||
         (expDate && expDate < new Date())
       ) {
         isSubExpired = true;
@@ -122,7 +121,7 @@ export const AppLayout = ({ children, fullScreen = false }) => {
       !pathname.startsWith('/payment') &&
       !pathname.startsWith('/auth')
     ) {
-      router.push('/subscription');
+      router.push('/pricing');
       return;
     }
   }, [mounted, pathname, hasAuthToken, isProtected, user, router]);

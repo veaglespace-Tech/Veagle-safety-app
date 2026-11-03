@@ -141,8 +141,10 @@ export default function LoginScreen({ navigation }) {
   const dispatch = useDispatch();
   const { isLoading, error } = useSelector((state) => state.auth);
 
+  const [loginType, setLoginType] = useState('MEMBER'); // 'MEMBER' or 'PARENT'
   const [email,    setEmail]    = useState('');
   const [password, setPassword] = useState('');
+  const [parentPhone, setParentPhone] = useState('');
   const [showPass, setShowPass] = useState(false);
   const [showIntroDisclosure, setShowIntroDisclosure] = useState(false);
 
@@ -177,20 +179,37 @@ export default function LoginScreen({ navigation }) {
   // ── Validation ────────────────────────────────────────────────────────────
 
   const validate = useCallback(() => {
+    if (loginType === 'PARENT') {
+      const cleanPhone = parentPhone ? parentPhone.replace(/\D/g, '') : '';
+      const phoneRegex = /^[6-9]\d{9}$/;
+      if (!cleanPhone || !phoneRegex.test(cleanPhone)) {
+        const msg = 'Please enter a valid 10-digit Parent mobile number starting with 6, 7, 8, or 9.';
+        if (Platform.OS === 'web' && typeof window !== 'undefined') {
+          window.alert(msg);
+        } else {
+          Alert.alert('Invalid Mobile Number', msg);
+        }
+        return false;
+      }
+      return true;
+    }
+
     if (!email.trim()) {
       if (Platform.OS === 'web' && typeof window !== 'undefined') {
-        window.alert('Please enter your email address.');
+        window.alert('Please enter your email address or mobile number.');
       } else {
-        Alert.alert('Email Required', 'Please enter your email address.');
+        Alert.alert('Input Required', 'Please enter your email address or mobile number.');
       }
       return false;
     }
+    const cleanInput = email.trim().replace(/\D/g, '');
+    const isPhone = cleanInput.length >= 10;
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    if (!emailRegex.test(email.trim())) {
+    if (!isPhone && !emailRegex.test(email.trim())) {
       if (Platform.OS === 'web' && typeof window !== 'undefined') {
-        window.alert('Please enter a valid email address.');
+        window.alert('Please enter a valid email address or 10-digit mobile number.');
       } else {
-        Alert.alert('Invalid Email', 'Please enter a valid email address.');
+        Alert.alert('Invalid Input', 'Please enter a valid email address or 10-digit mobile number.');
       }
       return false;
     }
@@ -203,7 +222,7 @@ export default function LoginScreen({ navigation }) {
       return false;
     }
     return true;
-  }, [email, password]);
+  }, [loginType, parentPhone, email, password]);
 
   // ── OTP redirect helper ───────────────────────────────────────────────────
 
@@ -211,8 +230,8 @@ export default function LoginScreen({ navigation }) {
     (payload) => {
       if (payload?.requiresVerification || payload?.pendingToken) {
         navigation.navigate('OTP', {
-          email: email.trim(),
-          password,
+          email: loginType === 'PARENT' ? parentPhone.trim() : email.trim(),
+          password: loginType === 'PARENT' ? '' : password,
           mode: 'login',
           debugOtp: payload?.debugOtp || null,
         });
@@ -220,7 +239,7 @@ export default function LoginScreen({ navigation }) {
       }
       return false;
     },
-    [email, password, navigation],
+    [loginType, parentPhone, email, password, navigation],
   );
 
   // ── Core login logic ──────────────────────────────────────────────────────
@@ -241,7 +260,24 @@ export default function LoginScreen({ navigation }) {
 
     dispatch(clearAuthMessages());
 
-    // Step 1 — Standard login
+    // Parent Direct Mobile Login (Password-free)
+    if (loginType === 'PARENT') {
+      const cleanPhone = parentPhone.replace(/\D/g, '');
+      const phone10 = cleanPhone.slice(-10);
+      const result = await dispatch(loginUser({ email: phone10, password: '' }));
+
+      if (loginUser.fulfilled.match(result)) {
+        handleOtpRedirect(result.payload);
+        return;
+      }
+      if (result.payload?.requiresVerification) {
+        handleOtpRedirect(result.payload);
+        return;
+      }
+      return;
+    }
+
+    // Step 1 — Standard member login
     const result = await dispatch(loginUser({ email: email.trim(), password }));
 
     if (loginUser.fulfilled.match(result)) {
@@ -267,7 +303,7 @@ export default function LoginScreen({ navigation }) {
         handleOtpRedirect(adminResult.payload);
       }
     }
-  }, [validate, dispatch, email, password, handleOtpRedirect]);
+  }, [validate, dispatch, loginType, parentPhone, email, password, handleOtpRedirect]);
 
   const togglePassword = useCallback(() => setShowPass((v) => !v), []);
 
@@ -304,76 +340,169 @@ export default function LoginScreen({ navigation }) {
           {/* ── Form ── */}
           <View style={styles.form}>
 
-            {/* Email */}
-            <InputField
-              label="Email Address"
-              icon="mail-outline"
-              inputProps={{
-                placeholder:    'your@email.com',
-                keyboardType:   'email-address',
-                autoCapitalize: 'none',
-                autoCorrect:    false,
-                returnKeyType:  'next',
-                value:          email,
-                onChangeText:   setEmail,
-              }}
-            />
-
-            {/* Password */}
-            <InputField
-              label="Password"
-              icon="lock-closed-outline"
-              inputProps={{
-                placeholder:     'Enter your password',
-                secureTextEntry: !showPass,
-                returnKeyType:   'done',
-                onSubmitEditing: handleLogin,
-                value:           password,
-                onChangeText:    setPassword,
-              }}
-              right={
-                <TouchableOpacity onPress={togglePassword} style={styles.eyeBtn} hitSlop={8}>
-                  <Ionicons
-                    name={showPass ? 'eye-off-outline' : 'eye-outline'}
-                    size={18}
-                    color={COLORS.textMuted}
-                  />
-                </TouchableOpacity>
-              }
-            />
-
-            {/* Forgot password */}
-            <TouchableOpacity
-              onPress={() => navigation.navigate('ForgotPassword')}
-              style={styles.forgotBtn}
-              hitSlop={8}
-            >
-              <Text style={styles.forgotText}>Forgot Password?</Text>
-            </TouchableOpacity>
-
-            {/* Sign In */}
-            <TouchableOpacity
-              style={[styles.loginBtn, isLoading && styles.btnDisabled]}
-              onPress={handleLogin}
-              disabled={isLoading}
-              activeOpacity={0.85}
-            >
-              <LinearGradient
-                colors={['#FF5C8A', '#FF2A6D']}
-                start={{ x: 0, y: 0 }}
-                end={{ x: 1, y: 1 }}
-                style={styles.loginBtnGradient}
+            {/* ── Switcher Tab between Member Login & Parent Portal ── */}
+            <View style={styles.tabContainer}>
+              <TouchableOpacity
+                style={[styles.tabButton, loginType === 'MEMBER' && styles.tabButtonActive]}
+                onPress={() => {
+                  setLoginType('MEMBER');
+                  dispatch(clearAuthMessages());
+                }}
+                activeOpacity={0.85}
               >
-                {isLoading ? (
-                  <ActivityIndicator color="#fff" size="small" />
-                ) : (
-                  <>
-                    <Ionicons name="log-in-outline" size={18} color="#fff" />
-                    <Text style={styles.loginBtnText}>SIGN IN</Text>
-                  </>
-                )}
-              </LinearGradient>
-            </TouchableOpacity>
+                <Ionicons
+                  name="person"
+                  size={15}
+                  color={loginType === 'MEMBER' ? '#fff' : COLORS.textMuted}
+                />
+                <Text style={[styles.tabText, loginType === 'MEMBER' && styles.tabTextActive]}>
+                  Member Login
+                </Text>
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                style={[styles.tabButton, loginType === 'PARENT' && styles.tabButtonActive]}
+                onPress={() => {
+                  setLoginType('PARENT');
+                  dispatch(clearAuthMessages());
+                }}
+                activeOpacity={0.85}
+              >
+                <Ionicons
+                  name="heart"
+                  size={15}
+                  color={loginType === 'PARENT' ? '#fff' : COLORS.textMuted}
+                />
+                <Text style={[styles.tabText, loginType === 'PARENT' && styles.tabTextActive]}>
+                  Parent Portal
+                </Text>
+              </TouchableOpacity>
+            </View>
+
+            {loginType === 'PARENT' ? (
+              /* ── PARENT LOGIN: Phone only, No password needed ── */
+              <>
+                <View style={styles.parentNoticeBox}>
+                  <Ionicons name="shield-checkmark" size={20} color="#10B981" />
+                  <Text style={styles.parentNoticeText}>
+                    Direct Guardian Access: Enter your 10-digit registered mobile number to monitor your child's live safety and receive emergency alerts.
+                  </Text>
+                </View>
+
+                {/* Parent Mobile Number */}
+                <InputField
+                  label="Parent Mobile Number"
+                  icon="call-outline"
+                  inputProps={{
+                    placeholder: 'Enter 10-digit mobile number',
+                    keyboardType: 'phone-pad',
+                    maxLength: 10,
+                    returnKeyType: 'done',
+                    onSubmitEditing: handleLogin,
+                    value: parentPhone,
+                    onChangeText: (text) => setParentPhone(text.replace(/\D/g, '')),
+                  }}
+                />
+
+                {/* Parent Sign In Button */}
+                <TouchableOpacity
+                  style={[styles.loginBtn, isLoading && styles.btnDisabled]}
+                  onPress={handleLogin}
+                  disabled={isLoading}
+                  activeOpacity={0.85}
+                >
+                  <LinearGradient
+                    colors={['#059669', '#10B981']}
+                    start={{ x: 0, y: 0 }}
+                    end={{ x: 1, y: 1 }}
+                    style={styles.loginBtnGradient}
+                  >
+                    {isLoading ? (
+                      <ActivityIndicator color="#fff" size="small" />
+                    ) : (
+                      <>
+                        <Ionicons name="heart" size={18} color="#fff" />
+                        <Text style={styles.loginBtnText}>SIGN IN AS PARENT</Text>
+                      </>
+                    )}
+                  </LinearGradient>
+                </TouchableOpacity>
+              </>
+            ) : (
+              /* ── STANDARD MEMBER LOGIN: Email/Phone & Password ── */
+              <>
+                {/* Email */}
+                <InputField
+                  label="Email Address or Mobile Number"
+                  icon="mail-outline"
+                  inputProps={{
+                    placeholder:    'your@email.com or mobile',
+                    keyboardType:   'email-address',
+                    autoCapitalize: 'none',
+                    autoCorrect:    false,
+                    returnKeyType:  'next',
+                    value:          email,
+                    onChangeText:   setEmail,
+                  }}
+                />
+
+                {/* Password */}
+                <InputField
+                  label="Password"
+                  icon="lock-closed-outline"
+                  inputProps={{
+                    placeholder:     'Enter your password',
+                    secureTextEntry: !showPass,
+                    returnKeyType:   'done',
+                    onSubmitEditing: handleLogin,
+                    value:           password,
+                    onChangeText:    setPassword,
+                  }}
+                  right={
+                    <TouchableOpacity onPress={togglePassword} style={styles.eyeBtn} hitSlop={8}>
+                      <Ionicons
+                        name={showPass ? 'eye-off-outline' : 'eye-outline'}
+                        size={18}
+                        color={COLORS.textMuted}
+                      />
+                    </TouchableOpacity>
+                  }
+                />
+
+                {/* Forgot password */}
+                <TouchableOpacity
+                  onPress={() => navigation.navigate('ForgotPassword')}
+                  style={styles.forgotBtn}
+                  hitSlop={8}
+                >
+                  <Text style={styles.forgotText}>Forgot Password?</Text>
+                </TouchableOpacity>
+
+                {/* Sign In */}
+                <TouchableOpacity
+                  style={[styles.loginBtn, isLoading && styles.btnDisabled]}
+                  onPress={handleLogin}
+                  disabled={isLoading}
+                  activeOpacity={0.85}
+                >
+                  <LinearGradient
+                    colors={['#FF5C8A', '#FF2A6D']}
+                    start={{ x: 0, y: 0 }}
+                    end={{ x: 1, y: 1 }}
+                    style={styles.loginBtnGradient}
+                  >
+                    {isLoading ? (
+                      <ActivityIndicator color="#fff" size="small" />
+                    ) : (
+                      <>
+                        <Ionicons name="log-in-outline" size={18} color="#fff" />
+                        <Text style={styles.loginBtnText}>SIGN IN</Text>
+                      </>
+                    )}
+                  </LinearGradient>
+                </TouchableOpacity>
+              </>
+            )}
 
             {/* Info note */}
             <View style={styles.infoRow}>
@@ -480,6 +609,63 @@ const styles = StyleSheet.create({
 
   // Form
   form:      { gap: 16 },
+
+  // Role Switcher Tab
+  tabContainer: {
+    flexDirection: 'row',
+    backgroundColor: '#FFF0F3',
+    borderRadius: 16,
+    padding: 4,
+    marginBottom: 8,
+    borderWidth: 1.5,
+    borderColor: '#FFCCE1',
+  },
+  tabButton: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 10,
+    borderRadius: 12,
+    gap: 6,
+  },
+  tabButtonActive: {
+    backgroundColor: '#FF2A6D',
+    shadowColor: '#FF2A6D',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.25,
+    shadowRadius: 8,
+    elevation: 4,
+  },
+  tabText: {
+    fontSize: 12.5,
+    fontWeight: '800',
+    color: '#684E67',
+  },
+  tabTextActive: {
+    color: '#FFFFFF',
+  },
+
+  // Parent guidance notice
+  parentNoticeBox: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#ECFDF5',
+    borderWidth: 1.5,
+    borderColor: '#A7F3D0',
+    borderRadius: 14,
+    padding: 12,
+    marginBottom: 4,
+    gap: 10,
+  },
+  parentNoticeText: {
+    flex: 1,
+    fontSize: 12,
+    fontWeight: '600',
+    color: '#065F46',
+    lineHeight: 17,
+  },
+
   fieldWrap: {},
   label: {
     fontSize: 11, fontWeight: '800', color: COLORS.textDark,

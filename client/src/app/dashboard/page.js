@@ -50,6 +50,10 @@ export default function DashboardAppPage() {
 
   useEffect(() => {
     setMounted(true);
+    if (user && user.role === 'USER' && user.subscriptionStatus !== 'ACTIVE') {
+      router.replace('/pricing');
+      return;
+    }
     dispatch(fetchUser());
     dispatch(fetchContacts());
     dispatch(checkActiveSos());
