@@ -118,7 +118,7 @@ export default function GlobalEmergencyListener() {
 
       setAlarmData(data);
       setIsSirenPlaying(true);
-      playEmergencySiren(true, 60);
+      playEmergencySiren(true, 28);
     });
 
     // 🛑 WHEN SOS IS RESOLVED / STOPPED:
@@ -181,7 +181,7 @@ export default function GlobalEmergencyListener() {
       if (sosId) dispatch(muteSos(String(sosId)));
     } else {
       if (sosId) dispatch(toggleSosMute(String(sosId)));
-      playEmergencySiren(true, 60);
+      playEmergencySiren(true, 28);
       setIsSirenPlaying(true);
     }
   };

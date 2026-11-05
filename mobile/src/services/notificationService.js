@@ -74,7 +74,7 @@ export function setupFirebaseBackgroundMessageHandler() {
       if (isSos) {
         console.log('🚨 [FCM Native Background] Emergency SOS payload confirmed! Triggering siren...');
         try {
-          await playEmergencySiren(true, 60);
+          await playEmergencySiren(true, 28);
         } catch (err) {
           console.warn('[FCM Background] Siren error:', err?.message);
         }
@@ -104,7 +104,7 @@ if (Platform.OS !== 'web') {
       if (isSos) {
         console.log('🚨 [BackgroundTask] Emergency SOS received via Expo TaskManager! Playing siren for 60s...');
         try {
-          await playEmergencySiren(true, 60);
+          await playEmergencySiren(true, 28);
         } catch (err) {}
       }
     });
@@ -126,7 +126,7 @@ if (Platform.OS !== 'web') {
         notification?.request?.content?.title?.includes('SOS');
 
       if (isSos) {
-        playEmergencySiren(true, 60).catch(() => {});
+        playEmergencySiren(true, 28).catch(() => {});
       }
 
       return {
@@ -148,7 +148,7 @@ export async function setupNotificationChannels() {
     try {
       await Notifications.setNotificationChannelAsync('emergency_sos_siren_channel', {
         name: 'Emergency SOS Siren Alert',
-        description: 'Critical life-safety alarms that sound immediately for 60 seconds even when phone is locked or on silent.',
+        description: 'Critical life-safety alarms that sound immediately for 28 seconds even when phone is locked or on silent.',
         importance: Notifications.AndroidImportance.MAX,
         vibrationPattern: [0, 500, 200, 500, 200, 500],
         sound: 'alarm_siren.wav',
@@ -372,7 +372,7 @@ export function setupFcmListeners(authToken) {
         remoteMessage?.data?.type === 'CRITICAL_SOS';
 
       if (isSos) {
-        playEmergencySiren(true, 60).catch(() => {});
+        playEmergencySiren(true, 28).catch(() => {});
       }
     });
     if (typeof unsubMsg === 'function') unsubscribers.push(unsubMsg);
@@ -414,7 +414,7 @@ function handleNotificationNavigation(data) {
   if (!data) return;
   const isSos = data?.type === 'SOS_TRIGGERED' || data?.type === 'CRITICAL_SOS';
   if (isSos) {
-    playEmergencySiren(true, 60).catch(() => {});
+    playEmergencySiren(true, 28).catch(() => {});
     navigate('ActiveSOS', {
       sosId: data?.sosId,
       victimName: data?.victimName,

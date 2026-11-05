@@ -35,7 +35,7 @@ function AppInner() {
         notification?.request?.content?.data?.type === 'SOS_TRIGGERED' ||
         notification?.request?.content?.title?.includes('SOS');
       if (isSos) {
-        playEmergencySiren(true, 60).catch(() => {});
+        playEmergencySiren(true, 28).catch(() => {});
       }
     });
 
@@ -44,7 +44,7 @@ function AppInner() {
         response?.notification?.request?.content?.data?.type === 'SOS_TRIGGERED' ||
         response?.notification?.request?.content?.title?.includes('SOS');
       if (isSos) {
-        playEmergencySiren(true, 60).catch(() => {});
+        playEmergencySiren(true, 28).catch(() => {});
       }
     });
 

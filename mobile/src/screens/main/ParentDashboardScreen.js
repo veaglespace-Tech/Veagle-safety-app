@@ -236,7 +236,7 @@ export default function ParentDashboardScreen({ navigation }) {
     );
 
     if (shouldAlertOnce && hasAnyUnmuted) {
-      playEmergencySiren(true, 60).catch(() => {});
+      playEmergencySiren(true, 28).catch(() => {});
     } else if (!hasAnyUnmuted) {
       stopEmergencySiren().catch(() => {});
     }
@@ -688,7 +688,7 @@ export default function ParentDashboardScreen({ navigation }) {
                             const sosId = String(item.activeSos.id);
                             if (isMuted) {
                               playedAlertIdsRef.current.delete(sosId);
-                              playEmergencySiren(true, 60);
+                              playEmergencySiren(true, 28);
                             } else {
                               playedAlertIdsRef.current.add(sosId);
                               stopEmergencySiren();

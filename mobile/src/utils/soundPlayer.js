@@ -188,7 +188,7 @@ async function getOrCreateNativePlayer(loop = false) {
   }
 }
 
-export const playEmergencySiren = (loop = true, durationSeconds = 60) => {
+export const playEmergencySiren = (loop = true, durationSeconds = 28) => {
   isPlaying = true;
 
   if (autoStopTimeout) {
@@ -196,7 +196,7 @@ export const playEmergencySiren = (loop = true, durationSeconds = 60) => {
     autoStopTimeout = null;
   }
 
-  // Automatically stop the siren after requested duration (default 60 seconds)
+  // Automatically stop the siren after requested duration (universal 28s duration compliant with iOS <30s and Android)
   if (durationSeconds && durationSeconds > 0) {
     autoStopTimeout = setTimeout(() => {
       stopEmergencySiren();

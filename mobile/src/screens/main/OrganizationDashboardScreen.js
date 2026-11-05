@@ -228,7 +228,7 @@ export default function OrganizationDashboardScreen({ navigation }) {
     );
 
     if (shouldAlertOnce && hasUnmutedSos) {
-      playEmergencySiren(true, 60).catch(() => {});
+      playEmergencySiren(true, 28).catch(() => {});
     } else if (!hasUnmutedSos) {
       stopEmergencySiren().catch(() => {});
     }

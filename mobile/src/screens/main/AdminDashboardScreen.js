@@ -104,7 +104,7 @@ export default function AdminDashboardScreen({ navigation }) {
     );
 
     if (shouldAlertOnce && hasAnyUnmuted) {
-      playEmergencySiren(true, 60).catch(() => {});
+      playEmergencySiren(true, 28).catch(() => {});
     } else if (!hasAnyUnmuted) {
       stopEmergencySiren().catch(() => {});
     }
