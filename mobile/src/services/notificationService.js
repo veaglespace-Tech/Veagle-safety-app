@@ -4,67 +4,148 @@ import * as TaskManager from 'expo-task-manager';
 import Constants from 'expo-constants';
 import { apiClient } from '../api/apiClient';
 import { playEmergencySiren } from '../utils/soundPlayer';
+import { navigate } from '../navigation/navigationRef';
+
+// Helper to safely obtain RN Firebase Messaging instance on native platforms (iOS / Android)
+function getNativeMessaging() {
+  if (Platform.OS === 'web') return null;
+  try {
+    const rnfMessaging = require('@react-native-firebase/messaging');
+    if (typeof rnfMessaging.getMessaging === 'function') {
+      return rnfMessaging.getMessaging();
+    }
+    if (typeof rnfMessaging.default === 'function') {
+      return rnfMessaging.default();
+    }
+    if (typeof rnfMessaging === 'function') {
+      return rnfMessaging();
+    }
+  } catch (e) {
+    console.warn('[NotificationService] Native messaging load notice:', e?.message);
+  }
+  return null;
+}
 
 export const BACKGROUND_NOTIFICATION_TASK = 'BACKGROUND-EMERGENCY-SOS-TASK';
 const EAS_PROJECT_ID = '7ab3fa26-39e9-4fc7-82af-b3857b4157f6';
 
-// 1. Define headless background task that executes even when app is killed/swiped away
-try {
-  TaskManager.defineTask(BACKGROUND_NOTIFICATION_TASK, async ({ data, error, executionInfo }) => {
-    if (error) {
-      console.warn('[BackgroundTask] Execution error:', error.message);
-      return;
-    }
-    const notification = data?.notification;
-    const isSos = notification?.data?.type === 'SOS_TRIGGERED' ||
-      notification?.title?.includes('SOS') ||
-      data?.type === 'SOS_TRIGGERED';
-
-    if (isSos) {
-      console.log('🚨 [BackgroundTask] Emergency SOS received in background! Playing siren for 60s...');
-      try {
-        await playEmergencySiren(true, 60);
-      } catch (err) {}
-    }
-  });
-
-  Notifications.registerTaskAsync(BACKGROUND_NOTIFICATION_TASK).catch(() => {});
-} catch (e) {
-  console.warn('[BackgroundTask] DefineTask notice:', e?.message);
+// ---------------------------------------------------------------------------
+// 0. Deduplication Cache for Incoming Notifications
+// ---------------------------------------------------------------------------
+const processedNotificationIds = new Set();
+function isDuplicateNotification(notificationId) {
+  if (!notificationId) return false;
+  if (processedNotificationIds.has(notificationId)) return true;
+  processedNotificationIds.add(notificationId);
+  // Keep set bounded to last 100 IDs
+  if (processedNotificationIds.size > 100) {
+    const firstItem = processedNotificationIds.values().next().value;
+    processedNotificationIds.delete(firstItem);
+  }
+  return false;
 }
 
-// 2. Configure top-level notification presentation behaviour for foreground / unlocked state
-Notifications.setNotificationHandler({
-  handleNotification: async (notification) => {
-    const isSos = notification?.request?.content?.data?.type === 'SOS_TRIGGERED' ||
-      notification?.request?.content?.title?.includes('SOS');
+// ---------------------------------------------------------------------------
+// 1. Headless Background Handler for Native Firebase Cloud Messaging
+// MUST be registered early before React App initialization
+// ---------------------------------------------------------------------------
+export function setupFirebaseBackgroundMessageHandler() {
+  if (Platform.OS === 'web') return;
 
-    if (isSos) {
-      playEmergencySiren(true, 60).catch(() => {});
+  try {
+    const messaging = getNativeMessaging();
+    if (!messaging || typeof messaging.setBackgroundMessageHandler !== 'function') {
+      return;
     }
 
-    return {
-      shouldShowAlert: true,
-      shouldPlaySound: true,
-      shouldSetBadge: true,
-      shouldShowBanner: true,
-      priority: Notifications.AndroidNotificationPriority.MAX,
-    };
-  },
-});
+    messaging.setBackgroundMessageHandler(async (remoteMessage) => {
+      console.log('🚨 [FCM Native Background] Message received in background/killed state:', remoteMessage?.messageId);
 
-/**
- * Configure Android Emergency Siren Notification Channel
- * Bypasses DND, sets MAX importance, and triggers high-decibel alarm for 60 seconds
- */
+      const msgId = remoteMessage?.messageId || remoteMessage?.data?.sosId;
+      if (isDuplicateNotification(msgId)) {
+        return;
+      }
+
+      const isSos =
+        remoteMessage?.data?.type === 'SOS_TRIGGERED' ||
+        remoteMessage?.notification?.title?.includes('SOS') ||
+        remoteMessage?.data?.type === 'CRITICAL_SOS';
+
+      if (isSos) {
+        console.log('🚨 [FCM Native Background] Emergency SOS payload confirmed! Triggering siren...');
+        try {
+          await playEmergencySiren(true, 60);
+        } catch (err) {
+          console.warn('[FCM Background] Siren error:', err?.message);
+        }
+      }
+    });
+  } catch (e) {
+    console.warn('[FCM Background] setBackgroundMessageHandler notice:', e?.message);
+  }
+}
+
+// ---------------------------------------------------------------------------
+// 2. Legacy Expo TaskManager Background Task (Fallback for Expo Push Service)
+// ---------------------------------------------------------------------------
+if (Platform.OS !== 'web') {
+  try {
+    TaskManager.defineTask(BACKGROUND_NOTIFICATION_TASK, async ({ data, error, executionInfo }) => {
+      if (error) {
+        console.warn('[BackgroundTask] Execution error:', error.message);
+        return;
+      }
+      const notification = data?.notification;
+      const isSos =
+        notification?.data?.type === 'SOS_TRIGGERED' ||
+        notification?.title?.includes('SOS') ||
+        data?.type === 'SOS_TRIGGERED';
+
+      if (isSos) {
+        console.log('🚨 [BackgroundTask] Emergency SOS received via Expo TaskManager! Playing siren for 60s...');
+        try {
+          await playEmergencySiren(true, 60);
+        } catch (err) {}
+      }
+    });
+
+    Notifications.registerTaskAsync(BACKGROUND_NOTIFICATION_TASK).catch(() => {});
+  } catch (e) {
+    console.warn('[BackgroundTask] DefineTask notice:', e?.message);
+  }
+}
+
+// ---------------------------------------------------------------------------
+// 3. Configure top-level Expo notification presentation behaviour for foreground
+// ---------------------------------------------------------------------------
+if (Platform.OS !== 'web') {
+  Notifications.setNotificationHandler({
+    handleNotification: async (notification) => {
+      const isSos =
+        notification?.request?.content?.data?.type === 'SOS_TRIGGERED' ||
+        notification?.request?.content?.title?.includes('SOS');
+
+      if (isSos) {
+        playEmergencySiren(true, 60).catch(() => {});
+      }
+
+      return {
+        shouldShowAlert: true,
+        shouldPlaySound: true,
+        shouldSetBadge: true,
+        shouldShowBanner: true,
+        priority: Notifications.AndroidNotificationPriority.MAX,
+      };
+    },
+  });
+}
+
+// ---------------------------------------------------------------------------
+// 4. Configure Android Emergency Siren Notification Channel
+// ---------------------------------------------------------------------------
 export async function setupNotificationChannels() {
   if (Platform.OS === 'android') {
     try {
-      // Recreate channel if already cached so Android OS binds the fresh 60s alarm_siren.wav
-      try {
-        await Notifications.deleteNotificationChannelAsync('emergency_sos_siren_channel');
-      } catch (delErr) {}
-
       await Notifications.setNotificationChannelAsync('emergency_sos_siren_channel', {
         name: 'Emergency SOS Siren Alert',
         description: 'Critical life-safety alarms that sound immediately for 60 seconds even when phone is locked or on silent.',
@@ -81,9 +162,8 @@ export async function setupNotificationChannels() {
           contentType: Notifications.AndroidAudioContentType.SONIFICATION,
         },
       });
-      console.log('✅ [NotificationService] Emergency SOS Siren Channel configured (60s alarm)');
+      console.log('✅ [NotificationService] Emergency SOS Siren Channel configured');
 
-      // Ensure background notification task is active
       try {
         await Notifications.registerTaskAsync(BACKGROUND_NOTIFICATION_TASK);
       } catch (taskErr) {}
@@ -93,40 +173,83 @@ export async function setupNotificationChannels() {
   }
 }
 
-/**
- * Request notification permissions and register push device tokens with server
- * Registers BOTH Native FCM token (for Firebase Admin) AND Expo push token (for Expo Push Service)
- * @param {string} authToken - Logged-in user auth JWT token
- */
-export async function registerPushDeviceToken(authToken) {
-  try {
-    await setupNotificationChannels();
+// ---------------------------------------------------------------------------
+// 5. Request Native Notification Permissions (Android 13+ & iOS APNs)
+// ---------------------------------------------------------------------------
+export async function requestNotificationPermission() {
+  if (Platform.OS === 'web') return false;
 
+  try {
+    if (Platform.OS === 'ios') {
+      const messaging = getNativeMessaging();
+      if (messaging && typeof messaging.requestPermission === 'function') {
+        const authStatus = await messaging.requestPermission({
+          alert: true,
+          announcement: false,
+          badge: true,
+          carPlay: true,
+          provisional: false,
+          sound: true,
+        });
+        const enabled =
+          authStatus === 1 || // AuthorizationStatus.AUTHORIZED
+          authStatus === 2;   // AuthorizationStatus.PROVISIONAL
+        return enabled;
+      }
+    }
+
+    // Android / Fallback
     const { status: existingStatus } = await Notifications.getPermissionsAsync();
     let finalStatus = existingStatus;
     if (existingStatus !== 'granted') {
       const { status } = await Notifications.requestPermissionsAsync();
       finalStatus = status;
     }
+    return finalStatus === 'granted';
+  } catch (err) {
+    console.warn('[NotificationService] Permission request error:', err?.message);
+    return false;
+  }
+}
 
-    if (finalStatus !== 'granted') {
+// ---------------------------------------------------------------------------
+// 6. Token Registration with Backend Server
+// Registers Native FCM Token with Platform identifier
+// ---------------------------------------------------------------------------
+export async function registerPushDeviceToken(authToken) {
+  if (Platform.OS === 'web') return null;
+
+  try {
+    await setupNotificationChannels();
+
+    const permissionGranted = await requestNotificationPermission();
+    if (!permissionGranted) {
       console.log('[NotificationService] Push notification permission not granted');
       return null;
     }
 
     const tokensToRegister = [];
 
-    // 1. Fetch Native FCM Device Token (Matches google-services.json & server Firebase Admin SDK)
+    // A. Native Firebase Cloud Messaging Token (iOS & Android)
     try {
-      const deviceToken = await Notifications.getDevicePushTokenAsync();
-      if (deviceToken?.data && typeof deviceToken.data === 'string' && deviceToken.data.length > 10) {
-        tokensToRegister.push(deviceToken.data);
+      const messaging = getNativeMessaging();
+      if (messaging) {
+        if (Platform.OS === 'ios' && typeof messaging.registerDeviceForRemoteMessages === 'function') {
+          await messaging.registerDeviceForRemoteMessages();
+        }
+        if (typeof messaging.getToken === 'function') {
+          const nativeFcmToken = await messaging.getToken();
+          if (nativeFcmToken && typeof nativeFcmToken === 'string' && nativeFcmToken.length > 10) {
+            tokensToRegister.push(nativeFcmToken);
+            console.log('✅ [NotificationService] Acquired Native FCM token for', Platform.OS);
+          }
+        }
       }
     } catch (fcmErr) {
-      console.warn('[NotificationService] Native FCM device token error:', fcmErr?.message);
+      console.warn('[NotificationService] Native FCM getToken error:', fcmErr?.message);
     }
 
-    // 2. Fetch Expo Push Token (Matches Expo push service)
+    // B. Expo Push Token as fallback (for Expo push service compatibility)
     try {
       const projectId = Constants?.expoConfig?.extra?.eas?.projectId || EAS_PROJECT_ID;
       const expoToken = await Notifications.getExpoPushTokenAsync({ projectId });
@@ -137,18 +260,18 @@ export async function registerPushDeviceToken(authToken) {
       console.warn('[NotificationService] Expo push token error:', expoErr?.message);
     }
 
-    // Register each acquired token with the backend server
-    for (const t of tokensToRegister) {
+    // C. Send acquired token(s) to backend
+    for (const tokenStr of tokensToRegister) {
       try {
         await apiClient.post(
           '/push/register-device',
           {
-            token: t,
-            platform: Platform.OS,
+            token: tokenStr,
+            platform: Platform.OS, // 'android' or 'ios'
           },
           authToken ? { headers: { Authorization: `Bearer ${authToken}` } } : undefined
         );
-        console.log('✅ [NotificationService] Push token registered on server:', t.substring(0, 25) + '...');
+        console.log('✅ [NotificationService] Push token registered on backend:', tokenStr.substring(0, 20) + '...');
       } catch (postErr) {
         console.warn('[NotificationService] Push token upload error:', postErr?.message);
       }
@@ -161,16 +284,21 @@ export async function registerPushDeviceToken(authToken) {
   }
 }
 
-/**
- * Remove device push tokens upon logout
- */
+// ---------------------------------------------------------------------------
+// 7. Token Invalidation on Logout
+// ---------------------------------------------------------------------------
 export async function unregisterPushDeviceToken() {
+  if (Platform.OS === 'web') return;
+
   try {
     const tokensToRemove = [];
 
     try {
-      const deviceToken = await Notifications.getDevicePushTokenAsync();
-      if (deviceToken?.data) tokensToRemove.push(deviceToken.data);
+      const messaging = getNativeMessaging();
+      if (messaging && typeof messaging.getToken === 'function') {
+        const nativeFcmToken = await messaging.getToken();
+        if (nativeFcmToken) tokensToRemove.push(nativeFcmToken);
+      }
     } catch (e) {}
 
     try {
@@ -186,5 +314,113 @@ export async function unregisterPushDeviceToken() {
         await apiClient.post('/push/remove-device', { token: t });
       } catch (err) {}
     }
+
+    try {
+      const messaging = getNativeMessaging();
+      if (messaging && typeof messaging.deleteToken === 'function') {
+        await messaging.deleteToken();
+      }
+    } catch (delErr) {}
   } catch (e) {}
+}
+
+// ---------------------------------------------------------------------------
+// 8. Setup Full FCM Listeners (Foreground, Background Click, Terminated State, Token Refresh)
+// ---------------------------------------------------------------------------
+export function setupFcmListeners(authToken) {
+  if (Platform.OS === 'web') {
+    return () => {};
+  }
+
+  const messaging = getNativeMessaging();
+  if (!messaging) {
+    return () => {};
+  }
+
+  const unsubscribers = [];
+
+  // A. Listen for FCM Token Refresh
+  if (typeof messaging.onTokenRefresh === 'function') {
+    const unsubToken = messaging.onTokenRefresh(async (newToken) => {
+      console.log('🔄 [FCM] Token refreshed:', newToken.substring(0, 20) + '...');
+      try {
+        await apiClient.post(
+          '/push/register-device',
+          {
+            token: newToken,
+            platform: Platform.OS,
+          },
+          authToken ? { headers: { Authorization: `Bearer ${authToken}` } } : undefined
+        );
+      } catch (err) {
+        console.warn('[FCM] Failed to update refreshed token:', err?.message);
+      }
+    });
+    if (typeof unsubToken === 'function') unsubscribers.push(unsubToken);
+  }
+
+  // B. Foreground FCM Message Handler
+  if (typeof messaging.onMessage === 'function') {
+    const unsubMsg = messaging.onMessage(async (remoteMessage) => {
+      console.log('📩 [FCM Foreground] Message received:', remoteMessage?.notification?.title);
+      const msgId = remoteMessage?.messageId || remoteMessage?.data?.sosId;
+      if (isDuplicateNotification(msgId)) return;
+
+      const isSos =
+        remoteMessage?.data?.type === 'SOS_TRIGGERED' ||
+        remoteMessage?.notification?.title?.includes('SOS') ||
+        remoteMessage?.data?.type === 'CRITICAL_SOS';
+
+      if (isSos) {
+        playEmergencySiren(true, 60).catch(() => {});
+      }
+    });
+    if (typeof unsubMsg === 'function') unsubscribers.push(unsubMsg);
+  }
+
+  // C. Background -> User Tapped Notification
+  if (typeof messaging.onNotificationOpenedApp === 'function') {
+    const unsubOpen = messaging.onNotificationOpenedApp((remoteMessage) => {
+      console.log('📱 [FCM Notification Opened from Background]:', remoteMessage?.data);
+      handleNotificationNavigation(remoteMessage?.data);
+    });
+    if (typeof unsubOpen === 'function') unsubscribers.push(unsubOpen);
+  }
+
+  // D. Terminated App -> User Tapped Notification to Launch App
+  if (typeof messaging.getInitialNotification === 'function') {
+    messaging
+      .getInitialNotification()
+      .then((remoteMessage) => {
+        if (remoteMessage) {
+          console.log('🚀 [FCM Initial Notification from Terminated State]:', remoteMessage?.data);
+          handleNotificationNavigation(remoteMessage?.data);
+        }
+      })
+      .catch((err) => console.warn('[FCM Initial Notification Error]:', err?.message));
+  }
+
+  return () => {
+    unsubscribers.forEach((unsub) => {
+      try {
+        if (typeof unsub === 'function') unsub();
+      } catch (e) {}
+    });
+  };
+}
+
+// Helper to route user to correct emergency screen when notification is tapped
+function handleNotificationNavigation(data) {
+  if (!data) return;
+  const isSos = data?.type === 'SOS_TRIGGERED' || data?.type === 'CRITICAL_SOS';
+  if (isSos) {
+    playEmergencySiren(true, 60).catch(() => {});
+    navigate('ActiveSOS', {
+      sosId: data?.sosId,
+      victimName: data?.victimName,
+      trackingUrl: data?.trackingUrl,
+      latitude: data?.latitude,
+      longitude: data?.longitude,
+    });
+  }
 }

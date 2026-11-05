@@ -485,14 +485,51 @@ export const login = asyncHandler(async (req, res) => {
   const cleanPhone = inputStr.replace(/\D/g, '');
   const phone10 = cleanPhone.length >= 10 ? cleanPhone.slice(-10) : cleanPhone;
 
-  const user = await prisma.user.findFirst({
-    where: {
-      OR: [
-        { email: inputStr.toLowerCase() },
-        phone10.length >= 10 ? { phone: phone10 } : undefined,
-      ].filter(Boolean),
-    },
-  });
+  const { isParentLogin = false } = req.body;
+
+  let user = null;
+  if (isParentLogin && phone10.length >= 10) {
+    // 1. Look for existing PARENT user account with this phone
+    user = await prisma.user.findFirst({
+      where: {
+        phone: { contains: phone10 },
+        role: 'PARENT',
+      },
+    });
+
+    // 2. If no dedicated PARENT account exists yet, check if any child listed this number
+    if (!user) {
+      const childUser = await prisma.user.findFirst({
+        where: {
+          OR: [
+            { emergencyContactPhone: { contains: phone10 } },
+            { phone: { contains: phone10 } },
+          ],
+        },
+      });
+
+      if (childUser) {
+        user = await syncParentProfileAndLink({
+          childId: childUser.id,
+          parentPhone: phone10,
+          parentName: childUser.emergencyContactName || 'Parent Guardian',
+          parentEmail: childUser.parentEmail || '',
+          relationship: 'Parent',
+        });
+      }
+    }
+  }
+
+  if (!user) {
+    user = await prisma.user.findFirst({
+      where: {
+        OR: [
+          { email: inputStr.toLowerCase() },
+          phone10.length >= 10 ? { phone: phone10 } : undefined,
+        ].filter(Boolean),
+      },
+    });
+  }
 
   if (!user) {
     return res.status(401).json({ error: 'Invalid email/phone or password' });

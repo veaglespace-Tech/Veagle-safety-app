@@ -2,6 +2,7 @@ import { createSlice, createAsyncThunk } from '@reduxjs/toolkit';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { authApi } from '../../api/authApi';
 import { TOKEN_KEY } from '../../utils/constants';
+import { unregisterPushDeviceToken } from '../../services/notificationService';
 
 // ---------------------------------------------------------------------------
 // Constants
@@ -179,6 +180,7 @@ export const logoutUser = createAsyncThunk(
       // Always proceed with local logout even if the API call fails
     }
     // Remove persisted token — the fulfilled handler resets Redux state
+    await unregisterPushDeviceToken().catch(() => {});
     await AsyncStorage.removeItem(TOKEN_KEY);
     return null;
   },

@@ -20,9 +20,8 @@ export default function OTPScreen({ navigation, route }) {
   const inputs = useRef([]);
 
   useEffect(() => {
-    if (debugOtp && typeof debugOtp === 'string' && debugOtp.length === 6) {
-      setOtp(debugOtp.split(''));
-    }
+    // Auto-fill disabled for security
+    // User must enter OTP sent to their email
   }, [debugOtp]);
 
   useEffect(() => {
@@ -78,9 +77,7 @@ export default function OTPScreen({ navigation, route }) {
       if (loginUser.fulfilled.match(loginRes)) {
         setResendCooldown(60);
         setOtp(['', '', '', '', '', '']);
-        if (loginRes.payload?.debugOtp && typeof loginRes.payload.debugOtp === 'string') {
-          setOtp(loginRes.payload.debugOtp.split(''));
-        }
+        
         inputs.current[0]?.focus();
         notify('OTP Sent', 'A fresh OTP has been requested and sent to your email.');
         return;
@@ -92,9 +89,7 @@ export default function OTPScreen({ navigation, route }) {
     if (resendOtpCode.fulfilled.match(res)) {
       setResendCooldown(60);
       setOtp(['', '', '', '', '', '']);
-      if (res.payload?.debugOtp && typeof res.payload.debugOtp === 'string') {
-        setOtp(res.payload.debugOtp.split(''));
-      }
+      
       inputs.current[0]?.focus();
       notify('OTP Sent', res.payload?.message || 'A new OTP has been dispatched to your email.');
     } else {

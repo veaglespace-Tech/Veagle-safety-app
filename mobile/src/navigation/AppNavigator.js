@@ -5,6 +5,7 @@ import { useDispatch, useSelector } from 'react-redux';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { TOKEN_KEY } from '../utils/constants';
 import { fetchUser, setToken, bootstrapComplete } from '../redux/slices/authSlice';
+import { navigationRef } from './navigationRef';
 
 // Core navigators
 import RoleBasedNavigator from './RoleBasedNavigator';
@@ -113,7 +114,7 @@ export default function AppNavigator() {
       <GlobalEmergencyListener />
       {isAuthenticated && <LocationManager />}
 
-      <NavigationContainer>
+      <NavigationContainer ref={navigationRef}>
         <Stack.Navigator screenOptions={SCREEN_OPTIONS}>
           {!isAuthenticated ? (
             // ── Auth Flow ──────────────────────────────────────────────────

@@ -233,7 +233,7 @@ export default function LoginScreen({ navigation }) {
           email: loginType === 'PARENT' ? parentPhone.trim() : email.trim(),
           password: loginType === 'PARENT' ? '' : password,
           mode: 'login',
-          debugOtp: payload?.debugOtp || null,
+          // debugOtp removed for security
         });
         return true;
       }
@@ -264,7 +264,7 @@ export default function LoginScreen({ navigation }) {
     if (loginType === 'PARENT') {
       const cleanPhone = parentPhone.replace(/\D/g, '');
       const phone10 = cleanPhone.slice(-10);
-      const result = await dispatch(loginUser({ email: phone10, password: '' }));
+      const result = await dispatch(loginUser({ email: phone10, password: '', isParentLogin: true }));
 
       if (loginUser.fulfilled.match(result)) {
         handleOtpRedirect(result.payload);

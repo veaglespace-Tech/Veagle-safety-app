@@ -9,10 +9,13 @@
       "autoIncrement": false
     },
     "preview": {
-      "distribution": "internal",
       "autoIncrement": false,
       "android": {
-        "buildType": "apk"
+        "buildType": "apk",
+        "distribution": "internal"
+      },
+      "ios": {
+        "distribution": "store"
       }
     },
     "production": {
@@ -20,6 +23,9 @@
       "credentialsSource": "local",
       "android": {
         "buildType": "app-bundle"
+      },
+      "ios": {
+        "distribution": "store"
       }
     }
   },

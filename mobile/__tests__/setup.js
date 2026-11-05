@@ -43,3 +43,24 @@ jest.mock('expo-task-manager', () => ({
   defineTask: jest.fn(),
   isTaskDefined: jest.fn().mockReturnValue(true),
 }));
+
+jest.mock('expo-constants', () => ({
+  expoConfig: { extra: { eas: { projectId: 'mock-project-id' } } },
+}));
+
+jest.mock('@react-native-firebase/messaging', () => {
+  const messagingInstance = {
+    setBackgroundMessageHandler: jest.fn(),
+    requestPermission: jest.fn().mockResolvedValue(1),
+    registerDeviceForRemoteMessages: jest.fn().mockResolvedValue(true),
+    getToken: jest.fn().mockResolvedValue('mock-native-fcm-token'),
+    deleteToken: jest.fn().mockResolvedValue(true),
+    onTokenRefresh: jest.fn(() => () => {}),
+    onMessage: jest.fn(() => () => {}),
+    onNotificationOpenedApp: jest.fn(() => () => {}),
+    getInitialNotification: jest.fn().mockResolvedValue(null),
+  };
+  const fn = () => messagingInstance;
+  fn.AuthorizationStatus = { AUTHORIZED: 1, PROVISIONAL: 2 };
+  return fn;
+});

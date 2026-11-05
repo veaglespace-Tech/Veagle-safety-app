@@ -1,12 +1,17 @@
 import React, { useEffect } from 'react';
 import { Provider, useSelector } from 'react-redux';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
+import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { StatusBar } from 'expo-status-bar';
 import * as Notifications from 'expo-notifications';
 import { store } from './src/redux/store';
 import AppNavigator from './src/navigation/AppNavigator';
 import GlobalErrorBoundary from './src/components/common/GlobalErrorBoundary';
-import { setupNotificationChannels, registerPushDeviceToken } from './src/services/notificationService';
+import {
+  setupNotificationChannels,
+  registerPushDeviceToken,
+  setupFcmListeners,
+} from './src/services/notificationService';
 import { playEmergencySiren } from './src/utils/soundPlayer';
 
 function AppInner() {
@@ -16,14 +21,18 @@ function AppInner() {
     // 1. Configure Android High-Decibel Emergency Siren Channel on app start
     setupNotificationChannels();
 
-    // 2. Register Device Token with server when user is authenticated
+    // 2. Register Native FCM / Expo Device Token with server when user is authenticated
     if (token) {
       registerPushDeviceToken(token);
     }
 
-    // 3. Listen for incoming notifications while app is in foreground / background
+    // 3. Setup Native Firebase Messaging listeners (Foreground, Open from BG, Terminated, Refresh)
+    const cleanupFcm = setupFcmListeners(token);
+
+    // 4. Preserve existing Expo Notifications listeners for local / fallback notifications
     const notifSub = Notifications.addNotificationReceivedListener((notification) => {
-      const isSos = notification?.request?.content?.data?.type === 'SOS_TRIGGERED' ||
+      const isSos =
+        notification?.request?.content?.data?.type === 'SOS_TRIGGERED' ||
         notification?.request?.content?.title?.includes('SOS');
       if (isSos) {
         playEmergencySiren(true, 60).catch(() => {});
@@ -31,7 +40,8 @@ function AppInner() {
     });
 
     const responseSub = Notifications.addNotificationResponseReceivedListener((response) => {
-      const isSos = response?.notification?.request?.content?.data?.type === 'SOS_TRIGGERED' ||
+      const isSos =
+        response?.notification?.request?.content?.data?.type === 'SOS_TRIGGERED' ||
         response?.notification?.request?.content?.title?.includes('SOS');
       if (isSos) {
         playEmergencySiren(true, 60).catch(() => {});
@@ -39,6 +49,7 @@ function AppInner() {
     });
 
     return () => {
+      cleanupFcm?.();
       notifSub.remove();
       responseSub.remove();
     };
@@ -54,12 +65,14 @@ function AppInner() {
 
 export default function App() {
   return (
-    <GlobalErrorBoundary>
-      <GestureHandlerRootView style={{ flex: 1 }}>
-        <Provider store={store}>
-          <AppInner />
-        </Provider>
-      </GestureHandlerRootView>
-    </GlobalErrorBoundary>
+    <SafeAreaProvider>
+      <GlobalErrorBoundary>
+        <GestureHandlerRootView style={{ flex: 1 }}>
+          <Provider store={store}>
+            <AppInner />
+          </Provider>
+        </GestureHandlerRootView>
+      </GlobalErrorBoundary>
+    </SafeAreaProvider>
   );
 }

@@ -93,10 +93,11 @@ async function sendExpoEmergencyPush({ tokens, victimName, sosId, trackingUrl, l
       } else {
         failureCount++;
         const badToken = tokens[i];
-        console.error(`🚨 [ExpoPush Error] Token #${i} (${badToken.substring(0, 25)}...):`, ticket.message, ticket.details);
+        const masked = badToken.length > 10 ? `${badToken.substring(0, 8)}...` : '***';
+        console.error(`🚨 [ExpoPush Error] Token #${i} (${masked}):`, ticket.message, ticket.details);
 
         if (ticket.details?.error === 'DeviceNotRegistered') {
-          console.warn(`🧹 [ExpoPush Cleanup] Removing unregistered Expo token from database: ${badToken.substring(0, 25)}...`);
+          console.warn(`🧹 [ExpoPush Cleanup] Removing unregistered Expo token from database: ${masked}`);
           await prisma.deviceToken.deleteMany({ where: { token: badToken } }).catch(() => {});
         }
       }
@@ -112,11 +113,13 @@ async function sendExpoEmergencyPush({ tokens, victimName, sosId, trackingUrl, l
 
 /**
  * Send High-Priority Emergency Siren Push via Native Firebase Admin SDK
+ * Configured with Android high-priority & iOS APNs alert & custom/critical sound
  */
 async function sendFcmEmergencyPush({ tokens, victimName, sosId, trackingUrl, latitude, longitude }) {
   if (!tokens || tokens.length === 0) return { success: true, count: 0 };
 
-  console.log(`[FCM] Target tokens count: ${tokens.length}. Sample: ${tokens[0].substring(0, 20)}...`);
+  const maskedSample = tokens[0].length > 10 ? `${tokens[0].substring(0, 8)}...` : '***';
+  console.log(`[FCM] Target tokens count: ${tokens.length}. Sample: ${maskedSample}`);
 
   initFirebase();
 
@@ -144,7 +147,7 @@ async function sendFcmEmergencyPush({ tokens, victimName, sosId, trackingUrl, la
       priority: 'high',
       notification: {
         channelId: 'emergency_sos_siren_channel',
-        sound: 'default',
+        sound: 'alarm_siren.wav',
         priority: 'max',
         visibility: 'public',
         defaultVibrateTimings: false,
@@ -154,16 +157,18 @@ async function sendFcmEmergencyPush({ tokens, victimName, sosId, trackingUrl, la
     apns: {
       headers: {
         'apns-priority': '10',
+        'apns-push-type': 'alert',
       },
       payload: {
         aps: {
           alert: {
             title: '🚨 EMERGENCY SOS ALERT!',
-            body: `${victimName} activated SOS!`,
+            body: `${victimName} activated SOS! Tap to open live tracker.`,
           },
           sound: 'default',
           badge: 1,
-          'interruption-level': 'critical',
+          'content-available': 1,
+          'interruption-level': 'time-sensitive',
         },
       },
     },
@@ -180,12 +185,17 @@ async function sendFcmEmergencyPush({ tokens, victimName, sosId, trackingUrl, la
         const resp = response.responses[idx];
         if (!resp.success) {
           const badToken = tokens[idx];
+          const maskedToken = badToken.length > 10 ? `${badToken.substring(0, 8)}...` : '***';
           const errCode = resp.error?.code || 'UNKNOWN_ERROR';
           const errMsg = resp.error?.message || 'No description provided';
-          console.error(`🚨 [FCM Exact Error] Token #${idx} (${badToken.substring(0, 25)}...): Code = "${errCode}", Message = "${errMsg}"`);
+          console.error(`🚨 [FCM Error] Token #${idx} (${maskedToken}): Code = "${errCode}", Message = "${errMsg}"`);
 
-          if (errCode === 'messaging/registration-token-not-registered') {
-            console.warn(`🧹 [FCM Cleanup] Removing stale token from database: ${badToken.substring(0, 25)}...`);
+          if (
+            errCode === 'messaging/registration-token-not-registered' ||
+            errCode === 'messaging/invalid-registration-token' ||
+            errCode === 'messaging/invalid-argument'
+          ) {
+            console.warn(`🧹 [FCM Cleanup] Removing stale token from database: ${maskedToken}`);
             await prisma.deviceToken.deleteMany({ where: { token: badToken } }).catch(() => {});
           }
         }
