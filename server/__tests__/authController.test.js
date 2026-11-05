@@ -39,7 +39,7 @@ describe('Auth Controller - Unit Tests', () => {
       prismaMock.user.findFirst.mockResolvedValue({
         id: 1,
         email: 'test@example.com',
-        password: 'hashedpassword',
+        passwordHash: 'hashedpassword',
       });
 
       // Mock bcrypt to return false (password mismatch)
@@ -57,7 +57,7 @@ describe('Auth Controller - Unit Tests', () => {
       const mockUser = {
         id: 1,
         email: 'test@example.com',
-        password: 'hashedpassword',
+        passwordHash: 'hashedpassword',
         fullName: 'Test User',
         role: 'USER',
         safetyStatus: 'SAFE',

@@ -16,19 +16,10 @@ app.post('/api/sos/start', sosController.startSos);
 
 describe('SOS Controller - Unit Tests', () => {
   let prismaMock;
-  let socketMock;
 
   beforeAll(async () => {
     const prismaModule = await import('../src/config/prisma.js');
     prismaMock = prismaModule.prisma;
-    
-    // Add missing mocks that aren't auto-generated or present
-    prismaMock.trustedContact = { findMany: jest.fn() };
-    prismaMock.parentChildLink = { findMany: jest.fn() };
-    prismaMock.organizationMember = { findMany: jest.fn() };
-    
-    const socketModule = await import('../src/socket.js');
-    socketMock = socketModule;
   });
 
   afterEach(() => {
@@ -36,19 +27,41 @@ describe('SOS Controller - Unit Tests', () => {
   });
 
   describe('POST /api/sos/start', () => {
-    it('should return 400 if an active session already exists', async () => {
+    it('should reuse existing active session if one exists', async () => {
       // Mock finding an active session
-      prismaMock.sosSession.findFirst.mockResolvedValue({ id: 100, status: 'ACTIVE' });
+      prismaMock.sosSession.findFirst.mockResolvedValue({
+        id: 100,
+        userId: 1,
+        status: 'ACTIVE',
+        shareToken: 'existing-uuid-token',
+        startedAt: new Date().toISOString(),
+        isSilent: false,
+      });
+
+      prismaMock.user.findUnique.mockResolvedValue({
+        id: 1,
+        fullName: 'Jane Doe',
+        phone: '1234567890',
+        email: 'jane@example.com',
+      });
+
+      prismaMock.sosLocation.create.mockResolvedValue({
+        id: 10,
+        sosSessionId: 100,
+        latitude: 18.5204,
+        longitude: 73.8567,
+      });
 
       const response = await request(app)
         .post('/api/sos/start')
-        .send({ latitude: 18.5204, longitude: 73.8567 });
+        .send({ initialLat: 18.5204, initialLng: 73.8567 });
 
-      expect(response.status).toBe(400);
-      expect(response.body.error).toBe('An active emergency session already exists.');
+      expect(response.status).toBe(200);
+      expect(response.body.sosSession).toHaveProperty('id', 100);
+      expect(response.body.sosSession).toHaveProperty('shareToken', 'existing-uuid-token');
     });
 
-    it('should create a new SOS session and return 201', async () => {
+    it('should create a new SOS session and return 200', async () => {
       // Mock NO active session exists
       prismaMock.sosSession.findFirst.mockResolvedValue(null);
 
@@ -57,7 +70,7 @@ describe('SOS Controller - Unit Tests', () => {
         id: 1,
         fullName: 'Jane Doe',
         phone: '1234567890',
-        trustedContacts: []
+        email: 'jane@example.com',
       });
 
       // Mock session creation
@@ -65,7 +78,9 @@ describe('SOS Controller - Unit Tests', () => {
         id: 101,
         userId: 1,
         status: 'ACTIVE',
-        shareToken: 'test-uuid-token'
+        shareToken: 'test-uuid-token',
+        startedAt: new Date().toISOString(),
+        isSilent: false,
       });
 
       // Mock location creation
@@ -76,18 +91,14 @@ describe('SOS Controller - Unit Tests', () => {
         longitude: 73.8567,
       });
 
-      prismaMock.trustedContact.findMany.mockResolvedValue([]);
-      prismaMock.parentChildLink.findMany.mockResolvedValue([]);
-      prismaMock.organizationMember.findMany.mockResolvedValue([]);
-
       const response = await request(app)
         .post('/api/sos/start')
-        .send({ latitude: 18.5204, longitude: 73.8567 });
+        .send({ initialLat: 18.5204, initialLng: 73.8567 });
 
-      expect(response.status).toBe(201);
-      expect(response.body).toHaveProperty('sessionId', 101);
-      expect(response.body).toHaveProperty('shareToken', 'test-uuid-token');
-      
+      expect(response.status).toBe(200);
+      expect(response.body.sosSession).toHaveProperty('id', 101);
+      expect(response.body.sosSession).toHaveProperty('shareToken', 'test-uuid-token');
+
       // Verify prisma was called correctly
       expect(prismaMock.sosSession.create).toHaveBeenCalled();
       expect(prismaMock.sosLocation.create).toHaveBeenCalled();
