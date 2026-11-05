@@ -234,35 +234,31 @@ export async function sendEmergencySirenPush({ tokens, victimName, sosId, tracki
     return { success: false, reason: 'No valid device tokens provided' };
   }
 
+  // Purge any stale legacy Expo tokens from DB
   const isExpoToken = (t) => t.startsWith('ExponentPushToken[') || t.startsWith('ExpoPushToken[');
-  const expoTokens = validTokens.filter(isExpoToken);
+  const legacyExpoTokens = validTokens.filter(isExpoToken);
   const fcmTokens = validTokens.filter((t) => !isExpoToken(t));
 
-  console.log(`[Push Dispatch] Total: ${validTokens.length} (Expo: ${expoTokens.length}, Native FCM: ${fcmTokens.length})`);
-
-  const results = {};
-
-  if (expoTokens.length > 0) {
-    results.expo = await sendExpoEmergencyPush({
-      tokens: expoTokens,
-      victimName,
-      sosId,
-      trackingUrl,
-      latitude,
-      longitude,
-    });
+  if (legacyExpoTokens.length > 0) {
+    import('../config/prisma.js').then(({ prisma }) => {
+      prisma.deviceToken.deleteMany({
+        where: { token: { in: legacyExpoTokens } },
+      }).catch(() => {});
+    }).catch(() => {});
   }
 
-  if (fcmTokens.length > 0) {
-    results.fcm = await sendFcmEmergencyPush({
-      tokens: fcmTokens,
-      victimName,
-      sosId,
-      trackingUrl,
-      latitude,
-      longitude,
-    });
+  console.log(`[Push Dispatch] Sending direct Native FCM Siren Push to ${fcmTokens.length} device(s) via Google Firebase Admin SDK`);
+
+  if (fcmTokens.length === 0) {
+    return { success: false, reason: 'No native FCM tokens available' };
   }
 
-  return { success: true, results };
+  return await sendFcmEmergencyPush({
+    tokens: fcmTokens,
+    victimName,
+    sosId,
+    trackingUrl,
+    latitude,
+    longitude,
+  });
 }

@@ -228,8 +228,8 @@ export async function requestNotificationPermission() {
 }
 
 // ---------------------------------------------------------------------------
-// 6. Token Registration with Backend Server
-// Registers Native FCM Token with Platform identifier
+// 6. Direct Native Google FCM Token Registration with Backend Server
+// Exclusively registers Native FCM Token (NO Expo account / Push Token)
 // ---------------------------------------------------------------------------
 export async function registerPushDeviceToken(authToken) {
   if (Platform.OS === 'web') return null;
@@ -243,58 +243,55 @@ export async function registerPushDeviceToken(authToken) {
       return null;
     }
 
-    const tokensToRegister = [];
+    // Direct Native Google FCM Token (iOS & Android)
+    let nativeFcmToken = null;
+    const messaging = getNativeMessaging();
 
-    // A. Native Firebase Cloud Messaging Token (iOS & Android)
-    try {
-      const messaging = getNativeMessaging();
-      if (messaging) {
-        if (Platform.OS === 'ios' && typeof messaging.registerDeviceForRemoteMessages === 'function') {
+    if (messaging) {
+      if (Platform.OS === 'ios' && typeof messaging.registerDeviceForRemoteMessages === 'function') {
+        try {
           await messaging.registerDeviceForRemoteMessages();
-        }
-        if (typeof messaging.getToken === 'function') {
-          const nativeFcmToken = await messaging.getToken();
-          if (nativeFcmToken && typeof nativeFcmToken === 'string' && nativeFcmToken.length > 10) {
-            tokensToRegister.push(nativeFcmToken);
-            console.log('✅ [NotificationService] Acquired Native FCM token for', Platform.OS);
-          }
+        } catch (regErr) {
+          console.warn('[NotificationService] registerDeviceForRemoteMessages notice:', regErr?.message);
         }
       }
-    } catch (fcmErr) {
-      console.warn('[NotificationService] Native FCM getToken error:', fcmErr?.message);
+
+      if (typeof messaging.getToken === 'function') {
+        try {
+          nativeFcmToken = await messaging.getToken();
+        } catch (fcmErr) {
+          console.error('❌ [NotificationService] Native FCM getToken error:', fcmErr?.message);
+        }
+      }
+    } else {
+      console.warn('⚠️ [NotificationService] Native Firebase Messaging module not available');
     }
 
-    // B. Expo Push Token as fallback (for Expo push service compatibility)
+    if (!nativeFcmToken || typeof nativeFcmToken !== 'string' || nativeFcmToken.length < 10) {
+      console.warn('⚠️ [NotificationService] No valid Native FCM token acquired. Skipping registration.');
+      return null;
+    }
+
+    console.log(`✅ [NotificationService] Acquired Direct Native FCM Token for ${Platform.OS}: ${nativeFcmToken.substring(0, 25)}...`);
+
+    // Register pure Native FCM token with backend
     try {
-      const projectId = Constants?.expoConfig?.extra?.eas?.projectId || EAS_PROJECT_ID;
-      const expoToken = await Notifications.getExpoPushTokenAsync({ projectId });
-      if (expoToken?.data && typeof expoToken.data === 'string' && !tokensToRegister.includes(expoToken.data)) {
-        tokensToRegister.push(expoToken.data);
-      }
-    } catch (expoErr) {
-      console.warn('[NotificationService] Expo push token error:', expoErr?.message);
+      await apiClient.post(
+        '/push/register-device',
+        {
+          token: nativeFcmToken,
+          platform: Platform.OS, // 'android' or 'ios'
+        },
+        authToken ? { headers: { Authorization: `Bearer ${authToken}` } } : undefined
+      );
+      console.log('🚀 [NotificationService] Native FCM token successfully registered on backend');
+    } catch (postErr) {
+      console.warn('❌ [NotificationService] Native FCM token upload error:', postErr?.message);
     }
 
-    // C. Send acquired token(s) to backend
-    for (const tokenStr of tokensToRegister) {
-      try {
-        await apiClient.post(
-          '/push/register-device',
-          {
-            token: tokenStr,
-            platform: Platform.OS, // 'android' or 'ios'
-          },
-          authToken ? { headers: { Authorization: `Bearer ${authToken}` } } : undefined
-        );
-        console.log('✅ [NotificationService] Push token registered on backend:', tokenStr.substring(0, 20) + '...');
-      } catch (postErr) {
-        console.warn('[NotificationService] Push token upload error:', postErr?.message);
-      }
-    }
-
-    return tokensToRegister[0] || null;
+    return nativeFcmToken;
   } catch (error) {
-    console.warn('[NotificationService] Device registration notice:', error?.message);
+    console.warn('[NotificationService] Device registration error:', error?.message);
     return null;
   }
 }
@@ -306,36 +303,19 @@ export async function unregisterPushDeviceToken() {
   if (Platform.OS === 'web') return;
 
   try {
-    const tokensToRemove = [];
-
-    try {
-      const messaging = getNativeMessaging();
-      if (messaging && typeof messaging.getToken === 'function') {
-        const nativeFcmToken = await messaging.getToken();
-        if (nativeFcmToken) tokensToRemove.push(nativeFcmToken);
-      }
-    } catch (e) {}
-
-    try {
-      const projectId = Constants?.expoConfig?.extra?.eas?.projectId || EAS_PROJECT_ID;
-      const expoToken = await Notifications.getExpoPushTokenAsync({ projectId });
-      if (expoToken?.data && !tokensToRemove.includes(expoToken.data)) {
-        tokensToRemove.push(expoToken.data);
-      }
-    } catch (e) {}
-
-    for (const t of tokensToRemove) {
+    const messaging = getNativeMessaging();
+    if (messaging && typeof messaging.getToken === 'function') {
       try {
-        await apiClient.post('/push/remove-device', { token: t });
-      } catch (err) {}
-    }
+        const nativeFcmToken = await messaging.getToken();
+        if (nativeFcmToken) {
+          await apiClient.post('/push/remove-device', { token: nativeFcmToken }).catch(() => {});
+        }
+      } catch (e) {}
 
-    try {
-      const messaging = getNativeMessaging();
-      if (messaging && typeof messaging.deleteToken === 'function') {
-        await messaging.deleteToken();
+      if (typeof messaging.deleteToken === 'function') {
+        await messaging.deleteToken().catch(() => {});
       }
-    } catch (delErr) {}
+    }
   } catch (e) {}
 }
 
