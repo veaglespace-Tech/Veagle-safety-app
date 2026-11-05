@@ -181,6 +181,20 @@ export async function requestNotificationPermission() {
 
   try {
     if (Platform.OS === 'ios') {
+      try {
+        const { status: existingStatus } = await Notifications.getPermissionsAsync();
+        if (existingStatus !== 'granted') {
+          await Notifications.requestPermissionsAsync({
+            ios: {
+              allowAlert: true,
+              allowBadge: true,
+              allowSound: true,
+              allowAnnouncements: false,
+            },
+          });
+        }
+      } catch (expoErr) {}
+
       const messaging = getNativeMessaging();
       if (messaging && typeof messaging.requestPermission === 'function') {
         const authStatus = await messaging.requestPermission({
@@ -196,6 +210,7 @@ export async function requestNotificationPermission() {
           authStatus === 2;   // AuthorizationStatus.PROVISIONAL
         return enabled;
       }
+      return true;
     }
 
     // Android / Fallback

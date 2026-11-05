@@ -228,38 +228,48 @@ export const startSos = async (req, res) => {
       const targetRooms = new Set();
       targetRooms.add('admin-ops');
 
+      // 1. Linked parents from parentChildLink
       parentLinks.forEach((link) => {
         if (link.parent?.email) targetRooms.add(`user:${link.parent.email.trim().toLowerCase()}`);
         if (link.parent?.phone) {
           const cleanP = link.parent.phone.replace(/\D/g, '');
-          if (cleanP) targetRooms.add(`user:${cleanP}`);
+          if (cleanP) {
+            targetRooms.add(`user:${cleanP}`);
+            if (cleanP.length >= 10) targetRooms.add(`user:${cleanP.slice(-10)}`);
+          }
         }
       });
 
+      // 2. All SuperAdmins and Admins rooms
+      const allAdmins = await prisma.user.findMany({
+        where: { role: { in: ['SUPER_ADMIN', 'ADMIN'] } },
+        select: { id: true, email: true, phone: true },
+      }).catch(() => []);
 
+      allAdmins.forEach((adm) => {
+        if (adm.email) targetRooms.add(`user:${adm.email.trim().toLowerCase()}`);
+        if (adm.phone) {
+          const cp = adm.phone.replace(/\D/g, '');
+          if (cp) {
+            targetRooms.add(`user:${cp}`);
+            if (cp.length >= 10) targetRooms.add(`user:${cp.slice(-10)}`);
+          }
+        }
+      });
 
+      // 3. Parent email on user profile
       if (currentUser?.parentEmail) {
         targetRooms.add(`user:${currentUser.parentEmail.trim().toLowerCase()}`);
       }
-      if (currentUser?.organization?.email) {
-        targetRooms.add(`user:${currentUser.organization.email.trim().toLowerCase()}`);
-      }
+      // 4. Emergency contact phone on user profile
       if (currentUser?.emergencyContactPhone) {
         const cleanEmergencyPhone = currentUser.emergencyContactPhone.replace(/\D/g, '');
         if (cleanEmergencyPhone) {
           targetRooms.add(`user:${cleanEmergencyPhone}`);
+          if (cleanEmergencyPhone.length >= 10) targetRooms.add(`user:${cleanEmergencyPhone.slice(-10)}`);
         }
       }
-      if (currentUser?.email) {
-        targetRooms.add(`user:${currentUser.email.trim().toLowerCase()}`);
-      }
-      if (currentUser?.phone) {
-        const cleanVictimPhone = currentUser.phone.replace(/\D/g, '');
-        if (cleanVictimPhone) {
-          targetRooms.add(`user:${cleanVictimPhone}`);
-        }
-      }
-
+      // 5. Trusted Contacts
       contacts.forEach((c) => {
         if (c.email && typeof c.email === 'string') {
           targetRooms.add(`user:${c.email.trim().toLowerCase()}`);
@@ -268,6 +278,7 @@ export const startSos = async (req, res) => {
           const cleanPhone = c.phone.replace(/\D/g, '');
           if (cleanPhone) {
             targetRooms.add(`user:${cleanPhone}`);
+            if (cleanPhone.length >= 10) targetRooms.add(`user:${cleanPhone.slice(-10)}`);
           }
         }
       });
@@ -276,6 +287,8 @@ export const startSos = async (req, res) => {
       targetRooms.forEach((roomName) => {
         io.to(roomName).emit('SOS_ALARM_BROADCAST', sosAlarmPayload);
       });
+      // Also broadcast directly to admin-ops
+      io.to('admin-ops').emit('SOS_ALARM_BROADCAST', sosAlarmPayload);
     }
 
     // 5. Send Web Push Notifications to all trusted contacts' devices
@@ -288,31 +301,87 @@ export const startSos = async (req, res) => {
       longitude,
     });
 
-    // 6. Send Native Mobile FCM Push (High-Decibel Siren to Parents, Guardians & Admins)
+    // 6. Send Native Mobile FCM Push (High-Decibel Siren to BOTH Parents, Guardians & Admins)
     try {
       const recipientUserIds = new Set();
-      // Add linked parents
+
+      // A. Add ALL SuperAdmins and Admins
+      const superAdmins = await prisma.user.findMany({
+        where: { role: { in: ['SUPER_ADMIN', 'ADMIN'] } },
+        select: { id: true },
+      }).catch(() => []);
+      superAdmins.forEach((a) => recipientUserIds.add(a.id));
+
+      // B. Add linked parents from parentChildLink
       parentLinks.forEach((link) => {
         if (link.parentId) recipientUserIds.add(link.parentId);
       });
-      // Add organization admin if any
+
+      // C. Look up parent account by child's emergencyContactPhone
+      if (currentUser?.emergencyContactPhone) {
+        const cleanECP = currentUser.emergencyContactPhone.replace(/\D/g, '');
+        const ecp10 = cleanECP.slice(-10);
+        if (ecp10.length >= 10) {
+          const matchedParentUsers = await prisma.user.findMany({
+            where: {
+              OR: [
+                { phone: { contains: ecp10 } },
+                { phone: ecp10 },
+              ],
+            },
+            select: { id: true },
+          }).catch(() => []);
+          matchedParentUsers.forEach((p) => recipientUserIds.add(p.id));
+        }
+      }
+
+      // D. Look up parent account by child's parentEmail
+      if (currentUser?.parentEmail) {
+        const matchedParentByEmail = await prisma.user.findMany({
+          where: { email: currentUser.parentEmail.trim().toLowerCase() },
+          select: { id: true },
+        }).catch(() => []);
+        matchedParentByEmail.forEach((p) => recipientUserIds.add(p.id));
+      }
+
+      // E. Look up any user accounts matching trusted contacts (phone or email)
+      for (const contact of contacts) {
+        const orConds = [];
+        if (contact.phone) {
+          const cp = contact.phone.replace(/\D/g, '').slice(-10);
+          if (cp.length >= 10) orConds.push({ phone: { contains: cp } });
+        }
+        if (contact.email && contact.email.trim()) {
+          orConds.push({ email: contact.email.trim().toLowerCase() });
+        }
+        if (orConds.length > 0) {
+          const matchedContacts = await prisma.user.findMany({
+            where: { OR: orConds },
+            select: { id: true },
+          }).catch(() => []);
+          matchedContacts.forEach((u) => recipientUserIds.add(u.id));
+        }
+      }
+
+      // F. Add organization admin if any
       if (currentUser?.organizationId) {
         recipientUserIds.add(currentUser.organizationId);
       }
-      // Add super admins
-      const superAdmins = await prisma.user.findMany({
-        where: { role: 'SUPER_ADMIN' },
-        select: { id: true },
-      });
-      superAdmins.forEach((a) => recipientUserIds.add(a.id));
+
+      // NEVER send guardian siren to the victim themselves
+      recipientUserIds.delete(userId);
+
+      console.log(`🚨 [FCM Emergency Dispatch] Resolved ${recipientUserIds.size} recipient user(s):`, Array.from(recipientUserIds));
 
       if (recipientUserIds.size > 0) {
         const deviceTokenRecords = await prisma.deviceToken.findMany({
           where: { userId: { in: Array.from(recipientUserIds) } },
-          select: { token: true },
+          select: { token: true, userId: true, platform: true },
         });
 
-        const fcmTokens = deviceTokenRecords.map((t) => t.token);
+        console.log(`📱 [FCM Emergency Dispatch] Found ${deviceTokenRecords.length} registered device token(s) across recipients`);
+
+        const fcmTokens = Array.from(new Set(deviceTokenRecords.map((t) => t.token)));
         if (fcmTokens.length > 0) {
           sendEmergencySirenPush({
             tokens: fcmTokens,

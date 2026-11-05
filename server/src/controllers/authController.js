@@ -497,6 +497,31 @@ export const login = asyncHandler(async (req, res) => {
       },
     });
 
+    // If existing parent user found, ensure all children that list this number are linked
+    if (user) {
+      try {
+        const matchingKids = await prisma.user.findMany({
+          where: {
+            id: { not: user.id },
+            OR: [
+              { emergencyContactPhone: { contains: phone10 } },
+              user.email ? { parentEmail: user.email } : undefined,
+            ].filter(Boolean),
+          },
+          select: { id: true },
+        });
+        for (const kid of matchingKids) {
+          await prisma.parentChildLink.upsert({
+            where: { parentId_childId: { parentId: user.id, childId: kid.id } },
+            update: { status: 'ACTIVE' },
+            create: { parentId: user.id, childId: kid.id, relationship: 'Child', status: 'ACTIVE' },
+          });
+        }
+      } catch (linkErr) {
+        console.warn('[Parent Login Auto-Link Notice]:', linkErr.message);
+      }
+    }
+
     // 2. If no dedicated PARENT account exists yet, check if any child listed this number
     if (!user) {
       const childUser = await prisma.user.findFirst({

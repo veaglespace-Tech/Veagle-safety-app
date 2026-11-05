@@ -62,7 +62,7 @@ async function sendExpoEmergencyPush({ tokens, victimName, sosId, trackingUrl, l
       longitude: String(longitude || ''),
       timestamp: new Date().toISOString(),
     },
-    sound: 'default',
+    sound: 'alarm_siren.wav',
     priority: 'high',
     channelId: 'emergency_sos_siren_channel',
     _displayInForeground: true,
@@ -133,6 +133,7 @@ async function sendFcmEmergencyPush({ tokens, victimName, sosId, trackingUrl, la
     notification: {
       title: '🚨 EMERGENCY SOS ALERT!',
       body: `${victimName} activated SOS! Tap to open live tracker.`,
+      sound: 'alarm_siren.wav',
     },
     data: {
       type: 'SOS_TRIGGERED',
@@ -165,11 +166,7 @@ async function sendFcmEmergencyPush({ tokens, victimName, sosId, trackingUrl, la
             title: '🚨 EMERGENCY SOS ALERT!',
             body: `${victimName} activated SOS! Tap to open live tracker.`,
           },
-          sound: {
-            critical: 1,
-            name: 'alarm_siren.wav',
-            volume: 1.0,
-          },
+          sound: 'alarm_siren.wav',
           badge: 1,
           'content-available': 1,
           'interruption-level': 'time-sensitive',
