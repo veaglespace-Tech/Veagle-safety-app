@@ -165,7 +165,11 @@ async function sendFcmEmergencyPush({ tokens, victimName, sosId, trackingUrl, la
             title: '🚨 EMERGENCY SOS ALERT!',
             body: `${victimName} activated SOS! Tap to open live tracker.`,
           },
-          sound: 'default',
+          sound: {
+            critical: 1,
+            name: 'alarm_siren.wav',
+            volume: 1.0,
+          },
           badge: 1,
           'content-available': 1,
           'interruption-level': 'time-sensitive',

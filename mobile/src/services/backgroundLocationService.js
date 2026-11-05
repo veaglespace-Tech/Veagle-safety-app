@@ -1,6 +1,7 @@
 import { Platform } from 'react-native';
 import * as TaskManager from 'expo-task-manager';
 import * as Location from 'expo-location';
+import * as Notifications from 'expo-notifications';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { apiClient } from '../api/apiClient';
 
@@ -92,6 +93,8 @@ export async function startBackgroundLocationTracking(sosSessionId) {
         distanceInterval: 1,     // Or every 1 meter movement
         deferredUpdatesInterval: 3000,
         showsBackgroundLocationIndicator: true,
+        pausesLocationUpdatesAutomatically: false, // CRITICAL for iOS: Prevents Apple CoreLocation from sleeping
+        activityType: Location.ActivityType.OtherNavigation, // CRITICAL for iOS: High-precision life-safety tracking
         foregroundService: {
           notificationTitle: '🚨 Emergency SOS Live Tracking Active',
           notificationBody: 'SakhiSuraksha is continuously sharing your live location with your emergency contacts.',
@@ -101,6 +104,21 @@ export async function startBackgroundLocationTracking(sosSessionId) {
       });
       console.log('✅ [BackgroundLocation] Persistent foreground service started for SOS session:', sosSessionId);
     }
+
+    // On iOS, post the active SOS tracking notification to Lock Screen & Notification Center
+    if (Platform.OS === 'ios') {
+      try {
+        await Notifications.scheduleNotificationAsync({
+          content: {
+            title: '🚨 Emergency SOS Live Tracking Active',
+            body: 'SakhiSuraksha is continuously sharing your live location with your emergency contacts.',
+            sound: false,
+          },
+          trigger: null,
+        });
+      } catch (notifErr) {}
+    }
+
     return true;
   } catch (err) {
     console.warn('[BackgroundLocation] Start error:', err?.message);
@@ -120,6 +138,13 @@ export async function stopBackgroundLocationTracking() {
     if (hasStarted) {
       await Location.stopLocationUpdatesAsync(BACKGROUND_LOCATION_TASK).catch(() => {});
       console.log('🛑 [BackgroundLocation] Background tracking & foreground service stopped');
+    }
+
+    // Dismiss active emergency tracking notification on iOS
+    if (Platform.OS === 'ios') {
+      try {
+        await Notifications.dismissAllNotificationsAsync().catch(() => {});
+      } catch (e) {}
     }
   } catch (err) {
     console.warn('[BackgroundLocation] Stop error:', err?.message);

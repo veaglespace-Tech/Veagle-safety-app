@@ -129,10 +129,12 @@ export default function SOSHeroButton() {
     const result = await requestPermissionsAfterConsent();
     if (result.foregroundGranted) {
       dispatch(setLocationStatus('LIVE'));
-      if (!result.backgroundGranted && Platform.OS === 'android') {
+      if (!result.backgroundGranted) {
         Alert.alert(
           'Background Safety Access',
-          'To ensure live tracking continues even when the app is closed or your phone is locked, please choose "Allow all the time" in location permissions.',
+          Platform.OS === 'ios'
+            ? 'To ensure live tracking continues when your screen is locked or while using other apps, please set Location to "Always" in Settings.'
+            : 'To ensure live tracking continues even when the app is closed or your phone is locked, please choose "Allow all the time" in location permissions.',
           [
             { text: 'Later', style: 'cancel' },
             { text: 'Open Settings', onPress: () => Linking.openSettings().catch(() => {}) }
