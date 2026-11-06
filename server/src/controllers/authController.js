@@ -488,7 +488,7 @@ export const login = asyncHandler(async (req, res) => {
   const { isParentLogin = false } = req.body;
 
   let user = null;
-  if (isParentLogin && phone10.length >= 10) {
+  if ((isParentLogin || !password) && phone10.length >= 10) {
     // 1. Look for existing PARENT user account with this phone
     user = await prisma.user.findFirst({
       where: {
@@ -497,28 +497,22 @@ export const login = asyncHandler(async (req, res) => {
       },
     });
 
-    // If existing parent user found, ensure all children that list this number are linked
-    if (user) {
-      try {
-        const matchingKids = await prisma.user.findMany({
-          where: {
-            id: { not: user.id },
-            OR: [
-              { emergencyContactPhone: { contains: phone10 } },
-              user.email ? { parentEmail: user.email } : undefined,
-            ].filter(Boolean),
-          },
-          select: { id: true },
+    // Also check TrustedContact if phone was added as a guardian contact by a child
+    if (!user) {
+      const contact = await prisma.trustedContact.findFirst({
+        where: {
+          phone: { contains: phone10 },
+        },
+      });
+
+      if (contact) {
+        user = await syncParentProfileAndLink({
+          childId: contact.userId,
+          parentPhone: phone10,
+          parentName: contact.name || 'Parent Guardian',
+          parentEmail: contact.email || '',
+          relationship: contact.relationship || 'Guardian',
         });
-        for (const kid of matchingKids) {
-          await prisma.parentChildLink.upsert({
-            where: { parentId_childId: { parentId: user.id, childId: kid.id } },
-            update: { status: 'ACTIVE' },
-            create: { parentId: user.id, childId: kid.id, relationship: 'Child', status: 'ACTIVE' },
-          });
-        }
-      } catch (linkErr) {
-        console.warn('[Parent Login Auto-Link Notice]:', linkErr.message);
       }
     }
 
@@ -543,6 +537,31 @@ export const login = asyncHandler(async (req, res) => {
         });
       }
     }
+
+    // If parent user found, ensure all children that list this number or parent email are linked
+    if (user) {
+      try {
+        const matchingKids = await prisma.user.findMany({
+          where: {
+            id: { not: user.id },
+            OR: [
+              { emergencyContactPhone: { contains: phone10 } },
+              user.email ? { parentEmail: user.email } : undefined,
+            ].filter(Boolean),
+          },
+          select: { id: true },
+        });
+        for (const kid of matchingKids) {
+          await prisma.parentChildLink.upsert({
+            where: { parentId_childId: { parentId: user.id, childId: kid.id } },
+            update: { status: 'ACTIVE' },
+            create: { parentId: user.id, childId: kid.id, relationship: 'Child', status: 'ACTIVE' },
+          });
+        }
+      } catch (linkErr) {
+        console.warn('[Parent Login Auto-Link Notice]:', linkErr.message);
+      }
+    }
   }
 
   if (!user) {
@@ -561,7 +580,8 @@ export const login = asyncHandler(async (req, res) => {
   }
 
   // ONLY PARENT role can log in using phone number without password
-  const isPhoneLogin = phone10.length >= 10 && user.phone === phone10;
+  const userPhoneClean = user.phone ? user.phone.replace(/\D/g, '') : '';
+  const isPhoneLogin = (phone10.length >= 10 && (userPhoneClean.endsWith(phone10) || phone10.endsWith(userPhoneClean))) || isParentLogin;
 
   if (isPhoneLogin && !password) {
     // Check if the user has PARENT role
