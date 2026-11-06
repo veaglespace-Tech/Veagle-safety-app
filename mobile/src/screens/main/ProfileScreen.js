@@ -16,6 +16,13 @@ export default function ProfileScreen({ navigation }) {
   const dispatch = useDispatch();
   const { user, isLoading } = useSelector((state) => state.auth);
 
+  const role = String(user?.role || '').toUpperCase();
+  const isParent = role === 'PARENT';
+  const isSuperAdmin = role.includes('ADMIN');
+  const isOrg = role === 'ORGANIZATION';
+  const showEmergencyContact = !isParent && !isSuperAdmin && !isOrg;
+  const showSubscriptionPlan = !isParent && !isSuperAdmin;
+
   const [isEditing, setIsEditing] = useState(false);
   const [fullName, setFullName] = useState('');
   const [phone, setPhone] = useState('');
@@ -176,39 +183,52 @@ export default function ProfileScreen({ navigation }) {
           </View>
         )}
 
-        {/* EMERGENCY CONTACT */}
-        <Animated.View entering={FadeInUp.delay(200).duration(500)} style={styles.section}>
-          <Text style={styles.sectionTitle}>Emergency Contact</Text>
-          {isEditing ? (
-            <View style={{ gap: 12 }}>
-              <View>
-                <Text style={styles.fieldLabel}>Contact Name</Text>
-                <TextInput style={styles.fieldInput} value={emergencyContactName} onChangeText={setEmergencyContactName} placeholder="Parent / Guardian name" placeholderTextColor={COLORS.primaryBorder} />
+        {/* EMERGENCY CONTACT (Only for regular members who need guardian protection) */}
+        {showEmergencyContact && (
+          <Animated.View entering={FadeInUp.delay(200).duration(500)} style={styles.section}>
+            <Text style={styles.sectionTitle}>Emergency Contact</Text>
+            {isEditing ? (
+              <View style={{ gap: 12 }}>
+                <View>
+                  <Text style={styles.fieldLabel}>Contact Name</Text>
+                  <TextInput style={styles.fieldInput} value={emergencyContactName} onChangeText={setEmergencyContactName} placeholder="Parent / Guardian name" placeholderTextColor={COLORS.primaryBorder} />
+                </View>
+                <View>
+                  <Text style={styles.fieldLabel}>Contact Phone</Text>
+                  <TextInput style={styles.fieldInput} value={emergencyContactPhone} onChangeText={setEmergencyContactPhone} placeholder="+91 98765 00000" placeholderTextColor={COLORS.primaryBorder} keyboardType="phone-pad" />
+                </View>
+                <View>
+                  <Text style={styles.fieldLabel}>Relationship</Text>
+                  <ScrollView horizontal showsHorizontalScrollIndicator={false}>
+                    {EMERGENCY_RELATIONS.map(r => (
+                      <TouchableOpacity key={r} onPress={() => setEmergencyContactRelation(r)}
+                        style={[styles.pill, emergencyContactRelation === r && styles.pillActive]}>
+                        <Text style={[styles.pillText, emergencyContactRelation === r && styles.pillTextActive]}>{r}</Text>
+                      </TouchableOpacity>
+                    ))}
+                  </ScrollView>
+                </View>
               </View>
-              <View>
-                <Text style={styles.fieldLabel}>Contact Phone</Text>
-                <TextInput style={styles.fieldInput} value={emergencyContactPhone} onChangeText={setEmergencyContactPhone} placeholder="+91 98765 00000" placeholderTextColor={COLORS.primaryBorder} keyboardType="phone-pad" />
+            ) : (
+              <View style={{ gap: 2 }}>
+                <InfoRow icon="person-add-outline" label="Contact Name" value={user?.emergencyContactName} />
+                <InfoRow icon="call-outline" label="Contact Phone" value={user?.emergencyContactPhone} />
+                <InfoRow icon="people-outline" label="Relationship" value={user?.emergencyContactRelation} />
               </View>
-              <View>
-                <Text style={styles.fieldLabel}>Relationship</Text>
-                <ScrollView horizontal showsHorizontalScrollIndicator={false}>
-                  {EMERGENCY_RELATIONS.map(r => (
-                    <TouchableOpacity key={r} onPress={() => setEmergencyContactRelation(r)}
-                      style={[styles.pill, emergencyContactRelation === r && styles.pillActive]}>
-                      <Text style={[styles.pillText, emergencyContactRelation === r && styles.pillTextActive]}>{r}</Text>
-                    </TouchableOpacity>
-                  ))}
-                </ScrollView>
-              </View>
-            </View>
-          ) : (
+            )}
+          </Animated.View>
+        )}
+
+        {/* PARENT GUARDIAN ACCESS BADGE */}
+        {isParent && (
+          <Animated.View entering={FadeInUp.delay(200).duration(500)} style={styles.section}>
+            <Text style={styles.sectionTitle}>Guardian Portal Access</Text>
             <View style={{ gap: 2 }}>
-              <InfoRow icon="person-add-outline" label="Contact Name" value={user?.emergencyContactName} />
-              <InfoRow icon="call-outline" label="Contact Phone" value={user?.emergencyContactPhone} />
-              <InfoRow icon="people-outline" label="Relationship" value={user?.emergencyContactRelation} />
+              <InfoRow icon="shield-checkmark-outline" label="Account Role" value="Child Safety Guardian" />
+              <InfoRow icon="heart-outline" label="Guardian Access" value="Complimentary Active Access" />
             </View>
-          )}
-        </Animated.View>
+          </Animated.View>
+        )}
 
         {/* SAVE BUTTON */}
         {isEditing && (
@@ -231,8 +251,9 @@ export default function ProfileScreen({ navigation }) {
           </TouchableOpacity>
         )}
 
-        {/* SAFETY PLAN & UPGRADE SECTION */}
-        <Animated.View entering={FadeInUp.delay(230).duration(500)} style={styles.section}>
+        {/* SAFETY PLAN & UPGRADE SECTION (Regular members only) */}
+        {showSubscriptionPlan && (
+          <Animated.View entering={FadeInUp.delay(230).duration(500)} style={styles.section}>
           <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
             <Text style={styles.sectionTitle}>Safety Plan & Upgrade</Text>
             <View style={[styles.subStatusBadge, user?.subscriptionStatus === 'ACTIVE' ? styles.subActiveBadge : styles.subInactiveBadge]}>
@@ -271,6 +292,7 @@ export default function ProfileScreen({ navigation }) {
             </TouchableOpacity>
           </View>
         </Animated.View>
+        )}
 
         {/* ABOUT & LEGAL */}
         <Animated.View entering={FadeInUp.delay(250).duration(500)} style={styles.section}>
