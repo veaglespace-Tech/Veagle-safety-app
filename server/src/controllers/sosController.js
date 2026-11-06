@@ -369,7 +369,10 @@ export const startSos = async (req, res) => {
       }
 
       // NEVER send guardian siren to the victim themselves
+      const numericUserId = parseInt(userId, 10);
       recipientUserIds.delete(userId);
+      recipientUserIds.delete(numericUserId);
+      recipientUserIds.delete(String(userId));
 
       console.log(`🚨 [FCM Emergency Dispatch] Resolved ${recipientUserIds.size} recipient user(s):`, Array.from(recipientUserIds));
 
@@ -379,12 +382,28 @@ export const startSos = async (req, res) => {
           select: { token: true, userId: true, platform: true },
         });
 
-        console.log(`📱 [FCM Emergency Dispatch] Found ${deviceTokenRecords.length} registered device token(s) across recipients`);
+        // Always exclude any tokens belonging to the victim (e.g. from prior role logins on same device)
+        const victimDeviceTokens = await prisma.deviceToken.findMany({
+          where: {
+            OR: [
+              ...(isNaN(numericUserId) ? [] : [{ userId: numericUserId }]),
+              ...(userId ? [{ userId }] : []),
+            ],
+          },
+          select: { token: true },
+        }).catch(() => []);
+        const victimTokenSet = new Set(victimDeviceTokens.map((t) => t.token));
 
-        const fcmTokens = Array.from(new Set(deviceTokenRecords.map((t) => t.token)));
+        const fcmTokens = Array.from(new Set(deviceTokenRecords.map((t) => t.token))).filter(
+          (t) => !victimTokenSet.has(t)
+        );
+
+        console.log(`📱 [FCM Emergency Dispatch] Found ${fcmTokens.length} registered device token(s) across recipients (victim tokens excluded)`);
+
         if (fcmTokens.length > 0) {
           sendEmergencySirenPush({
             tokens: fcmTokens,
+            victimId: userId,
             victimName: currentUser?.fullName || 'Sakhi Suraksha User',
             sosId: session.id,
             trackingUrl,

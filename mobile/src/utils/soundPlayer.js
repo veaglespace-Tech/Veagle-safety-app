@@ -156,39 +156,64 @@ function setupNativePlayer(player, loop = false) {
 }
 
 // 2. LAZY ON-DEMAND NATIVE AUDIO PLAYER (Zero startup overhead, immune to cold-start crashes)
+let nativePlayerInitPromise = null;
 async function getOrCreateNativePlayer(loop = false) {
   if (Platform.OS === 'web') return null;
-  try {
-    if (activeNativePlayer) {
-      setupNativePlayer(activeNativePlayer, loop);
-      return activeNativePlayer;
-    }
-    const { createAudioPlayer, setAudioModeAsync } = await import('expo-audio');
-    if (setAudioModeAsync) {
-      await setAudioModeAsync({
-        playsInSilentMode: true,
-        staysActiveInBackground: true,
-        interruptionMode: 'doNotMixPersistent',
-        shouldRouteThroughEarpiece: false,
-      }).catch(() => {});
-    }
-    const localSiren = require('../../assets/sounds/alarm_siren.wav');
-    const player = createAudioPlayer(localSiren, {
-      keepAudioSessionActive: true,
-      preferredForwardBufferDuration: 10,
-    });
-    if (player) {
-      setupNativePlayer(player, loop);
-      activeNativePlayer = player;
-    }
+  if (activeNativePlayer) {
+    setupNativePlayer(activeNativePlayer, loop);
     return activeNativePlayer;
-  } catch (err) {
-    console.warn('[SoundPlayer] Native audio initialization fallback:', err?.message);
-    return null;
   }
+  if (nativePlayerInitPromise) {
+    return nativePlayerInitPromise;
+  }
+
+  nativePlayerInitPromise = (async () => {
+    try {
+      const { createAudioPlayer, setAudioModeAsync } = await import('expo-audio');
+      if (setAudioModeAsync) {
+        await setAudioModeAsync({
+          playsInSilentMode: true,
+          staysActiveInBackground: true,
+          interruptionMode: 'doNotMixPersistent',
+          shouldRouteThroughEarpiece: false,
+        }).catch(() => {});
+      }
+      const localSiren = require('../../assets/sounds/alarm_siren.wav');
+      const player = createAudioPlayer(localSiren, {
+        keepAudioSessionActive: true,
+        preferredForwardBufferDuration: 10,
+      });
+      if (player) {
+        setupNativePlayer(player, loop);
+        activeNativePlayer = player;
+      }
+      return activeNativePlayer;
+    } catch (err) {
+      console.warn('[SoundPlayer] Native audio initialization fallback:', err?.message);
+      return null;
+    } finally {
+      nativePlayerInitPromise = null;
+    }
+  })();
+
+  return nativePlayerInitPromise;
 }
 
 export const playEmergencySiren = (loop = true, durationSeconds = 28) => {
+  // If native player is ALREADY actively playing, do not create a second instance or seek/restart (prevents double siren)
+  if (isPlaying && activeNativePlayer && activeNativePlayer.playing) {
+    if (autoStopTimeout) {
+      clearTimeout(autoStopTimeout);
+      autoStopTimeout = null;
+    }
+    if (durationSeconds && durationSeconds > 0) {
+      autoStopTimeout = setTimeout(() => {
+        stopEmergencySiren();
+      }, durationSeconds * 1000);
+    }
+    return Promise.resolve();
+  }
+
   isPlaying = true;
 
   if (autoStopTimeout) {

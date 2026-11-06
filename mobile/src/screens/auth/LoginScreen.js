@@ -53,7 +53,7 @@ const InputField = memo(function InputField({ label, icon, right, inputProps }) 
     <View style={styles.fieldWrap}>
       <Text style={styles.label}>{label}</Text>
       <View style={styles.inputRow}>
-        <Ionicons name={icon} size={18} color={COLORS.textMuted} style={styles.inputIcon} />
+        <Ionicons name={icon} size={22} color={COLORS.textMuted} style={styles.inputIcon} />
         <TextInput
           style={styles.input}
           placeholderTextColor={COLORS.primaryBorder}
@@ -462,7 +462,7 @@ export default function LoginScreen({ navigation }) {
                     <TouchableOpacity onPress={togglePassword} style={styles.eyeBtn} hitSlop={8}>
                       <Ionicons
                         name={showPass ? 'eye-off-outline' : 'eye-outline'}
-                        size={18}
+                        size={22}
                         color={COLORS.textMuted}
                       />
                     </TouchableOpacity>
@@ -668,21 +668,46 @@ const styles = StyleSheet.create({
 
   fieldWrap: {},
   label: {
-    fontSize: 11, fontWeight: '800', color: COLORS.textDark,
-    textTransform: 'uppercase', letterSpacing: 0.8, marginBottom: 8,
+    fontSize: 12.5,
+    fontWeight: '800',
+    color: COLORS.textDark,
+    textTransform: 'uppercase',
+    letterSpacing: 0.8,
+    marginBottom: 8,
   },
   inputRow: {
-    flexDirection: 'row', alignItems: 'center',
+    flexDirection: 'row',
+    alignItems: 'center',
     backgroundColor: COLORS.surface,
-    borderWidth: 1.5, borderColor: COLORS.primaryBorder,
-    borderRadius: 16, paddingHorizontal: 14, paddingVertical: 14,
+    borderWidth: 1.5,
+    borderColor: COLORS.primaryBorder,
+    borderRadius: 16,
+    paddingHorizontal: 16,
+    paddingVertical: Platform.OS === 'ios' ? 14 : 10,
+    minHeight: 56,
     shadowColor: COLORS.primary,
     shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.06, shadowRadius: 6, elevation: 2,
+    shadowOpacity: 0.06,
+    shadowRadius: 6,
+    elevation: 2,
   },
-  inputIcon: { marginRight: 10 },
-  input:     { flex: 1, fontSize: 14, fontWeight: '600', color: COLORS.textDark },
-  eyeBtn:    { padding: 4 },
+  inputIcon: {
+    marginRight: 12,
+  },
+  input: {
+    flex: 1,
+    fontSize: 16,
+    fontWeight: '600',
+    color: COLORS.textDark,
+    minHeight: 44,
+    paddingVertical: Platform.OS === 'ios' ? 4 : 0,
+    ...(Platform.OS === 'web' ? { outlineStyle: 'none', outline: 'none' } : {}),
+  },
+  eyeBtn: {
+    padding: 6,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
 
   // Forgot
   forgotBtn:  { alignSelf: 'flex-end', marginTop: -4 },

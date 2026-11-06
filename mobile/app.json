@@ -8,7 +8,7 @@
         "projectId": "1fbff418-6a14-4ad6-870c-9ba1fb381634"
       }
     },
-    "version": "1.1.0",
+    "version": "1.0.2",
     "orientation": "portrait",
     "icon": "./assets/logo_attractive.png",
     "userInterfaceStyle": "light",
@@ -17,7 +17,7 @@
     "ios": {
       "supportsTablet": false,
       "bundleIdentifier": "com.veaglesafety.app",
-      "buildNumber": "4",
+      "buildNumber": "7",
       "infoPlist": {
         "NSLocationWhenInUseUsageDescription": "SakhiSuraksha requires your location to determine your real-time position so it can be instantly shared with your trusted Guardians and Organization Administrators during an active SOS emergency.",
         "NSLocationAlwaysAndWhenInUseUsageDescription": "SakhiSuraksha requires background location access to continuously broadcast your live position to emergency contacts even when your phone is locked or the app is minimized during an active SOS event. This continuous tracking is critical for your safety.",

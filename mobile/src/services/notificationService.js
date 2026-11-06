@@ -30,7 +30,7 @@ export const BACKGROUND_NOTIFICATION_TASK = 'BACKGROUND-EMERGENCY-SOS-TASK';
 const EAS_PROJECT_ID = '7ab3fa26-39e9-4fc7-82af-b3857b4157f6';
 
 // ---------------------------------------------------------------------------
-// 0. Deduplication Cache for Incoming Notifications
+// 0. Deduplication & Victim Safety Filter
 // ---------------------------------------------------------------------------
 const processedNotificationIds = new Set();
 function isDuplicateNotification(notificationId) {
@@ -43,6 +43,100 @@ function isDuplicateNotification(notificationId) {
     processedNotificationIds.delete(firstItem);
   }
   return false;
+}
+
+/**
+ * Checks whether this notification is an emergency SOS alert that SHOULD ring the siren.
+ * CRITICAL SAFETY RULE: Never ring the siren on the victim's own device!
+ */
+export function shouldPlaySirenForNotification(remoteMessageOrData) {
+  if (!remoteMessageOrData) return false;
+  const data = remoteMessageOrData?.data || remoteMessageOrData || {};
+  const isSos =
+    data.type === 'SOS_TRIGGERED' ||
+    data.type === 'CRITICAL_SOS' ||
+    data.type === 'SOS_EMERGENCY' ||
+    data.type === 'EMERGENCY' ||
+    remoteMessageOrData?.notification?.title?.includes('SOS') ||
+    data.title?.includes('SOS');
+
+  if (!isSos) return false;
+
+  try {
+    // Lazily resolve store to avoid circular dependency during bootstrap
+    const { store } = require('../redux/store');
+    const state = store?.getState?.();
+    const sosState = state?.sos;
+    const user = state?.auth?.user;
+
+    const currentUserId = user?.id || user?._id || user?.userId;
+    const currentUserEmail = (user?.email || '').trim().toLowerCase();
+    const currentUserPhone = (user?.phone || '').replace(/\D/g, '');
+
+    // 1. If this device triggered SOS or is in active SOS -> NEVER ring siren on this device
+    const isRecentlyTriggered = sosState?.lastTriggeredAt && (Date.now() - sosState.lastTriggeredAt < 120000);
+    if (sosState?.isTriggering || isRecentlyTriggered || sosState?.activeSession) {
+      console.log('🔇 [NotificationService] Suppressing siren: device actively triggered / in active SOS');
+      return false;
+    }
+
+    // 2. If the user logged into this device is a regular USER -> NEVER ring siren for guardian notifications
+    if (String(user?.role || '').toUpperCase() === 'USER') {
+      console.log('🔇 [NotificationService] Suppressing siren: regular user role does not receive guardian siren');
+      return false;
+    }
+
+    // 3. Multi-backend victim ID matching
+    const incomingVictimId =
+      data.victimId ||
+      data.victim_id ||
+      data.userId ||
+      data.user_id ||
+      data.senderId ||
+      data.sender_id ||
+      data.user?.id ||
+      data.user?._id ||
+      data.session?.userId ||
+      data.session?.victimId ||
+      data.id;
+
+    if (currentUserId && incomingVictimId && String(currentUserId) === String(incomingVictimId)) {
+      console.log('🔇 [NotificationService] Suppressing siren: current logged-in user matches victim ID');
+      return false;
+    }
+
+    // 4. Multi-backend email matching
+    const incomingEmail = (
+      data.victimEmail ||
+      data.userEmail ||
+      data.email ||
+      data.user?.email ||
+      ''
+    ).trim().toLowerCase();
+
+    if (currentUserEmail && incomingEmail && currentUserEmail === incomingEmail) {
+      console.log('🔇 [NotificationService] Suppressing siren: current user email matches victim');
+      return false;
+    }
+
+    // 5. Multi-backend phone matching
+    const incomingPhone = (
+      data.victimPhone ||
+      data.userPhone ||
+      data.phone ||
+      data.user?.phone ||
+      ''
+    ).replace(/\D/g, '');
+
+    if (currentUserPhone && incomingPhone && currentUserPhone.slice(-10) === incomingPhone.slice(-10)) {
+      console.log('🔇 [NotificationService] Suppressing siren: current user phone matches victim');
+      return false;
+    }
+  } catch (e) {
+    console.warn('[NotificationService] Victim check notice:', e?.message);
+  }
+
+  return true;
 }
 
 // ---------------------------------------------------------------------------
@@ -66,13 +160,8 @@ export function setupFirebaseBackgroundMessageHandler() {
         return;
       }
 
-      const isSos =
-        remoteMessage?.data?.type === 'SOS_TRIGGERED' ||
-        remoteMessage?.notification?.title?.includes('SOS') ||
-        remoteMessage?.data?.type === 'CRITICAL_SOS';
-
-      if (isSos) {
-        console.log('🚨 [FCM Native Background] Emergency SOS payload confirmed! Triggering siren...');
+      if (shouldPlaySirenForNotification(remoteMessage)) {
+        console.log('🚨 [FCM Native Background] Emergency SOS payload confirmed! Triggering siren for guardian/admin...');
         try {
           await playEmergencySiren(true, 28);
         } catch (err) {
@@ -96,13 +185,10 @@ if (Platform.OS !== 'web') {
         return;
       }
       const notification = data?.notification;
-      const isSos =
-        notification?.data?.type === 'SOS_TRIGGERED' ||
-        notification?.title?.includes('SOS') ||
-        data?.type === 'SOS_TRIGGERED';
+      const payloadData = notification?.data || data;
 
-      if (isSos) {
-        console.log('🚨 [BackgroundTask] Emergency SOS received via Expo TaskManager! Playing siren for 60s...');
+      if (shouldPlaySirenForNotification(payloadData)) {
+        console.log('🚨 [BackgroundTask] Emergency SOS received via Expo TaskManager! Playing siren for 28s...');
         try {
           await playEmergencySiren(true, 28);
         } catch (err) {}
@@ -121,17 +207,10 @@ if (Platform.OS !== 'web') {
 if (Platform.OS !== 'web') {
   Notifications.setNotificationHandler({
     handleNotification: async (notification) => {
-      const isSos =
-        notification?.request?.content?.data?.type === 'SOS_TRIGGERED' ||
-        notification?.request?.content?.title?.includes('SOS');
-
-      if (isSos) {
-        playEmergencySiren(true, 28).catch(() => {});
-      }
-
+      // Audio siren is managed exclusively by messaging.onMessage to avoid dual-playback
       return {
         shouldShowAlert: true,
-        shouldPlaySound: true,
+        shouldPlaySound: false, // Prevent OS notification chime from overlapping with emergency siren WAV
         shouldSetBadge: true,
         shouldShowBanner: true,
         priority: Notifications.AndroidNotificationPriority.MAX,
@@ -332,6 +411,15 @@ export function setupFcmListeners(authToken) {
     return () => {};
   }
 
+  // On iOS, explicitly suppress native APNs hardware sound in foreground
+  if (Platform.OS === 'ios' && typeof messaging.setForegroundNotificationPresentationOptions === 'function') {
+    messaging.setForegroundNotificationPresentationOptions({
+      alert: true,
+      badge: true,
+      sound: false,
+    }).catch(() => {});
+  }
+
   const unsubscribers = [];
 
   // A. Listen for FCM Token Refresh
@@ -361,12 +449,7 @@ export function setupFcmListeners(authToken) {
       const msgId = remoteMessage?.messageId || remoteMessage?.data?.sosId;
       if (isDuplicateNotification(msgId)) return;
 
-      const isSos =
-        remoteMessage?.data?.type === 'SOS_TRIGGERED' ||
-        remoteMessage?.notification?.title?.includes('SOS') ||
-        remoteMessage?.data?.type === 'CRITICAL_SOS';
-
-      if (isSos) {
+      if (shouldPlaySirenForNotification(remoteMessage)) {
         playEmergencySiren(true, 28).catch(() => {});
       }
     });
@@ -409,7 +492,9 @@ function handleNotificationNavigation(data) {
   if (!data) return;
   const isSos = data?.type === 'SOS_TRIGGERED' || data?.type === 'CRITICAL_SOS';
   if (isSos) {
-    playEmergencySiren(true, 28).catch(() => {});
+    if (shouldPlaySirenForNotification(data)) {
+      playEmergencySiren(true, 28).catch(() => {});
+    }
     navigate('ActiveSOS', {
       sosId: data?.sosId,
       victimName: data?.victimName,

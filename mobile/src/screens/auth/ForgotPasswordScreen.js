@@ -61,7 +61,7 @@ export default function ForgotPasswordScreen({ navigation }) {
                 <View style={styles.form}>
                   <Text style={styles.label}>Email Address</Text>
                   <View style={styles.inputRow}>
-                    <Ionicons name="mail-outline" size={18} color={COLORS.textMuted} style={{ marginRight: 10 }} />
+                    <Ionicons name="mail-outline" size={22} color={COLORS.textMuted} style={{ marginRight: 12 }} />
                     <TextInput
                       style={styles.input}
                       placeholder="your@email.com"
@@ -105,9 +105,27 @@ const styles = StyleSheet.create({
   subtitle: { fontSize: 13, fontWeight: '600', color: COLORS.textMuted, textAlign: 'center', lineHeight: 20, marginBottom: 28 },
   highlight: { fontWeight: '800', color: COLORS.primary },
   form: { width: '100%', marginBottom: 20 },
-  label: { fontSize: 11, fontWeight: '800', color: COLORS.textDark, textTransform: 'uppercase', letterSpacing: 0.8, marginBottom: 8 },
-  inputRow: { flexDirection: 'row', alignItems: 'center', backgroundColor: COLORS.surface, borderWidth: 1.5, borderColor: COLORS.primaryBorder, borderRadius: 16, paddingHorizontal: 14, paddingVertical: 14 },
-  input: { flex: 1, fontSize: 14, fontWeight: '600', color: COLORS.textDark },
+  label: { fontSize: 12.5, fontWeight: '800', color: COLORS.textDark, textTransform: 'uppercase', letterSpacing: 0.8, marginBottom: 8 },
+  inputRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: COLORS.surface,
+    borderWidth: 1.5,
+    borderColor: COLORS.primaryBorder,
+    borderRadius: 16,
+    paddingHorizontal: 16,
+    paddingVertical: Platform.OS === 'ios' ? 14 : 10,
+    minHeight: 56,
+  },
+  input: {
+    flex: 1,
+    fontSize: 16,
+    fontWeight: '600',
+    color: COLORS.textDark,
+    minHeight: 44,
+    paddingVertical: Platform.OS === 'ios' ? 4 : 0,
+    ...(Platform.OS === 'web' ? { outlineStyle: 'none', outline: 'none' } : {}),
+  },
   btn: { width: '100%', backgroundColor: COLORS.primary, borderRadius: 999, paddingVertical: 17, alignItems: 'center', shadowColor: COLORS.primary, shadowOffset: { width: 0, height: 8 }, shadowOpacity: 0.38, shadowRadius: 20, elevation: 10 },
   btnDisabled: { opacity: 0.65 },
   btnText: { fontSize: 14, fontWeight: '900', color: '#fff', letterSpacing: 1 },

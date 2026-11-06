@@ -13,11 +13,15 @@ import { playEmergencySiren, stopEmergencySiren } from '../../utils/soundPlayer'
 import { stopBackgroundLocationTracking } from '../../services/backgroundLocationService';
 import { clearSosState, checkActiveSos, muteSos, toggleSosMute } from '../../redux/slices/sosSlice';
 import { adminApi } from '../../api/adminApi';
+import { store } from '../../redux/store';
 
 export default function GlobalEmergencyListener() {
   const dispatch = useDispatch();
   const { user } = useSelector(state => state.auth);
   const mutedSosIds = useSelector(state => state.sos?.mutedSosIds || []);
+  const activeSession = useSelector(state => state.sos?.activeSession);
+  const isTriggering = useSelector(state => state.sos?.isTriggering);
+
   const [alarmData, setAlarmData] = useState(null);
   const [isSirenPlaying, setIsSirenPlaying] = useState(false);
   const socketRef = useRef(null);
@@ -27,6 +31,18 @@ export default function GlobalEmergencyListener() {
   useEffect(() => {
     mutedSosIdsRef.current = mutedSosIds;
   }, [mutedSosIds]);
+
+  // If this device is in an active SOS session or actively triggering SOS,
+  // immediately dismiss any guardian emergency broadcast modal and stop siren
+  useEffect(() => {
+    if (activeSession || isTriggering) {
+      if (alarmData) {
+        setAlarmData(null);
+        setIsSirenPlaying(false);
+        stopEmergencySiren();
+      }
+    }
+  }, [activeSession, isTriggering, alarmData]);
 
   useEffect(() => {
     if (!user) return;
@@ -94,16 +110,60 @@ export default function GlobalEmergencyListener() {
 
     // 🚨 WHEN ANYONE TRIGGERS SOS:
     socket.on('SOS_ALARM_BROADCAST', (data) => {
-      const sosId = data?.sosId || data?.id || data?.sosSessionId;
+      const sosId = data?.sosId || data?.id || data?.sosSessionId || data?.session?.id;
       if (sosId && (dismissedSosIdsRef.current.has(String(sosId)) || (mutedSosIdsRef.current && mutedSosIdsRef.current.includes(String(sosId))))) {
         return;
       }
 
-      // Suppress siren for victim who triggered SOS (self-safety)
-      const currentId = user?.id || user?._id;
-      const victimId = data?.victimId;
-      const victimEmail = (data?.victimEmail || '').trim().toLowerCase();
-      const victimPhone = (data?.victimPhone || '').replace(/\D/g, '');
+      const sosState = store.getState()?.sos;
+      const isDeviceTriggering = sosState?.isTriggering;
+      const isDeviceInActiveSos = Boolean(sosState?.activeSession);
+      const isRecentlyTriggered = sosState?.lastTriggeredAt && (Date.now() - sosState.lastTriggeredAt < 120000);
+
+      // 1. Suppress if this device triggered or is in active SOS (prevents ringing on victim's panel)
+      if (isDeviceTriggering || isRecentlyTriggered || isDeviceInActiveSos) {
+        console.log('🔇 [GlobalEmergencyListener] Suppressing siren: this device triggered / is in active SOS');
+        return;
+      }
+
+      const currentActiveSosId = sosState?.activeSession?.id;
+      if (currentActiveSosId && sosId && String(currentActiveSosId) === String(sosId)) {
+        console.log('🔇 [GlobalEmergencyListener] Suppressing siren: active session ID matches on this device');
+        return;
+      }
+
+      // 2. Comprehensive multi-backend victim ID matching
+      const currentId = user?.id || user?._id || user?.userId;
+      const victimId =
+        data?.victimId ||
+        data?.victim_id ||
+        data?.userId ||
+        data?.user_id ||
+        data?.senderId ||
+        data?.sender_id ||
+        data?.user?.id ||
+        data?.user?._id ||
+        data?.session?.userId ||
+        data?.session?.victimId;
+
+      const victimEmail = (
+        data?.victimEmail ||
+        data?.userEmail ||
+        data?.email ||
+        data?.user?.email ||
+        data?.session?.user?.email ||
+        ''
+      ).trim().toLowerCase();
+
+      const victimPhone = (
+        data?.victimPhone ||
+        data?.userPhone ||
+        data?.phone ||
+        data?.user?.phone ||
+        data?.session?.user?.phone ||
+        ''
+      ).replace(/\D/g, '');
+
       const userEmail = (user?.email || '').trim().toLowerCase();
       const userPhone = (user?.phone || '').replace(/\D/g, '');
 
@@ -113,6 +173,13 @@ export default function GlobalEmergencyListener() {
         (userPhone && victimPhone && userPhone.slice(-10) === victimPhone.slice(-10));
 
       if (isVictim) {
+        console.log('🔇 [GlobalEmergencyListener] Suppressing siren: logged-in user matches victim identity');
+        return;
+      }
+
+      // 3. Regular users should not receive the Admin/Guardian emergency dispatch modal
+      if (String(user?.role || '').toUpperCase() === 'USER') {
+        console.log('🔇 [GlobalEmergencyListener] Suppressing siren: regular user role does not receive dispatch modals');
         return;
       }
 

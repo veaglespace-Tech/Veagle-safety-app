@@ -20,7 +20,6 @@
     },
     "production": {
       "autoIncrement": false,
-      "credentialsSource": "local",
       "android": {
         "buildType": "app-bundle"
       },

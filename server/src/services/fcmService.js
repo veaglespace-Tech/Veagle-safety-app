@@ -44,7 +44,7 @@ export function initFirebase() {
  * Send High-Priority Emergency Siren Push via Expo Push Service
  * Wakes device from sleep and plays emergency siren on channel: 'emergency_sos_siren_channel'
  */
-async function sendExpoEmergencyPush({ tokens, victimName, sosId, trackingUrl, latitude, longitude }) {
+async function sendExpoEmergencyPush({ tokens, victimId, victimName, sosId, trackingUrl, latitude, longitude }) {
   if (!tokens || tokens.length === 0) return { success: true, count: 0 };
 
   console.log(`[ExpoPush] Sending emergency siren to ${tokens.length} Expo tokens...`);
@@ -56,6 +56,7 @@ async function sendExpoEmergencyPush({ tokens, victimName, sosId, trackingUrl, l
     data: {
       type: 'SOS_TRIGGERED',
       sosId: String(sosId),
+      victimId: String(victimId || ''),
       victimName: String(victimName),
       trackingUrl: String(trackingUrl || ''),
       latitude: String(latitude || ''),
@@ -115,7 +116,7 @@ async function sendExpoEmergencyPush({ tokens, victimName, sosId, trackingUrl, l
  * Send High-Priority Emergency Siren Push via Native Firebase Admin SDK
  * Configured with Android high-priority & iOS APNs alert & custom/critical sound
  */
-async function sendFcmEmergencyPush({ tokens, victimName, sosId, trackingUrl, latitude, longitude }) {
+async function sendFcmEmergencyPush({ tokens, victimId, victimName, sosId, trackingUrl, latitude, longitude }) {
   if (!tokens || tokens.length === 0) return { success: true, count: 0 };
 
   const maskedSample = tokens[0].length > 10 ? `${tokens[0].substring(0, 8)}...` : '***';
@@ -138,6 +139,7 @@ async function sendFcmEmergencyPush({ tokens, victimName, sosId, trackingUrl, la
     data: {
       type: 'SOS_TRIGGERED',
       sosId: String(sosId),
+      victimId: String(victimId || ''),
       victimName: String(victimName),
       trackingUrl: String(trackingUrl || ''),
       latitude: String(latitude || ''),
@@ -227,7 +229,7 @@ async function sendFcmEmergencyPush({ tokens, victimName, sosId, trackingUrl, la
  * @param {number} [params.latitude] - Victim latitude
  * @param {number} [params.longitude] - Victim longitude
  */
-export async function sendEmergencySirenPush({ tokens, victimName, sosId, trackingUrl, latitude, longitude }) {
+export async function sendEmergencySirenPush({ tokens, victimId, victimName, sosId, trackingUrl, latitude, longitude }) {
   const validTokens = Array.from(new Set((tokens || []).filter((t) => typeof t === 'string' && t.trim().length > 10)));
 
   if (validTokens.length === 0) {
@@ -255,6 +257,7 @@ export async function sendEmergencySirenPush({ tokens, victimName, sosId, tracki
 
   return await sendFcmEmergencyPush({
     tokens: fcmTokens,
+    victimId,
     victimName,
     sosId,
     trackingUrl,

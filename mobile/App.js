@@ -11,6 +11,7 @@ import {
   setupNotificationChannels,
   registerPushDeviceToken,
   setupFcmListeners,
+  shouldPlaySirenForNotification,
 } from './src/services/notificationService';
 import { playEmergencySiren } from './src/utils/soundPlayer';
 
@@ -29,28 +30,16 @@ function AppInner() {
     // 3. Setup Native Firebase Messaging listeners (Foreground, Open from BG, Terminated, Refresh)
     const cleanupFcm = setupFcmListeners(token);
 
-    // 4. Preserve existing Expo Notifications listeners for local / fallback notifications
-    const notifSub = Notifications.addNotificationReceivedListener((notification) => {
-      const isSos =
-        notification?.request?.content?.data?.type === 'SOS_TRIGGERED' ||
-        notification?.request?.content?.title?.includes('SOS');
-      if (isSos) {
-        playEmergencySiren(true, 28).catch(() => {});
-      }
-    });
-
+    // 4. Fallback for non-FCM local notification response (tap)
     const responseSub = Notifications.addNotificationResponseReceivedListener((response) => {
-      const isSos =
-        response?.notification?.request?.content?.data?.type === 'SOS_TRIGGERED' ||
-        response?.notification?.request?.content?.title?.includes('SOS');
-      if (isSos) {
+      const data = response?.notification?.request?.content?.data;
+      if (shouldPlaySirenForNotification(data)) {
         playEmergencySiren(true, 28).catch(() => {});
       }
     });
 
     return () => {
       cleanupFcm?.();
-      notifSub.remove();
       responseSub.remove();
     };
   }, [token]);

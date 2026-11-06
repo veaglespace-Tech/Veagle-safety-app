@@ -6,10 +6,11 @@ import { startBackgroundLocationTracking, stopBackgroundLocationTracking } from 
 export const startEmergencySos = createAsyncThunk('sos/startEmergencySos', async (payload, { rejectWithValue }) => {
   try {
     const data = await sosApi.startSos(payload);
-    if (data.sosSession?.id) {
-      startBackgroundLocationTracking(data.sosSession.id).catch(() => {});
+    const session = data?.sosSession || data?.session || data?.data || data?.sos || data;
+    if (session?.id) {
+      startBackgroundLocationTracking(session.id).catch(() => {});
     }
-    return data.sosSession;
+    return session;
   } catch (err) {
     return rejectWithValue(err.response?.data?.error || 'Failed to activate Emergency SOS');
   }
@@ -19,7 +20,7 @@ export const resolveEmergencySos = createAsyncThunk('sos/resolveEmergencySos', a
   try {
     const data = await sosApi.resolveSos(sosSessionId);
     stopBackgroundLocationTracking().catch(() => {});
-    return data.session;
+    return data?.session || data?.sosSession || data?.data || data;
   } catch (err) {
     return rejectWithValue(err.response?.data?.error || 'Failed to resolve Emergency SOS');
   }
@@ -28,7 +29,8 @@ export const resolveEmergencySos = createAsyncThunk('sos/resolveEmergencySos', a
 export const checkActiveSos = createAsyncThunk('sos/checkActiveSos', async (_, { rejectWithValue }) => {
   try {
     const data = await sosApi.fetchActiveSos();
-    return data.session;
+    const session = data?.session || data?.sosSession || data?.data || data?.sos || data;
+    return session?.id ? session : (data?.id ? data : null);
   } catch (err) {
     return rejectWithValue(null);
   }
@@ -41,6 +43,7 @@ const sosSlice = createSlice({
     isTriggering: false,
     isResolving: false,
     isAlarmPlaying: false,
+    lastTriggeredAt: null,
     mutedSosIds: [],
     error: null,
   },
@@ -49,6 +52,7 @@ const sosSlice = createSlice({
       state.activeSession = null;
       state.isTriggering = false;
       state.isResolving = false;
+      state.isAlarmPlaying = false;
       state.error = null;
     },
     toggleSosMute: (state, action) => {
@@ -76,12 +80,14 @@ const sosSlice = createSlice({
     builder
       .addCase(startEmergencySos.pending, (state) => {
         state.isTriggering = true;
+        state.lastTriggeredAt = Date.now();
         state.error = null;
       })
       .addCase(startEmergencySos.fulfilled, (state, action) => {
         state.isTriggering = false;
         state.activeSession = action.payload;
-        state.isAlarmPlaying = true;
+        state.isAlarmPlaying = false;
+        state.lastTriggeredAt = Date.now();
       })
       .addCase(startEmergencySos.rejected, (state, action) => {
         state.isTriggering = false;
