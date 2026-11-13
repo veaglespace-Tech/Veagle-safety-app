@@ -292,15 +292,15 @@ export const sendSos5MinLocationUpdate = async ({
     const info = await transporter.sendMail({
       from: `"📍 Sakhi Suraksha Live GPS Update" <${config.emailService.user || 'sos@sakhisuraksha.org'}>`,
       to: recipientEmail,
-      subject: `📍 [5-MIN GPS UPDATE] Live Location for ${victimName}`,
+      subject: `📍 [15-MIN GPS UPDATE] Live Location for ${victimName}`,
       attachments: avatar.attachments,
       html: `
         <div style="font-family: 'Segoe UI', Helvetica, Arial, sans-serif; max-width: 580px; margin: 0 auto; border: 3px solid #3B82F6; border-radius: 18px; padding: 22px; background-color: #EFF6FF;">
           <div style="text-align: center; margin-bottom: 14px;">
             <div style="display: inline-block; background-color: #3B82F6; color: #ffffff; padding: 4px 12px; border-radius: 999px; font-size: 9px; font-weight: 900; letter-spacing: 1.5px; text-transform: uppercase;">
-              RECURRING 5-MINUTE LOCATION DISPATCH
+              RECURRING 15-MINUTE LOCATION DISPATCH
             </div>
-            <h2 style="color: #1E40AF; font-size: 20px; font-weight: 900; margin: 8px 0 2px 0;">📍 5-MIN LIVE GPS UPDATE</h2>
+            <h2 style="color: #1E40AF; font-size: 20px; font-weight: 900; margin: 8px 0 2px 0;">📍 15-MIN LIVE GPS UPDATE</h2>
             <p style="color: #1D4ED8; font-size: 11px; font-weight: 700; margin: 0;">Emergency Incident #${sosId} is STILL ACTIVE</p>
           </div>
 

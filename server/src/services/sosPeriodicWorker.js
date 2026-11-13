@@ -9,16 +9,16 @@ import { collectEmergencyRecipients } from '../utils/recipientHelper.js';
 const WORKER_KEY = Symbol.for('__SOS_PERIODIC_WORKER__');
 const LAST_SENT_KEY = Symbol.for('__SOS_LAST_SENT_MAP__');
 
-// Minimum interval between emails per session (5 minutes in ms)
-const PERIODIC_INTERVAL_MS = 5 * 60 * 1000;
+// Minimum interval between emails per session (15 minutes in ms)
+const PERIODIC_INTERVAL_MS = 15 * 60 * 1000;
 // How often to check (every 30 seconds — lightweight poll)
 const CHECK_INTERVAL_MS = 30 * 1000;
 
 /**
- * Start the 5-Minute Recurring Periodic GPS Location Worker.
+ * Start the 15-Minute Recurring Periodic GPS Location Worker.
  * Uses globalThis to ensure only ONE interval runs at a time,
  * even if this module is re-imported due to nodemon restarts.
- * Uses a per-session lastSentAt map to enforce the 5-min minimum gap.
+ * Uses a per-session lastSentAt map to enforce the 15-min minimum gap.
  */
 export const startSosPeriodicWorker = () => {
   // If an interval already exists on globalThis, do NOT create another one
@@ -32,7 +32,7 @@ export const startSosPeriodicWorker = () => {
     globalThis[LAST_SENT_KEY] = new Map();
   }
 
-  console.log('⏰ [SOS Periodic Worker] Starting GPS Alert Worker (checks every 30s, emails every 5 min per session)...');
+  console.log('⏰ [SOS Periodic Worker] Starting GPS Alert Worker (checks every 30s, emails every 15 min per session)...');
 
   globalThis[WORKER_KEY] = setInterval(async () => {
     try {
