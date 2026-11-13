@@ -152,6 +152,15 @@ export const registerDeviceToken = asyncHandler(async (req, res) => {
   }
 
   try {
+    // CRITICAL FIX: If this token was previously registered to a DIFFERENT user
+    // (e.g. tester switched from victim → parent on same device), remove the old association.
+    // This prevents the victim-token-exclusion filter in sosController from blocking the parent.
+    const existingToken = await prisma.deviceToken.findUnique({ where: { token } });
+    if (existingToken && existingToken.userId !== userId) {
+      console.log(`[DeviceToken] Token was owned by user ${existingToken.userId}, re-assigning to user ${userId}`);
+      await prisma.deviceToken.delete({ where: { token } }).catch(() => {});
+    }
+
     const deviceToken = await prisma.deviceToken.upsert({
       where: { token },
       update: { userId, platform, updatedAt: new Date() },

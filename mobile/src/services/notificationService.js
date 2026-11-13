@@ -57,6 +57,7 @@ export function shouldPlaySirenForNotification(remoteMessageOrData) {
     data.type === 'CRITICAL_SOS' ||
     data.type === 'SOS_EMERGENCY' ||
     data.type === 'EMERGENCY' ||
+    data.isAlarm === 'true' ||
     remoteMessageOrData?.notification?.title?.includes('SOS') ||
     data.title?.includes('SOS');
 
@@ -162,6 +163,28 @@ export function setupFirebaseBackgroundMessageHandler() {
 
       if (shouldPlaySirenForNotification(remoteMessage)) {
         console.log('🚨 [FCM Native Background] Emergency SOS payload confirmed! Triggering siren for guardian/admin...');
+
+        // For DATA-ONLY FCM messages (sent to wake Headless JS in killed/background state),
+        // Android OS does NOT show a notification banner automatically.
+        // We must display it manually via expo-notifications so the user sees an alert.
+        try {
+          if (remoteMessage?.data?.type === 'SOS_TRIGGERED' && !remoteMessage?.notification) {
+            const { scheduleNotificationAsync } = await import('expo-notifications');
+            await scheduleNotificationAsync({
+              content: {
+                title: '🚨 EMERGENCY SOS ALERT!',
+                body: `${remoteMessage.data?.victimName || 'Someone'} activated SOS! Tap to open.`,
+                sound: 'alarm_siren',
+                priority: 'max',
+                data: remoteMessage.data,
+              },
+              trigger: null, // Show immediately
+            }).catch(() => {});
+          }
+        } catch (notifErr) {
+          console.warn('[FCM Background] Manual notification display error:', notifErr?.message);
+        }
+
         try {
           await playEmergencySiren(true, 28);
         } catch (err) {
@@ -230,7 +253,9 @@ export async function setupNotificationChannels() {
         description: 'Critical life-safety alarms that sound immediately for 28 seconds even when phone is locked or on silent.',
         importance: Notifications.AndroidImportance.MAX,
         vibrationPattern: [0, 500, 200, 500, 200, 500],
-        sound: 'alarm_siren.wav',
+        // Android res/raw lookup: file name WITHOUT extension (no .wav)
+        // iOS uses .wav extension in APNs payload separately
+        sound: 'alarm_siren',
         enableLights: true,
         lightColor: '#FF2A6D',
         enableVibrate: true,

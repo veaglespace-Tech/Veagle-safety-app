@@ -129,32 +129,59 @@ async function sendFcmEmergencyPush({ tokens, victimId, victimName, sosId, track
     return { success: false, reason: 'Firebase not configured' };
   }
 
+  // ─────────────────────────────────────────────────────────────────────────────
+  // ANDROID STRATEGY: Send TWO messages per batch:
+  //   1. Data-only high-priority message  → wakes Headless JS in killed state
+  //      (Android OS must NOT see a "notification" key to invoke JS handler)
+  //   2. Notification message              → shows system-tray banner with sound
+  //
+  // iOS STRATEGY: Single APNs message with sound + content-available wakes
+  //   the app in background. iOS killed state relies on APNs sound file.
+  //   iOS sound key MUST include .wav extension; Android channel sound MUST NOT.
+  // ─────────────────────────────────────────────────────────────────────────────
+
+  const sharedData = {
+    type: 'SOS_TRIGGERED',
+    isAlarm: 'true',
+    sosId: String(sosId),
+    victimId: String(victimId || ''),
+    victimName: String(victimName),
+    trackingUrl: String(trackingUrl || ''),
+    latitude: String(latitude || ''),
+    longitude: String(longitude || ''),
+    timestamp: new Date().toISOString(),
+  };
+
+  // ── Message 1: Android DATA-ONLY (wakes Headless JS even when app is killed) ──
+  const androidDataOnlyMessage = {
+    tokens,
+    // NO "notification" key → Android OS hands the full message to JS handler
+    data: sharedData,
+    android: {
+      priority: 'high',
+      // No android.notification block → pure data message, JS wakes up
+    },
+  };
+
+  // ── Message 2: Combined Notification (banner + sound) for all platforms ──
   const message = {
     tokens,
     notification: {
       title: '🚨 EMERGENCY SOS ALERT!',
       body: `${victimName} activated SOS! Tap to open live tracker.`,
-      sound: 'alarm_siren.wav',
     },
-    data: {
-      type: 'SOS_TRIGGERED',
-      sosId: String(sosId),
-      victimId: String(victimId || ''),
-      victimName: String(victimName),
-      trackingUrl: String(trackingUrl || ''),
-      latitude: String(latitude || ''),
-      longitude: String(longitude || ''),
-      timestamp: new Date().toISOString(),
-    },
+    data: sharedData,
     android: {
       priority: 'high',
       notification: {
         channelId: 'emergency_sos_siren_channel',
-        sound: 'alarm_siren.wav',
+        // Android res/raw lookup: NO file extension allowed
+        sound: 'alarm_siren',
         priority: 'max',
         visibility: 'public',
         defaultVibrateTimings: false,
         vibrateTimingsMillis: [0, 500, 200, 500, 200, 500],
+        defaultSound: false,
       },
     },
     apns: {
@@ -168,6 +195,7 @@ async function sendFcmEmergencyPush({ tokens, victimId, victimName, sosId, track
             title: '🚨 EMERGENCY SOS ALERT!',
             body: `${victimName} activated SOS! Tap to open live tracker.`,
           },
+          // iOS APNs: file extension IS required
           sound: 'alarm_siren.wav',
           badge: 1,
           'content-available': 1,
@@ -179,9 +207,25 @@ async function sendFcmEmergencyPush({ tokens, victimId, victimName, sosId, track
 
   try {
     const messaging = getMessaging();
-    const response = await messaging.sendEachForMulticast(message);
-    console.log(`✅ [FCM] Emergency Siren dispatched: ${response.successCount} success, ${response.failureCount} failed`);
 
+    // ── Step 1: Android Data-Only message (wakes Headless JS in killed/bg state) ──
+    // Only send to tokens — FCM automatically ignores iOS for data-only if apns not set
+    let dataOnlySuccess = 0;
+    let dataOnlyFail = 0;
+    try {
+      const dataOnlyResp = await messaging.sendEachForMulticast(androidDataOnlyMessage);
+      dataOnlySuccess = dataOnlyResp.successCount;
+      dataOnlyFail = dataOnlyResp.failureCount;
+      console.log(`✅ [FCM] Data-only wakeup dispatched: ${dataOnlySuccess} success, ${dataOnlyFail} failed`);
+    } catch (dataErr) {
+      console.warn('[FCM] Data-only wakeup warning:', dataErr.message);
+    }
+
+    // ── Step 2: Notification message (banner + sound for all platforms) ──
+    const response = await messaging.sendEachForMulticast(message);
+    console.log(`✅ [FCM] Emergency Siren notification dispatched: ${response.successCount} success, ${response.failureCount} failed`);
+
+    // Cleanup stale / invalid tokens from database
     if (response.failureCount > 0) {
       const { prisma } = await import('../config/prisma.js');
       for (let idx = 0; idx < response.responses.length; idx++) {
