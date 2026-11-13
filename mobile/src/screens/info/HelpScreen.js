@@ -12,13 +12,13 @@ export default function HelpScreen({ navigation }) {
   };
 
   const handleCallSupport = () => {
-    Linking.openURL('tel:8237999101').catch(() => {
+    Linking.openURL('tel:9225241608').catch(() => {
       Alert.alert('Error', 'Could not open dialer.');
     });
   };
 
   const handleWhatsappSupport = () => {
-    Linking.openURL('https://wa.me/918237999101').catch(() => {
+    Linking.openURL('https://wa.me/919225241608').catch(() => {
       Alert.alert('Error', 'Could not open WhatsApp.');
     });
   };
@@ -49,8 +49,8 @@ export default function HelpScreen({ navigation }) {
               <Ionicons name="call" size={24} color={COLORS.primary} />
             </View>
             <View style={styles.contactTextWrap}>
-              <Text style={styles.contactTitle}>Call / Upgrade Plan</Text>
-              <Text style={styles.contactDesc}>+91 8237999101</Text>
+              <Text style={styles.contactTitle}>24/7 Helpline & Support</Text>
+              <Text style={styles.contactDesc}>+91 92252 41608</Text>
             </View>
             <Ionicons name="chevron-forward" size={20} color={COLORS.textMuted} />
           </TouchableOpacity>
@@ -61,7 +61,7 @@ export default function HelpScreen({ navigation }) {
             </View>
             <View style={styles.contactTextWrap}>
               <Text style={styles.contactTitle}>WhatsApp Support</Text>
-              <Text style={styles.contactDesc}>Message 8237999101 directly</Text>
+              <Text style={styles.contactDesc}>Message +91 92252 41608 directly</Text>
             </View>
             <Ionicons name="chevron-forward" size={20} color={COLORS.textMuted} />
           </TouchableOpacity>

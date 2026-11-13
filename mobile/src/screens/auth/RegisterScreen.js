@@ -42,16 +42,16 @@ export default function RegisterScreen({ navigation }) {
           <View style={styles.btnRow}>
             <TouchableOpacity
               style={styles.callBtn}
-              onPress={() => Linking.openURL('tel:8237999101')}
+              onPress={() => Linking.openURL('tel:9225241608')}
               activeOpacity={0.85}
             >
               <Ionicons name="call" size={18} color="#fff" />
-              <Text style={styles.btnText}>Call 8237999101</Text>
+              <Text style={styles.btnText}>Call +91 92252 41608</Text>
             </TouchableOpacity>
 
             <TouchableOpacity
               style={styles.whatsappBtn}
-              onPress={() => Linking.openURL('https://wa.me/918237999101')}
+              onPress={() => Linking.openURL('https://wa.me/919225241608')}
               activeOpacity={0.85}
             >
               <Ionicons name="logo-whatsapp" size={18} color="#fff" />

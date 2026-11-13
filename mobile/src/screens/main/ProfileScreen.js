@@ -275,16 +275,16 @@ export default function ProfileScreen({ navigation }) {
           <View style={styles.planButtonsRow}>
             <TouchableOpacity 
               style={styles.planCallBtn} 
-              onPress={() => Linking.openURL('tel:8237999101')}
+              onPress={() => Linking.openURL('tel:9225241608')}
               activeOpacity={0.85}
             >
               <Ionicons name="call" size={15} color="#fff" />
-              <Text style={styles.planBtnText}>Call 8237999101</Text>
+              <Text style={styles.planBtnText}>Call +91 92252 41608</Text>
             </TouchableOpacity>
 
             <TouchableOpacity 
               style={styles.planWhatsappBtn} 
-              onPress={() => Linking.openURL('https://wa.me/918237999101')}
+              onPress={() => Linking.openURL('https://wa.me/919225241608')}
               activeOpacity={0.85}
             >
               <Ionicons name="logo-whatsapp" size={15} color="#fff" />

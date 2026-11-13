@@ -32,7 +32,7 @@ export default function TermsScreen({ navigation }) {
 
           <Text style={styles.heading}>3. Subscription & Plan Upgrades</Text>
           <Text style={styles.paragraph}>
-            Active safety plans and account memberships are provisioned directly via authorized administration. To renew or upgrade your protection plan, contact 8237999101.
+            Active safety plans and account memberships are provisioned directly via authorized administration. To renew or upgrade your protection plan, contact +91 92252 41608.
           </Text>
 
           <Text style={styles.heading}>4. Limitation of Liability</Text>

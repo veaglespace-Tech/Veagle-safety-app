@@ -20,7 +20,7 @@ export const ROLES = {
 const ACTIVE_SUBSCRIPTION = 'ACTIVE';
 
 /** Contact number shown in subscription-expired messages */
-const SUPPORT_NUMBER = '8237999101';
+const SUPPORT_NUMBER = '+91 92252 41608';
 
 // ---------------------------------------------------------------------------
 // Helpers

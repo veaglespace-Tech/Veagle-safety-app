@@ -29,11 +29,11 @@ apiClient.interceptors.response.use(
         await AsyncStorage.removeItem(TOKEN_KEY);
       } catch (e) {}
     } else if (error.response && error.response.status === 402) {
-      const msg = "Your subscription plan has expired or is inactive. Please contact support at 8237999101 to upgrade or renew your plan.";
+      const msg = "Your subscription plan has expired or is inactive. Please contact support at +91 92252 41608 to upgrade or renew your plan.";
       if (Platform.OS === 'web' && typeof window !== 'undefined') {
-        const call = window.confirm("Subscription Required\n\n" + msg + "\n\nClick OK to call 8237999101");
+        const call = window.confirm("Subscription Required\n\n" + msg + "\n\nClick OK to call +91 92252 41608");
         if (call) {
-          Linking.openURL('tel:8237999101').catch(() => {});
+          Linking.openURL('tel:9225241608').catch(() => {});
         }
       } else {
         Alert.alert(
@@ -42,8 +42,8 @@ apiClient.interceptors.response.use(
           [
             { text: "Dismiss", style: "cancel" },
             {
-              text: "Call 8237999101",
-              onPress: () => Linking.openURL('tel:8237999101').catch(() => {}),
+              text: "Call +91 92252 41608",
+              onPress: () => Linking.openURL('tel:9225241608').catch(() => {}),
             },
           ]
         );

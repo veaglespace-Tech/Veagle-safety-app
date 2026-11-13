@@ -116,7 +116,7 @@ export default function HelpContactScreen({ navigation }) {
           <View style={styles.divider} />
           <View style={styles.faqItem}>
             <Text style={styles.faqQ}>Can I add more than 5 guardians?</Text>
-            <Text style={styles.faqA}>Yes, contact 8237999101 to upgrade your plan and increase guardian limits.</Text>
+            <Text style={styles.faqA}>Yes, contact +91 92252 41608 to upgrade your plan and increase guardian limits.</Text>
           </View>
         </View>
       </ScrollView>

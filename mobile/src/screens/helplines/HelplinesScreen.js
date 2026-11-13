@@ -8,16 +8,27 @@ import { COLORS } from '../../theme/colors';
 
 const PRIMARY_LINES = [
   {
+    title: 'Sakhi Suraksha Helpline',
+    number: '+91 92252 41608',
+    dialNumber: '9225241608',
+    desc: 'Official 24/7 command, safety support & emergency response',
+    bg: COLORS.primary,
+    icon: 'headset-outline',
+    badge: '24 / 7',
+  },
+  {
     title: 'National Emergency',
     number: '112',
+    dialNumber: '112',
     desc: 'Unified all-in-one emergency response (Police + Fire + Ambulance)',
-    bg: COLORS.primary,
+    bg: '#DC2626',
     icon: 'shield-outline',
-    badge: '24 / 7',
+    badge: 'GOVT',
   },
   {
     title: 'Women Helpline',
     number: '1091',
+    dialNumber: '1091',
     desc: 'National helpline for women in distress — trauma, abuse, harassment',
     bg: COLORS.plum,
     icon: 'call',
@@ -50,7 +61,7 @@ export default function HelplinesScreen({ navigation }) {
           <TouchableOpacity
             key={item.number}
             style={[styles.primaryCard, { backgroundColor: item.bg }]}
-            onPress={() => Linking.openURL(`tel:${item.number}`)}
+            onPress={() => Linking.openURL(`tel:${item.dialNumber || item.number.replace(/\s+/g, '')}`)}
             activeOpacity={0.85}
           >
             <View style={styles.primaryCardLeft}>

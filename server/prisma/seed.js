@@ -108,13 +108,20 @@ export async function seedDatabase() {
     console.log(`✅ [Seed] Subscription Plan Created (ID: ${p.id}): ${p.name} (Price: ₹${p.totalPrice})`);
   }
 
-  // 3. Seed System Setting for GST
+  // 3. Seed System Setting for GST & Support Phone
   await prisma.systemSetting.upsert({
     where: { key: 'GST_PERCENTAGE' },
     update: { value: '18.0' },
     create: { key: 'GST_PERCENTAGE', value: '18.0' },
   });
   console.log('✅ [Seed] System Setting Created (GST: 18.0%)');
+
+  await prisma.systemSetting.upsert({
+    where: { key: 'SUPPORT_PHONE' },
+    update: { value: '+91 92252 41608' },
+    create: { key: 'SUPPORT_PHONE', value: '+91 92252 41608' },
+  });
+  console.log('✅ [Seed] System Setting Created (SUPPORT_PHONE: +91 92252 41608)');
 
   console.log('🎉 Database Reset & Seeding Completed Successfully! Next inserted record will start from ID = 3.');
 }

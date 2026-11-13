@@ -28,7 +28,8 @@ import { LOCATION_DISCLOSURE_KEY } from '../../services/permissionService';
 // Constants
 // ---------------------------------------------------------------------------
 
-const SUPPORT_PHONE    = '8237999101';
+const SUPPORT_PHONE    = '9225241608';
+const SUPPORT_PHONE_DISPLAY = '+91 92252 41608';
 const SUPPORT_WHATSAPP = `https://wa.me/91${SUPPORT_PHONE}`;
 
 /**
