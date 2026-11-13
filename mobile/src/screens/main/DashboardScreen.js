@@ -264,7 +264,7 @@ export default function DashboardScreen({ navigation }) {
     { icon: 'navigate',  label: 'Track Journey', sub: 'Share Live Route',       onPress: handleTrackJourney },
     { icon: 'time',      label: 'Check On Me',   sub: 'Safety Timer',           onPress: handleTrackJourney },
     { icon: 'people',    label: 'Guardians',     sub: `${contacts.length} Trusted`, onPress: goContacts },
-    { icon: 'call',      label: 'Helplines',     sub: '112 & 1091',             onPress: goHelplines },
+    { icon: 'call',      label: 'Helplines',     sub: '24/7 & 112',             onPress: goHelplines },
   ], [contacts.length, handleTrackJourney, goContacts, goHelplines]);
 
   // ── Render ────────────────────────────────────────────────────────────────
