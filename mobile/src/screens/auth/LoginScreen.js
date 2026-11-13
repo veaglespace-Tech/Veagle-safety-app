@@ -702,7 +702,7 @@ const styles = StyleSheet.create({
     color: COLORS.textDark,
     minHeight: 44,
     paddingVertical: Platform.OS === 'ios' ? 4 : 0,
-    ...(Platform.OS === 'web' ? { outlineStyle: 'none', outline: 'none' } : {}),
+    ...(Platform.OS === 'web' ? { outlineStyle: 'none', outlineWidth: 0 } : {}),
   },
   eyeBtn: {
     padding: 6,

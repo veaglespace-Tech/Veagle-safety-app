@@ -124,7 +124,7 @@ const styles = StyleSheet.create({
     color: COLORS.textDark,
     minHeight: 44,
     paddingVertical: Platform.OS === 'ios' ? 4 : 0,
-    ...(Platform.OS === 'web' ? { outlineStyle: 'none', outline: 'none' } : {}),
+    ...(Platform.OS === 'web' ? { outlineStyle: 'none', outlineWidth: 0 } : {}),
   },
   btn: { width: '100%', backgroundColor: COLORS.primary, borderRadius: 999, paddingVertical: 17, alignItems: 'center', shadowColor: COLORS.primary, shadowOffset: { width: 0, height: 8 }, shadowOpacity: 0.38, shadowRadius: 20, elevation: 10 },
   btnDisabled: { opacity: 0.65 },
