@@ -39,15 +39,39 @@ try {
         return;
       }
 
-      await apiClient.post('/sos/location', {
+      // Post location update — apiClient interceptor auto-attaches JWT from AsyncStorage
+      const response = await apiClient.post('/sos/location', {
         sosSessionId: parseInt(activeSosId, 10),
         latitude: lat,
         longitude: lng,
         accuracy: acc,
       });
+
+      // If server says session is no longer active / unauthorized, stop tracking
+      if (response?.data?.error?.toLowerCase?.()?.includes('invalid') ||
+          response?.data?.error?.toLowerCase?.()?.includes('unauthorized')) {
+        await AsyncStorage.removeItem(ACTIVE_SOS_ID_KEY);
+        const isRunning = await Location.hasStartedLocationUpdatesAsync(BACKGROUND_LOCATION_TASK).catch(() => false);
+        if (isRunning) {
+          await Location.stopLocationUpdatesAsync(BACKGROUND_LOCATION_TASK).catch(() => {});
+        }
+      }
+
       console.log(`📡 [BackgroundLocationTask] Headless SOS GPS broadcasted: ${lat}, ${lng} (±${acc}m)`);
     } catch (err) {
-      console.warn('[BackgroundLocationTask] Broadcast notice:', err?.response?.data || err?.message);
+      const status = err?.response?.status;
+      // 401 = JWT expired / logged out — stop tracking gracefully
+      if (status === 401 || status === 403) {
+        console.warn('[BackgroundLocationTask] Auth expired — stopping background tracking');
+        await AsyncStorage.removeItem(ACTIVE_SOS_ID_KEY).catch(() => {});
+        const isRunning = await Location.hasStartedLocationUpdatesAsync(BACKGROUND_LOCATION_TASK).catch(() => false);
+        if (isRunning) {
+          await Location.stopLocationUpdatesAsync(BACKGROUND_LOCATION_TASK).catch(() => {});
+        }
+      } else {
+        // Network error / server down — keep trying, do not stop tracking
+        console.warn('[BackgroundLocationTask] Broadcast notice (will retry):', err?.response?.data || err?.message);
+      }
     }
   });
   console.log('✅ [BackgroundLocationService] Headless background location task defined');
