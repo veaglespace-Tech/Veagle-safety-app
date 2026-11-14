@@ -1,15 +1,35 @@
 import { createSlice, createAsyncThunk } from '@reduxjs/toolkit';
 import { sosApi } from '../../api/sosApi';
 import { startBackgroundLocationTracking, stopBackgroundLocationTracking } from '../../services/backgroundLocationService';
+import { sendEmergencySmsToAll } from '../../services/smsService';
 
 // Identical thunks as web app's sosSlice
 export const startEmergencySos = createAsyncThunk('sos/startEmergencySos', async (payload, { rejectWithValue }) => {
   try {
     const data = await sosApi.startSos(payload);
     const session = data?.sosSession || data?.session || data?.data || data?.sos || data;
+
+    // Start GPS background tracking immediately
     if (session?.id) {
       startBackgroundLocationTracking(session.id).catch(() => {});
     }
+
+    // Fire & forget: Send background SMS from device SIM to all emergency contacts
+    // This runs in parallel — does NOT block SOS activation or UI
+    if (session?.emergencyContacts && session.emergencyContacts.length > 0) {
+      sendEmergencySmsToAll({
+        emergencyContacts: session.emergencyContacts,
+        victimName: session.victimName || payload?.victimName || '',
+        trackingUrl: session.trackingUrl || '',
+        latitude: session.latitude || payload?.initialLat || null,
+        longitude: session.longitude || payload?.initialLng || null,
+      }).then((result) => {
+        console.log(`📱 [SOS] Emergency SMS dispatch result: ${result?.sent || 0} sent, ${result?.failed || 0} failed`);
+      }).catch((err) => {
+        console.warn('[SOS] Emergency SMS dispatch error (non-critical):', err?.message);
+      });
+    }
+
     return session;
   } catch (err) {
     return rejectWithValue(err.response?.data?.error || 'Failed to activate Emergency SOS');

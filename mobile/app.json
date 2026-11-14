@@ -8,7 +8,7 @@
         "projectId": "1fbff418-6a14-4ad6-870c-9ba1fb381634"
       }
     },
-    "version": "1.0.2",
+    "version": "1.1.2",
     "orientation": "portrait",
     "icon": "./assets/logo_attractive.png",
     "userInterfaceStyle": "light",
@@ -42,7 +42,7 @@
       },
       "package": "com.veaglesafety.app",
       "googleServicesFile": "./google-services.json",
-      "versionCode": 20,
+      "versionCode": 22,
       "permissions": [
         "android.permission.ACCESS_FINE_LOCATION",
         "android.permission.ACCESS_COARSE_LOCATION",
@@ -56,7 +56,9 @@
         "android.permission.INTERNET",
         "android.permission.CHANGE_NETWORK_STATE",
         "android.permission.ACCESS_NETWORK_STATE",
-        "android.permission.POST_NOTIFICATIONS"
+        "android.permission.POST_NOTIFICATIONS",
+        "android.permission.SEND_SMS",
+        "android.permission.READ_PHONE_STATE"
       ]
     },
     "web": {

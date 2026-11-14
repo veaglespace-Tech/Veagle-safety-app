@@ -416,6 +416,15 @@ export const startSos = async (req, res) => {
       console.warn('[FCM] Failed collecting device tokens:', pushErr.message);
     }
 
+    // Build emergency contacts list for mobile SMS dispatch
+    // Mobile app will use this to send SMS from user's own SIM card (Android SmsManager)
+    const emergencyContactsForSms = allAlertRecipients
+      .filter((c) => c.phone && c.phone.trim().length >= 7)
+      .map((c) => ({
+        name: c.name,
+        phone: c.phone.trim(),
+      }));
+
     return res.json({
       message: 'SOS Activated! Emergency Emails, WhatsApp Alerts & Siren Broadcasted.',
       sosSession: {
@@ -427,6 +436,12 @@ export const startSos = async (req, res) => {
         googleMapsUrl,
         whatsappAlerts,
         whatsappShareUrl,
+        // Emergency contacts for mobile SMS (sent from victim's own SIM card via Android SmsManager)
+        emergencyContacts: emergencyContactsForSms,
+        victimName: currentUser?.fullName || 'Sakhi Suraksha User',
+        victimPhone: currentUser?.phone || '',
+        latitude,
+        longitude,
       },
     });
   } catch (error) {
