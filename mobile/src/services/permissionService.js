@@ -1,6 +1,7 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as Location from 'expo-location';
 import * as Notifications from 'expo-notifications';
+import { requestSmsSendPermission, hasSmsSendPermission } from './smsService';
 
 export const LOCATION_DISCLOSURE_KEY = '@sakhi_suraksha_location_disclosure_consent_v2';
 export const BG_PERMISSION_PROMPTED_KEY = '@sakhi_suraksha_bg_perm_prompted_v2';
@@ -85,10 +86,17 @@ export async function requestPermissionsAfterConsent() {
       backgroundGranted = bgResult?.status === 'granted';
     }
 
+    // 5. Trigger native SMS permission for emergency SOS alerts on Android
+    let smsGranted = false;
+    try {
+      smsGranted = await requestSmsSendPermission();
+    } catch (_) {}
+
     return {
       success: foregroundGranted,
       foregroundGranted,
       backgroundGranted,
+      smsGranted,
     };
   } catch (error) {
     console.warn('[PermissionService] Error requesting native location permissions:', error);
