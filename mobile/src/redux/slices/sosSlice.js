@@ -1,3 +1,4 @@
+import { Platform } from 'react-native';
 import { createSlice, createAsyncThunk } from '@reduxjs/toolkit';
 import { sosApi } from '../../api/sosApi';
 import { startBackgroundLocationTracking, stopBackgroundLocationTracking } from '../../services/backgroundLocationService';
@@ -23,6 +24,7 @@ export const startEmergencySos = createAsyncThunk('sos/startEmergencySos', async
         trackingUrl: session.trackingUrl || '',
         latitude: session.latitude || payload?.initialLat || null,
         longitude: session.longitude || payload?.initialLng || null,
+        delayMs: Platform.OS === 'ios' ? 4500 : 0,
       }).then((result) => {
         console.log(`📱 [SOS] Emergency SMS dispatch result: ${result?.sent || 0} sent, ${result?.failed || 0} failed`);
       }).catch((err) => {

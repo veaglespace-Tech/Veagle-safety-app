@@ -181,9 +181,15 @@ export async function sendEmergencySmsToAll({
   trackingUrl,
   latitude,
   longitude,
+  delayMs = 0,
 }) {
   if (Platform.OS === 'web') {
     return { sent: 0, failed: 0, skipped: true };
+  }
+
+  // Optional delay to prevent UI / modal presentation clashes with external apps (e.g. on iOS)
+  if (delayMs > 0) {
+    await new Promise((res) => setTimeout(res, delayMs));
   }
 
   if (!emergencyContacts || emergencyContacts.length === 0) {

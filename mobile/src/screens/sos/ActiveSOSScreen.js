@@ -12,6 +12,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { COLORS } from '../../theme/colors';
 import { playEmergencySiren, stopEmergencySiren } from '../../utils/soundPlayer';
 import { stopBackgroundLocationTracking } from '../../services/backgroundLocationService';
+import { sendEmergencySmsToAll } from '../../services/smsService';
 import LiveSosMap from '../../components/Admin/LiveSosMap';
 
 export default function ActiveSOSScreen({ navigation }) {
@@ -25,6 +26,8 @@ export default function ActiveSOSScreen({ navigation }) {
   const [elapsed, setElapsed] = useState(0);
   const [showConfirmModal, setShowConfirmModal] = useState(false);
   const [copied, setCopied] = useState(false);
+  const [smsSending, setSmsSending] = useState(false);
+  const [smsSentNotice, setSmsSentNotice] = useState(false);
   const hasOpenedWhatsApp = useRef(false);
 
   useEffect(() => {
@@ -97,6 +100,34 @@ export default function ActiveSOSScreen({ navigation }) {
     Linking.openURL(whatsappUrl).catch(() => {
       Share.share({ message });
     });
+  };
+
+  const handleSendEmergencySms = async () => {
+    if (smsSending) return;
+    setSmsSending(true);
+    try {
+      const contactsToSend = activeSession?.emergencyContacts?.length > 0
+        ? activeSession.emergencyContacts
+        : contactsList.map((c) => ({ name: c.name, phone: c.phone }));
+
+      const res = await sendEmergencySmsToAll({
+        emergencyContacts: contactsToSend,
+        victimName: user?.fullName || user?.name || 'Sakhi Member',
+        trackingUrl: activeSession?.trackingUrl || '',
+        latitude,
+        longitude,
+        delayMs: 0,
+      });
+
+      if (res?.sent > 0 || res?.platform === 'ios') {
+        setSmsSentNotice(true);
+        setTimeout(() => setSmsSentNotice(false), 4000);
+      }
+    } catch (e) {
+      console.warn('[ActiveSOSScreen] SMS send notice:', e?.message);
+    } finally {
+      setSmsSending(false);
+    }
   };
 
   const firstName = (user?.fullName || user?.name || 'User').split(' ')[0];
@@ -194,6 +225,20 @@ export default function ActiveSOSScreen({ navigation }) {
               </View>
             </View>
           )}
+
+          {/* EMERGENCY SMS ALERT BUTTON */}
+          <TouchableOpacity
+            style={[styles.smsBtn, smsSentNotice && styles.smsBtnSent]}
+            onPress={handleSendEmergencySms}
+            disabled={smsSending}
+            activeOpacity={0.85}
+          >
+            <Ionicons name={smsSentNotice ? "checkmark-circle" : "chatbubble-ellipses"} size={18} color="#fff" />
+            <Text style={styles.smsBtnText}>
+              {smsSending ? 'PREPARING SMS...' : smsSentNotice ? 'EMERGENCY SMS SENT!' : Platform.OS === 'ios' ? 'SEND EMERGENCY SMS (1-TAP COMPOSER)' : 'SEND EMERGENCY SMS TO GUARDIANS'}
+            </Text>
+            <Ionicons name="paper-plane" size={14} color="#fff" />
+          </TouchableOpacity>
         </View>
 
         {/* EMERGENCY ACTIONS */}
@@ -324,6 +369,11 @@ const styles = StyleSheet.create({
   waChips: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
   waChip: { flexDirection: 'row', alignItems: 'center', gap: 5, backgroundColor: 'rgba(37,211,102,0.1)', borderWidth: 1, borderColor: 'rgba(37,211,102,0.4)', paddingHorizontal: 10, paddingVertical: 7, borderRadius: 10 },
   waChipText: { fontSize: 11, fontWeight: '700', color: '#128C7E' },
+
+  // EMERGENCY SMS
+  smsBtn: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, backgroundColor: '#3D0C38', borderRadius: 14, paddingVertical: 13, marginTop: 4, borderWidth: 1, borderColor: '#FF2A6D' },
+  smsBtnSent: { backgroundColor: COLORS.success, borderColor: COLORS.success },
+  smsBtnText: { fontSize: 11, fontWeight: '900', color: '#fff', letterSpacing: 0.3 },
 
   // 2 COL
   twoCol: { flexDirection: 'row', gap: 10 },
