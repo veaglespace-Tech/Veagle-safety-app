@@ -30,10 +30,21 @@ import { api } from '../utils/api.js';
 export default function LandingPage() {
   const { token, user } = useSelector((state) => state?.auth || {});
   const [mounted, setMounted] = useState(false);
-  const [stats, setStats] = useState({ 
-    registeredUsers: 0, 
-    fakeBaseCount: 3472, 
-    targetMissionCount: '1 Cr+' 
+  const [stats, setStats] = useState(() => {
+    if (typeof window !== 'undefined') {
+      try {
+        const cached = localStorage.getItem('sakhi_public_stats');
+        if (cached) {
+          const parsed = JSON.parse(cached);
+          if (parsed && typeof parsed === 'object') return parsed;
+        }
+      } catch (e) {}
+    }
+    return {
+      registeredUsers: 11,
+      fakeBaseCount: 3472,
+      targetMissionCount: '1 Cr+',
+    };
   });
 
   useEffect(() => {
@@ -45,14 +56,19 @@ export default function LandingPage() {
     try {
       const res = await api.get('/stats/public');
       if (res.data) {
-        setStats({ 
+        const newStats = {
           registeredUsers: res.data.registeredUsers !== undefined ? res.data.registeredUsers : 0,
           fakeBaseCount: res.data.fakeBaseCount !== undefined ? res.data.fakeBaseCount : 3472,
-          targetMissionCount: res.data.targetMissionCount || '1 Cr+'
-        });
+          targetMissionCount: res.data.targetMissionCount || '1 Cr+',
+        };
+        setStats(newStats);
+        try {
+          localStorage.setItem('sakhi_public_stats', JSON.stringify(newStats));
+        } catch (e) {}
       }
     } catch (err) {
-      console.error('Failed to fetch public stats', err);
+      // Use fallback or cached stats gracefully
+      console.warn('[LandingPage] Notice: Using fallback stats:', err?.message || 'Network unavailable');
     }
   };
 
@@ -113,7 +129,7 @@ export default function LandingPage() {
                
                <div className="mt-4 sm:mt-12 flex flex-col items-center justify-center">
                  <h3 className="text-[10px] sm:text-xl font-black text-[#FF2A6D] tracking-widest mb-1 sm:mb-2">WOMEN SAFE</h3>
-                 <p className="text-3xl sm:text-[80px] font-black text-transparent bg-clip-text bg-gradient-to-b from-[#FF2A6D] to-[#FF5C8A] leading-none mb-1 sm:mb-3 tracking-tighter">
+                 <p suppressHydrationWarning className="text-3xl sm:text-[80px] font-black text-transparent bg-clip-text bg-gradient-to-b from-[#FF2A6D] to-[#FF5C8A] leading-none mb-1 sm:mb-3 tracking-tighter">
                     {((stats?.fakeBaseCount || 3472) + (stats?.registeredUsers || 0)).toLocaleString()}
                  </p>
                  <p className="text-[8px] sm:text-xs font-black text-[#7A6478] uppercase tracking-widest opacity-90 bg-[#FFF0F3] px-2 py-1 rounded-full w-[max-content]">ACTIVE GUARDIANS</p>

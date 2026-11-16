@@ -53,6 +53,12 @@ const transporters = accountsPool.map((acc) => ({
     tls: {
       rejectUnauthorized: false,
     },
+    connectionTimeout: 8000,
+    greetingTimeout: 8000,
+    socketTimeout: 12000,
+    pool: true,
+    maxConnections: 5,
+    maxMessages: 100,
   }),
 }));
 

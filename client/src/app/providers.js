@@ -6,6 +6,7 @@ import { store } from '../redux/store.js';
 import { fetchUser } from '../redux/slices/authSlice.js';
 import { EmergencyAlarmListener } from '../components/common/EmergencyAlarmListener.js';
 import { usePushNotification } from '../hooks/usePushNotification.js';
+import { VisitorRenderTracker, FloatingBottomLeftCounter } from '../components/common/VisitorRenderTracker.js';
 
 function AuthInitializer({ children }) {
   const dispatch = useDispatch();
@@ -19,6 +20,10 @@ function AuthInitializer({ children }) {
 
   return (
     <>
+      {/* Global render counter (+2 on every visit/render) */}
+      <VisitorRenderTracker />
+      {/* Floating Bottom Left Counter Display */}
+      <FloatingBottomLeftCounter />
       {/* Global real-time alarm listener (Socket.io - browser open) */}
       <EmergencyAlarmListener />
       {children}

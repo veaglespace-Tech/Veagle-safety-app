@@ -262,7 +262,13 @@ function UserAuthForm() {
     if (!validateForm()) return;
 
     if (isLogin) {
-      dispatch(loginUser({ email: email.trim(), password }));
+      dispatch(
+        loginUser({
+          email: email.trim(),
+          password: loginRole === 'PARENT' ? '' : password,
+          isParentLogin: loginRole === 'PARENT',
+        })
+      );
     } else {
       const payload = {
         fullName: fullName.trim(),

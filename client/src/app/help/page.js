@@ -16,8 +16,19 @@ export const dynamic = 'force-dynamic';
 
 const PRIMARY_LINES = [
   {
+    title: 'Sakhi Suraksha Helpline',
+    number: '+91 92252 41608',
+    dialNumber: '9225241608',
+    desc: 'Official 24/7 emergency command, app support & distress coordination',
+    bg: 'bg-gradient-to-r from-[#FF5C8A] via-[#FF2A6D] to-[#E01A4F]',
+    text: 'text-white',
+    icon: PhoneCall,
+    badge: 'OFFICIAL 24/7',
+  },
+  {
     title: 'National Emergency',
     number: '112',
+    dialNumber: '112',
     desc: 'Unified all-in-one emergency response (Police + Fire + Ambulance)',
     bg: 'bg-tichi-emergency',
     text: 'text-white',
@@ -27,6 +38,7 @@ const PRIMARY_LINES = [
   {
     title: 'Women Helpline',
     number: '1091',
+    dialNumber: '1091',
     desc: 'National helpline for women in distress — trauma, abuse, harassment',
     bg: 'bg-plum',
     text: 'text-white',
@@ -76,7 +88,7 @@ export default function EmergencyHelpServicesPage() {
             return (
               <a
                 key={item.number}
-                href={`tel:${item.number}`}
+                href={`tel:${item.dialNumber || item.number.replace(/\s+/g, '')}`}
                 className={`flex items-center justify-between ${item.bg} ${item.text} p-5 rounded-card shadow-plum-lg active:scale-[0.98] transition-all group`}
               >
                 <div className="flex items-center space-x-4">

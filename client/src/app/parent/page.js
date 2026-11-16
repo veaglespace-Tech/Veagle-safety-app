@@ -77,6 +77,11 @@ function ParentDashboardContent() {
   const [trackingChild, setTrackingChild] = useState(null);
   const [isSirenActive, setIsSirenActive] = useState(false);
 
+  // Parent-triggered SOS state
+  const [triggeringSosForChildId, setTriggeringSosForChildId] = useState(null);
+  const [parentSosError, setParentSosError] = useState('');
+  const [parentSosSuccess, setParentSosSuccess] = useState('');
+
   useEffect(() => {
     setMounted(true);
   }, []);
@@ -367,6 +372,36 @@ function ParentDashboardContent() {
     }
   };
 
+  // Handle Parent-Triggered SOS on behalf of child
+  const handleTriggerChildSos = async (childId, childName) => {
+    setParentSosError('');
+    setParentSosSuccess('');
+
+    const confirmed = window.confirm(
+      `🚨 EMERGENCY SOS for ${childName}\n\nAre you sure you want to trigger an emergency SOS alert on behalf of ${childName}?\n\nThis will:\n• Alert all emergency contacts\n• Send emergency emails\n• Broadcast real-time GPS alert\n• Trigger alarm siren on guardian devices\n\nOnly use this if ${childName} cannot trigger SOS themselves.`
+    );
+
+    if (!confirmed) return;
+
+    try {
+      setTriggeringSosForChildId(childId);
+      const res = await api.post('/parent/trigger-child-sos', { childId });
+      if (res.data?.success) {
+        setParentSosSuccess(
+          res.data.message || `Emergency SOS triggered for ${childName}! All contacts alerted.`
+        );
+        setTimeout(() => setParentSosSuccess(''), 6000);
+        fetchOverview(false);
+      }
+    } catch (err) {
+      const errMsg = err?.response?.data?.error || `Failed to trigger SOS for ${childName}. Please try again.`;
+      setParentSosError(errMsg);
+      setTimeout(() => setParentSosError(''), 6000);
+    } finally {
+      setTriggeringSosForChildId(null);
+    }
+  };
+
   if (!mounted) return null;
 
   return (
@@ -383,6 +418,32 @@ function ParentDashboardContent() {
               onClick={() => setPingSuccessMessage('')}
               className="text-emerald-700 hover:text-emerald-900 p-1"
             >
+              <X className="w-4 h-4" />
+            </button>
+          </div>
+        )}
+
+        {/* PARENT-TRIGGERED SOS SUCCESS TOAST */}
+        {parentSosSuccess && (
+          <div className="bg-emerald-50 border-2 border-emerald-500 text-emerald-800 px-5 py-3.5 rounded-2xl flex items-center justify-between shadow-lg shadow-emerald-500/20 animate-fade-down">
+            <div className="flex items-center space-x-3">
+              <CheckCircle2 className="w-5 h-5 text-emerald-600 shrink-0" />
+              <p className="text-xs font-black">{parentSosSuccess}</p>
+            </div>
+            <button onClick={() => setParentSosSuccess('')} className="text-emerald-700 hover:text-emerald-900 p-1">
+              <X className="w-4 h-4" />
+            </button>
+          </div>
+        )}
+
+        {/* PARENT-TRIGGERED SOS ERROR TOAST */}
+        {parentSosError && (
+          <div className="bg-rose-50 border-2 border-rose-500 text-rose-800 px-5 py-3.5 rounded-2xl flex items-center justify-between shadow-lg shadow-rose-500/20 animate-fade-down">
+            <div className="flex items-center space-x-3">
+              <AlertTriangle className="w-5 h-5 text-rose-600 shrink-0" />
+              <p className="text-xs font-black">{parentSosError}</p>
+            </div>
+            <button onClick={() => setParentSosError('')} className="text-rose-700 hover:text-rose-900 p-1">
               <X className="w-4 h-4" />
             </button>
           </div>
@@ -821,6 +882,24 @@ function ParentDashboardContent() {
                             <span>JOURNEY ROUTE</span>
                             <ArrowUpRight className="w-3.5 h-3.5" />
                           </a>
+                        )}
+
+                        {/* 6. PARENT TRIGGER SOS — only when child has NO active SOS & subscription is ACTIVE */}
+                        {!item.activeSos && c.subscriptionStatus === 'ACTIVE' && (
+                          <button
+                            type="button"
+                            onClick={() => handleTriggerChildSos(c.id, c.fullName)}
+                            disabled={triggeringSosForChildId === c.id}
+                            className="w-full mt-1 py-3 px-4 rounded-2xl text-xs font-black uppercase tracking-wider flex items-center justify-center space-x-2 shadow-md cursor-pointer transition-all bg-gradient-to-r from-orange-500 via-red-500 to-rose-600 hover:from-orange-600 hover:to-rose-700 text-white border-2 border-orange-400 disabled:opacity-60 disabled:cursor-not-allowed"
+                            title={`Trigger emergency SOS for ${c.fullName} from your account`}
+                          >
+                            <AlertOctagon className={`w-4 h-4 ${triggeringSosForChildId === c.id ? 'animate-spin' : 'animate-pulse'}`} />
+                            <span>
+                              {triggeringSosForChildId === c.id
+                                ? `TRIGGERING SOS FOR ${c.fullName.split(' ')[0].toUpperCase()}...`
+                                : `🚨 TRIGGER SOS FOR ${c.fullName.split(' ')[0].toUpperCase()}`}
+                            </span>
+                          </button>
                         )}
                       </div>
                     </div>

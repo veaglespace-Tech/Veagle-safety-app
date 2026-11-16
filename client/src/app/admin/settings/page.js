@@ -33,6 +33,7 @@ export default function AdminSettingsPage() {
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
 
   const [supportEmail, setSupportEmail] = useState('');
+  const [supportPhone, setSupportPhone] = useState('+91 92252 41608');
   const [fakeBaseCount, setFakeBaseCount] = useState(3472);
   const [targetMissionCount, setTargetMissionCount] = useState('1 Cr+');
   const [galleryItems, setGalleryItems] = useState([]);
@@ -46,7 +47,7 @@ export default function AdminSettingsPage() {
   const [collapsedItems, setCollapsedItems] = useState({});
 
   // Track original states for unsaved changes detection
-  const [originalState, setOriginalState] = useState({ email: '', fakeBaseCount: 3472, targetMissionCount: '1 Cr+', items: [], meta: null });
+  const [originalState, setOriginalState] = useState({ email: '', phone: '+91 92252 41608', fakeBaseCount: 3472, targetMissionCount: '1 Cr+', items: [], meta: null });
 
   useEffect(() => {
     if (!token || user?.role !== 'SUPER_ADMIN') {
@@ -65,6 +66,7 @@ export default function AdminSettingsPage() {
     try {
       const res = await settingApi.fetchSettings([
         'SUPPORT_EMAIL',
+        'SUPPORT_PHONE',
         'FAKE_BASE_COUNT',
         'TARGET_MISSION_COUNT',
         'GALLERY_ITEMS',
@@ -72,6 +74,7 @@ export default function AdminSettingsPage() {
       ]);
       if (res.success) {
         const fetchedEmail = res.data.SUPPORT_EMAIL || 'support@veagle-safety.com';
+        const fetchedPhone = res.data.SUPPORT_PHONE || '+91 92252 41608';
         const fetchedFakeBase = parseInt(res.data.FAKE_BASE_COUNT, 10) || 3472;
         const fetchedTargetCount = res.data.TARGET_MISSION_COUNT || '1 Cr+';
         const fetchedItems = res.data.GALLERY_ITEMS || [];
@@ -83,6 +86,7 @@ export default function AdminSettingsPage() {
         };
 
         setSupportEmail(fetchedEmail);
+        setSupportPhone(fetchedPhone);
         setFakeBaseCount(fetchedFakeBase);
         setTargetMissionCount(fetchedTargetCount);
         setGalleryItems(fetchedItems);
@@ -90,6 +94,7 @@ export default function AdminSettingsPage() {
 
         setOriginalState({
           email: fetchedEmail,
+          phone: fetchedPhone,
           fakeBaseCount: fetchedFakeBase,
           targetMissionCount: fetchedTargetCount,
           items: JSON.parse(JSON.stringify(fetchedItems)),
@@ -122,6 +127,7 @@ export default function AdminSettingsPage() {
     try {
       await settingApi.updateSettings({
         SUPPORT_EMAIL: supportEmail,
+        SUPPORT_PHONE: supportPhone,
         FAKE_BASE_COUNT: String(fakeBaseCount),
         TARGET_MISSION_COUNT: targetMissionCount,
         GALLERY_ITEMS: galleryItems,
@@ -131,6 +137,7 @@ export default function AdminSettingsPage() {
 
       setOriginalState({
         email: supportEmail,
+          phone: supportPhone,
         fakeBaseCount: fakeBaseCount,
         targetMissionCount: targetMissionCount,
         items: JSON.parse(JSON.stringify(galleryItems)),

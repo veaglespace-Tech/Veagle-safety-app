@@ -21,8 +21,8 @@ export const config = {
   },
   emailService: {
     host: process.env.SMTP_HOST || 'smtp.hostinger.com',
-    port: Number(process.env.SMTP_PORT) || 465,
-    secure: process.env.SMTP_SECURE === 'true' || Number(process.env.SMTP_PORT) === 465,
+    port: process.env.SMTP_PORT ? Number(process.env.SMTP_PORT) : 465,
+    secure: process.env.SMTP_SECURE !== undefined ? process.env.SMTP_SECURE === 'true' : true,
     user: process.env.EMAIL || process.env.SMTP_USER || '',
     pass: process.env.EMAIL_PASS || process.env.SMTP_PASS || '',
     backupAccountsRaw: process.env.SMTP_BACKUP_ACCOUNTS || '',
