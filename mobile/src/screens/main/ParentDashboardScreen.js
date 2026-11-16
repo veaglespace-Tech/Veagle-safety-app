@@ -51,6 +51,7 @@ export default function ParentDashboardScreen({ navigation }) {
   // Modal State for Live Map Tracking
   const [trackingItem, setTrackingItem] = useState(null);
   const [pingingChildId, setPingingChildId] = useState(null);
+  const [triggeringChildId, setTriggeringChildId] = useState(null);
 
   const socketRef = useRef(null);
   const playedAlertIdsRef = useRef(new Set());
@@ -279,6 +280,50 @@ export default function ParentDashboardScreen({ navigation }) {
       notify('Notice', msg);
     } finally {
       setPingingChildId(null);
+    }
+  };
+
+  // Handle Parent-Triggered Emergency SOS on behalf of Child (New Feature from Web!)
+  const handleTriggerChildSos = (childId, childName) => {
+    const title = `🚨 EMERGENCY SOS for ${childName}`;
+    const message =
+      `Are you sure you want to trigger an emergency SOS alert on behalf of ${childName}?\n\n` +
+      `This will:\n` +
+      `• Alert all emergency contacts\n` +
+      `• Send emergency emails\n` +
+      `• Broadcast real-time GPS alert\n` +
+      `• Trigger alarm siren on guardian devices\n\n` +
+      `Only use this if ${childName} cannot trigger SOS themselves.`;
+
+    const onConfirm = async () => {
+      try {
+        setTriggeringChildId(childId);
+        const res = await parentApi.triggerChildSos(childId);
+        if (res && res.success) {
+          notify(
+            '🚨 Emergency SOS Activated!',
+            res.message || `Emergency SOS triggered for ${childName}! All emergency contacts alerted.`
+          );
+          await fetchData(false);
+        }
+      } catch (err) {
+        const errMsg =
+          err?.response?.data?.error || `Failed to trigger SOS for ${childName}. Please try again.`;
+        notify('Notice', errMsg);
+      } finally {
+        setTriggeringChildId(null);
+      }
+    };
+
+    if (Platform.OS === 'web' && typeof window !== 'undefined') {
+      if (window.confirm(`${title}\n\n${message}`)) {
+        onConfirm();
+      }
+    } else {
+      Alert.alert(title, message, [
+        { text: 'Cancel', style: 'cancel' },
+        { text: 'TRIGGER SOS', style: 'destructive', onPress: onConfirm },
+      ]);
     }
   };
 
@@ -704,6 +749,34 @@ export default function ParentDashboardScreen({ navigation }) {
                         </TouchableOpacity>
                       )}
                     </View>
+
+                    {/* PARENT TRIGGER SOS BUTTON — only when child does NOT already have an active SOS */}
+                    {!isSos && (
+                      <TouchableOpacity
+                        style={styles.triggerSosFullBtn}
+                        onPress={() => handleTriggerChildSos(c.id, c.fullName)}
+                        disabled={triggeringChildId === c.id}
+                        activeOpacity={0.85}
+                      >
+                        <LinearGradient
+                          colors={['#FF5722', '#E01A4F']}
+                          start={{ x: 0, y: 0 }}
+                          end={{ x: 1, y: 0 }}
+                          style={styles.triggerSosFullGradient}
+                        >
+                          {triggeringChildId === c.id ? (
+                            <ActivityIndicator size="small" color="#FFF" />
+                          ) : (
+                            <>
+                              <Ionicons name="warning" size={15} color="#FFF" />
+                              <Text style={styles.triggerSosFullText}>
+                                🚨 TRIGGER SOS FOR {c.fullName ? c.fullName.split(' ')[0].toUpperCase() : 'CHILD'}
+                              </Text>
+                            </>
+                          )}
+                        </LinearGradient>
+                      </TouchableOpacity>
+                    )}
                   </View>
                 );
               })
@@ -997,6 +1070,22 @@ export default function ParentDashboardScreen({ navigation }) {
                   <Ionicons name="radio" size={16} color="#FFF" />
                   <Text style={styles.actionBtnPingText}>PING</Text>
                 </TouchableOpacity>
+
+                {!isSosChild && (
+                  <TouchableOpacity
+                    style={styles.actionBtnModalSos}
+                    onPress={() => {
+                      const childId = trackingItem.child?.id;
+                      const childName = trackingItem.child?.fullName;
+                      setTrackingItem(null);
+                      handleTriggerChildSos(childId, childName);
+                    }}
+                    disabled={triggeringChildId === trackingItem.child?.id}
+                  >
+                    <Ionicons name="warning" size={15} color="#FFF" />
+                    <Text style={styles.actionBtnModalSosText}>TRIGGER SOS</Text>
+                  </TouchableOpacity>
+                )}
               </View>
             </View>
           </SafeAreaView>
@@ -1423,4 +1512,46 @@ const styles = StyleSheet.create({
   modalSubmitBtnText: { color: '#FFF', fontSize: 12, fontWeight: '900', letterSpacing: 0.5 },
 
   trackingModalActions: { flexDirection: 'row', alignItems: 'center', gap: 8, paddingTop: 4 },
+  triggerSosFullBtn: {
+    marginTop: 10,
+    borderRadius: 14,
+    overflow: 'hidden',
+    elevation: 4,
+    shadowColor: '#FF5722',
+    shadowOffset: { width: 0, height: 3 },
+    shadowOpacity: 0.3,
+    shadowRadius: 6,
+  },
+  triggerSosFullGradient: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+  },
+  triggerSosFullText: {
+    fontSize: 12,
+    fontWeight: '900',
+    color: '#FFF',
+    letterSpacing: 0.5,
+  },
+  actionBtnModalSos: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#E01A4F',
+    paddingHorizontal: 14,
+    paddingVertical: 10,
+    borderRadius: 12,
+    gap: 6,
+    borderWidth: 1,
+    borderColor: '#FF5722',
+  },
+  actionBtnModalSosText: {
+    color: '#FFF',
+    fontSize: 11,
+    fontWeight: '900',
+    letterSpacing: 0.4,
+  },
 });

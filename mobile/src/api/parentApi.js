@@ -17,4 +17,8 @@ export const parentApi = {
     const res = await apiClient.post('/parent/ping-checkin', { childId });
     return res.data;
   },
+  triggerChildSos: async (childId) => {
+    const res = await apiClient.post('/parent/trigger-child-sos', { childId });
+    return res.data;
+  },
 };
