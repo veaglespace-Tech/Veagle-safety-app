@@ -4,6 +4,8 @@ import sosReducer from './slices/sosSlice';
 import contactsReducer from './slices/contactsSlice';
 import locationReducer from './slices/locationSlice';
 import emergencyEmailsReducer from './slices/emergencyEmailsSlice';
+import { clearAuth } from './slices/authSlice';
+import { setAuthenticatedSessionExpiredHandler } from '../api/apiClient';
 
 const appReducer = combineReducers({
   auth: authReducer,
@@ -14,7 +16,7 @@ const appReducer = combineReducers({
 });
 
 const rootReducer = (state, action) => {
-  if (action.type === 'auth/logout' || action.type === 'auth/logoutUser/fulfilled') {
+  if (action.type === 'auth/logout' || action.type === 'auth/logoutUser/fulfilled' || action.type === clearAuth.type) {
     // Completely reset all Redux state upon logout to prevent data leaks (matching client store)
     state = undefined;
   }
@@ -29,3 +31,5 @@ export const store = configureStore({
       immutableCheck: false,
     }),
 });
+
+setAuthenticatedSessionExpiredHandler(() => store.dispatch(clearAuth()));

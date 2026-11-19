@@ -1,7 +1,12 @@
 import axios from 'axios';
 import { Alert, Linking, Platform } from 'react-native';
-import AsyncStorage from '@react-native-async-storage/async-storage';
-import { API_URL, TOKEN_KEY } from '../utils/constants';
+import { API_URL } from '../utils/constants';
+import { clearAuthToken, getAuthToken } from '../utils/tokenStorage';
+
+let onAuthenticatedSessionExpired = null;
+export const setAuthenticatedSessionExpiredHandler = (handler) => {
+  onAuthenticatedSessionExpired = handler;
+};
 
 export const apiClient = axios.create({
   baseURL: API_URL,
@@ -12,7 +17,7 @@ export const apiClient = axios.create({
 // Attach JWT token — mirrors the web app's interceptor using localStorage
 apiClient.interceptors.request.use(async (config) => {
   try {
-    const token = await AsyncStorage.getItem(TOKEN_KEY);
+    const token = await getAuthToken();
     if (token) {
       config.headers.Authorization = `Bearer ${token}`;
     }
@@ -24,9 +29,10 @@ apiClient.interceptors.request.use(async (config) => {
 apiClient.interceptors.response.use(
   (response) => response,
   async (error) => {
-    if (error.response && error.response.status === 401) {
+    if (error.response?.status === 401 && error.config?.headers?.Authorization) {
       try {
-        await AsyncStorage.removeItem(TOKEN_KEY);
+        await clearAuthToken();
+        onAuthenticatedSessionExpired?.();
       } catch (e) {}
     } else if (error.response && error.response.status === 402) {
       const msg = "Your subscription plan has expired or is inactive. Please contact support at +91 92252 41608 to upgrade or renew your plan.";

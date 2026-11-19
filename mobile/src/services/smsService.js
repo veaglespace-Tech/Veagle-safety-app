@@ -128,43 +128,42 @@ async function sendAndroidDirectSms(phoneNumber, message) {
 }
 
 // ---------------------------------------------------------------------------
-// 5. iOS: Pre-filled Native SMS Composer (User taps 'Send')
+// 5. Universal Pre-filled Native SMS Composer (1-Tap 'Send' for iOS & Android Fallback)
 // ---------------------------------------------------------------------------
 
-async function sendIosSmsComposer(phoneNumbers, message) {
-  if (Platform.OS !== 'ios') return false;
+export async function openUniversalSmsComposer(phoneNumbers, message) {
   if (!phoneNumbers || phoneNumbers.length === 0) return false;
 
-  console.log(`📱 [SMSService] Opening iOS SMS Composer for ${phoneNumbers.length} contact(s)...`);
+  console.log(`📱 [SMSService] Opening Universal SMS Composer for ${phoneNumbers.length} contact(s)...`);
 
-  // Option A: Try official expo-sms (MFMessageComposeViewController in-app modal)
+  // Option A: Try official expo-sms (native composer on both Android & iOS)
   try {
     const SMS = require('expo-sms');
     if (SMS && typeof SMS.isAvailableAsync === 'function') {
       const isAvailable = await SMS.isAvailableAsync();
       if (isAvailable) {
         const result = await SMS.sendSMSAsync(phoneNumbers, message);
-        console.log('📱 [SMSService] iOS expo-sms completed:', result);
+        console.log('📱 [SMSService] expo-sms completed:', result);
         return result?.result === 'sent';
       }
     }
   } catch (expoSmsErr) {
-    console.warn('[SMSService] expo-sms iOS notice:', expoSmsErr?.message);
+    console.warn('[SMSService] expo-sms notice:', expoSmsErr?.message);
   }
 
-  // Option B: Fallback to iOS system sms: URL scheme
+  // Option B: Fallback to system sms: URL scheme
   try {
-    // iOS scheme: sms:number1,number2&body=message
-    const joined = phoneNumbers.join(',');
-    const url = `sms:${joined}&body=${encodeURIComponent(message)}`;
+    const separator = Platform.OS === 'ios' ? '&' : '?';
+    const joined = phoneNumbers.join(Platform.OS === 'ios' ? ',' : ';');
+    const url = `sms:${joined}${separator}body=${encodeURIComponent(message)}`;
     const canOpen = await Linking.canOpenURL(url).catch(() => false);
     if (canOpen) {
       await Linking.openURL(url);
-      console.log('📱 [SMSService] iOS SMS URL scheme opened successfully');
+      console.log('📱 [SMSService] System SMS URL scheme opened successfully');
       return true;
     }
   } catch (linkErr) {
-    console.warn('[SMSService] iOS SMS URL scheme fallback error:', linkErr?.message);
+    console.warn('[SMSService] SMS URL scheme fallback error:', linkErr?.message);
   }
 
   return false;
@@ -172,7 +171,7 @@ async function sendIosSmsComposer(phoneNumbers, message) {
 
 // ---------------------------------------------------------------------------
 // 6. Master Dispatcher: sendEmergencySmsToAll
-// Called from sosSlice when SOS is triggered
+// Called from sosSlice when SOS is triggered and from ActiveSOSScreen button
 // ---------------------------------------------------------------------------
 
 export async function sendEmergencySmsToAll({
@@ -182,6 +181,7 @@ export async function sendEmergencySmsToAll({
   latitude,
   longitude,
   delayMs = 0,
+  forceComposer = false,
 }) {
   if (Platform.OS === 'web') {
     return { sent: 0, failed: 0, skipped: true };
@@ -194,7 +194,7 @@ export async function sendEmergencySmsToAll({
 
   if (!emergencyContacts || emergencyContacts.length === 0) {
     console.warn('[SMSService] No emergency contacts available for SMS');
-    return { sent: 0, failed: 0, skipped: true };
+    return { sent: 0, failed: 0, skipped: true, error: 'NO_CONTACTS' };
   }
 
   // Sanitize all phone numbers
@@ -207,7 +207,7 @@ export async function sendEmergencySmsToAll({
 
   if (validContacts.length === 0) {
     console.warn('[SMSService] No valid formatted phone numbers found in emergency contacts');
-    return { sent: 0, failed: 0, skipped: true };
+    return { sent: 0, failed: 0, skipped: true, error: 'INVALID_NUMBERS' };
   }
 
   const messageText = buildEmergencySmsText({
@@ -217,56 +217,73 @@ export async function sendEmergencySmsToAll({
     longitude,
   });
 
+  const phoneList = validContacts.map((c) => c.phone);
+
   // -------------------------------------------------------------------------
-  // A. iOS ROUTE: Pre-filled composer (User taps 'Send')
+  // A. iOS ROUTE OR FORCE COMPOSER: Pre-filled composer (User taps 'Send')
   // -------------------------------------------------------------------------
-  if (Platform.OS === 'ios') {
-    const phoneList = validContacts.map((c) => c.phone);
-    const success = await sendIosSmsComposer(phoneList, messageText);
+  if (Platform.OS === 'ios' || forceComposer) {
+    const success = await openUniversalSmsComposer(phoneList, messageText);
     return {
       sent: success ? phoneList.length : 0,
       failed: success ? 0 : phoneList.length,
-      platform: 'ios',
+      platform: Platform.OS,
+      mode: 'composer',
     };
   }
 
   // -------------------------------------------------------------------------
-  // B. ANDROID ROUTE: 100% Silent Background SMS via SIM
+  // B. ANDROID ROUTE:
+  // Step 1: Try 100% Silent Background SMS via SIM card
+  // Step 2: If rejected by OS/Carrier/Permission, immediately launch Universal Composer!
   // -------------------------------------------------------------------------
   let hasPermission = await hasSmsSendPermission();
   if (!hasPermission) {
     hasPermission = await requestSmsSendPermission();
   }
 
-  if (!hasPermission) {
-    console.warn('⚠️ [SMSService] Android SEND_SMS permission denied — cannot send silent background SMS');
-    return { sent: 0, failed: validContacts.length, permissionDenied: true, platform: 'android' };
-  }
-
-  console.log(`📱 [SMSService] Sending silent background SMS to ${validContacts.length} Android contact(s)...`);
-
   let sentCount = 0;
   let failCount = 0;
 
-  for (const contact of validContacts) {
-    try {
-      const ok = await sendAndroidDirectSms(contact.phone, messageText);
-      if (ok) {
-        sentCount++;
-        console.log(`✅ [SMSService] Background SMS dispatched to ${contact.name} (${contact.phone})`);
-      } else {
-        failCount++;
-        console.warn(`⚠️ [SMSService] Background SMS returned false for ${contact.name} (${contact.phone})`);
-      }
-    } catch (err) {
-      failCount++;
-      console.warn(`❌ [SMSService] SMS failed for ${contact.name}:`, err?.message);
-    }
+  if (hasPermission) {
+    console.log(`📱 [SMSService] Attempting silent background SMS to ${validContacts.length} Android contact(s)...`);
 
-    // 300ms throttle between sequential messages to avoid SIM modem saturation
-    await new Promise((res) => setTimeout(res, 300));
+    for (const contact of validContacts) {
+      try {
+        const ok = await sendAndroidDirectSms(contact.phone, messageText);
+        if (ok) {
+          sentCount++;
+          console.log(`✅ [SMSService] Background SMS dispatched to ${contact.name} (${contact.phone})`);
+        } else {
+          failCount++;
+          console.warn(`⚠️ [SMSService] Background SMS returned false for ${contact.name} (${contact.phone})`);
+        }
+      } catch (err) {
+        failCount++;
+        console.warn(`❌ [SMSService] SMS failed for ${contact.name}:`, err?.message);
+      }
+
+      // 300ms throttle between sequential messages to avoid SIM modem saturation
+      await new Promise((res) => setTimeout(res, 300));
+    }
+  }
+
+  // -------------------------------------------------------------------------
+  // SMART FAILOVER: If silent background failed or was blocked by Samsung/Carrier,
+  // automatically launch the pre-filled Native SMS app (iPhone-style 1-tap send)!
+  // -------------------------------------------------------------------------
+  if (sentCount === 0) {
+    console.log('🔄 [SMSService] Background SMS was blocked or failed — launching 1-tap Native SMS Composer fallback for all devices...');
+    const opened = await openUniversalSmsComposer(phoneList, messageText);
+    return {
+      sent: opened ? phoneList.length : 0,
+      failed: opened ? 0 : phoneList.length,
+      platform: 'android',
+      mode: 'fallback_composer',
+      permissionDenied: !hasPermission,
+    };
   }
 
   console.log(`📱 [SMSService] Android background SMS completed: ${sentCount} sent, ${failCount} failed`);
-  return { sent: sentCount, failed: failCount, platform: 'android' };
+  return { sent: sentCount, failed: failCount, platform: 'android', mode: 'background' };
 }

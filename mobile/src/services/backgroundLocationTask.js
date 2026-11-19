@@ -3,7 +3,8 @@ import * as TaskManager from 'expo-task-manager';
 import * as Location from 'expo-location';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { sosApi } from '../api/sosApi';
-import { API_URL, TOKEN_KEY } from '../utils/constants';
+import { API_URL } from '../utils/constants';
+import { getAuthToken } from '../utils/tokenStorage';
 
 export const BACKGROUND_SOS_LOCATION_TASK = 'BACKGROUND_SOS_LOCATION_TASK';
 
@@ -23,7 +24,7 @@ if (Platform.OS !== 'web') {
         try {
           const storedSosId = await AsyncStorage.getItem('@active_sos_session_id');
           if (storedSosId) {
-            const token = await AsyncStorage.getItem(TOKEN_KEY);
+            const token = await getAuthToken();
             const headers = {
               'Content-Type': 'application/json',
               ...(token ? { Authorization: `Bearer ${token}` } : {}),

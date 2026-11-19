@@ -1,7 +1,6 @@
 import { createSlice, createAsyncThunk } from '@reduxjs/toolkit';
-import AsyncStorage from '@react-native-async-storage/async-storage';
 import { authApi } from '../../api/authApi';
-import { TOKEN_KEY } from '../../utils/constants';
+import { clearAuthToken, setAuthToken } from '../../utils/tokenStorage';
 import { unregisterPushDeviceToken } from '../../services/notificationService';
 
 // ---------------------------------------------------------------------------
@@ -93,7 +92,7 @@ export const loginUser = createAsyncThunk(
 
       // Persist token to local storage on successful login
       if (data.token) {
-        await AsyncStorage.setItem(TOKEN_KEY, data.token);
+        await setAuthToken(data.token);
       }
 
       return data;
@@ -113,7 +112,7 @@ export const verifyEmailOtp = createAsyncThunk(
     try {
       const data = await authApi.verifyEmail(payload);
       if (data.token) {
-        await AsyncStorage.setItem(TOKEN_KEY, data.token);
+        await setAuthToken(data.token);
       }
       return data;
     } catch (err) {
@@ -181,7 +180,7 @@ export const logoutUser = createAsyncThunk(
     }
     // Remove persisted token — the fulfilled handler resets Redux state
     await unregisterPushDeviceToken().catch(() => {});
-    await AsyncStorage.removeItem(TOKEN_KEY);
+    await clearAuthToken();
     return null;
   },
 );

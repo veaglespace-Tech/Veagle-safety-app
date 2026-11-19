@@ -2,8 +2,7 @@ import React, { useEffect, useCallback, useMemo } from 'react';
 import { NavigationContainer } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { useDispatch, useSelector } from 'react-redux';
-import AsyncStorage from '@react-native-async-storage/async-storage';
-import { TOKEN_KEY } from '../utils/constants';
+import { getAuthToken } from '../utils/tokenStorage';
 import { fetchUser, setToken, bootstrapComplete } from '../redux/slices/authSlice';
 import { navigationRef } from './navigationRef';
 
@@ -76,7 +75,7 @@ function useBootstrap() {
   useEffect(() => {
     (async () => {
       try {
-        const storedToken = await AsyncStorage.getItem(TOKEN_KEY);
+        const storedToken = await getAuthToken();
         if (storedToken) {
           dispatch(setToken(storedToken));
           await dispatch(fetchUser());

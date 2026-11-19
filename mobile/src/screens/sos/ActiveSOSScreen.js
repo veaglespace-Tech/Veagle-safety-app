@@ -110,6 +110,15 @@ export default function ActiveSOSScreen({ navigation }) {
         ? activeSession.emergencyContacts
         : contactsList.map((c) => ({ name: c.name, phone: c.phone }));
 
+      if (!contactsToSend || contactsToSend.length === 0) {
+        Alert.alert(
+          'No Contacts Found',
+          'Please add guardian mobile numbers in the Contacts tab so SakhiSuraksha can send emergency SMS alerts.',
+          [{ text: 'OK' }]
+        );
+        return;
+      }
+
       const res = await sendEmergencySmsToAll({
         emergencyContacts: contactsToSend,
         victimName: user?.fullName || user?.name || 'Sakhi Member',
@@ -117,9 +126,10 @@ export default function ActiveSOSScreen({ navigation }) {
         latitude,
         longitude,
         delayMs: 0,
+        forceComposer: false,
       });
 
-      if (res?.sent > 0 || res?.platform === 'ios') {
+      if (res?.sent > 0 || res?.mode === 'fallback_composer' || res?.platform === 'ios') {
         setSmsSentNotice(true);
         setTimeout(() => setSmsSentNotice(false), 4000);
       }
