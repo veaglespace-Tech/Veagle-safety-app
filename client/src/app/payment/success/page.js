@@ -24,7 +24,9 @@ function SuccessContent() {
   useEffect(() => {
     if (token && typeof window !== 'undefined') {
       localStorage.setItem('tichi_token', token);
+      localStorage.setItem('tichi_auth_token', token);
       localStorage.setItem('token', token);
+      localStorage.removeItem('tichi_reg_token');
     }
     dispatch(fetchUser());
 
@@ -80,8 +82,7 @@ function SuccessContent() {
             </h1>
 
             <p className="text-xs text-[#684E67] font-bold leading-relaxed max-w-md mx-auto">
-              Your PayU transaction has been completed and your 365-day safety protection is now
-              fully activated in the system.
+              Your Razorpay payment has been verified and your 365-day safety protection is now fully activated in the system.
             </p>
           </div>
 

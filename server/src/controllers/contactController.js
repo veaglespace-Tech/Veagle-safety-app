@@ -38,14 +38,20 @@ export const addContact = async (req, res) => {
     });
 
     const currentUser = await prisma.user.findUnique({ where: { id: req.user?.id } });
+    const updateData = {};
     if (currentUser && (!currentUser.emergencyContactName || count === 0)) {
+      updateData.emergencyContactName = name.trim();
+      updateData.emergencyContactPhone = phone.replace(/\D/g, '');
+    }
+    // Also save parentEmail on user profile if relationship is parent-like or not already set
+    if (email && email.trim() && (!currentUser?.parentEmail || ['Parent', 'Father', 'Mother', 'Guardian'].includes(relationship))) {
+      updateData.parentEmail = email.trim().toLowerCase();
+    }
+    if (Object.keys(updateData).length > 0) {
       await prisma.user.update({
         where: { id: req.user?.id },
-        data: {
-          emergencyContactName: name.trim(),
-          emergencyContactPhone: phone.replace(/\D/g, ''),
-        },
-      });
+        data: updateData,
+      }).catch((err) => console.warn('[addContact] user profile update error:', err.message));
     }
 
     // Automatically sync parent profile and create active ParentChildLink
@@ -63,7 +69,8 @@ export const addContact = async (req, res) => {
 
     return res.status(201).json({ message: 'Trusted contact added', contact });
   } catch (error) {
-    return res.status(500).json({ error: 'Failed to add contact' });
+    console.error('[addContact] Error details:', error);
+    return res.status(500).json({ error: error.message || 'Failed to add contact' });
   }
 };
 

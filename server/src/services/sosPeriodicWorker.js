@@ -2,7 +2,7 @@ import { prisma } from '../config/prisma.js';
 import { config } from '../config/index.js';
 import { sendSos5MinLocationUpdate } from './mailer.js';
 import { getIO } from '../socket.js';
-import { collectEmergencyRecipients } from '../utils/recipientHelper.js';
+import { collectEmergencyRecipients, isValidEmail } from '../utils/recipientHelper.js';
 
 // Use a global symbol to prevent duplicate workers across nodemon hot-reloads
 // (each nodemon restart is a new module scope, but globalThis persists in the same process)
@@ -53,6 +53,14 @@ export const startSosPeriodicWorker = () => {
               parentEmail: true,
               emergencyContactName: true,
               trustedContacts: true,
+              parentLinks: {
+                where: { status: 'ACTIVE' },
+                include: {
+                  parent: {
+                    select: { id: true, email: true, fullName: true },
+                  },
+                },
+              },
             },
           },
           locations: {
@@ -64,14 +72,40 @@ export const startSosPeriodicWorker = () => {
 
       if (activeSessions.length === 0) return;
 
-      const clientBaseUrl = process.env.CLIENT_URL || config.payu?.clientUrl || 'http://localhost:3000';
+      const clientBaseUrl = process.env.CLIENT_URL || config.razorpay?.clientUrl || 'http://localhost:3000';
+      const maxSessionAgeMs = 2 * 60 * 60 * 1000; // 2 hours
 
       for (const session of activeSessions) {
+        // Auto-close stale sessions older than 2 hours to prevent infinite email loops
+        if (session.startedAt && (now - new Date(session.startedAt).getTime() > maxSessionAgeMs)) {
+          console.log(`⏹️ [SOS Periodic Worker] Auto-closing stale SOS session #${session.id} (> 2 hours old).`);
+          await prisma.sosSession.update({
+            where: { id: session.id },
+            data: {
+              status: 'RESOLVED',
+              resolvedAt: new Date(),
+              resolutionNote: 'Auto-resolved: active session exceeded 2 hours limit',
+            },
+          }).catch(() => {});
+          await prisma.user.update({
+            where: { id: session.userId },
+            data: { safetyStatus: 'SAFE' },
+          }).catch(() => {});
+          continue;
+        }
+
+        const countKey = `count_${session.id}`;
+        const currentCount = lastSentMap.get(countKey) || 0;
+        if (currentCount >= 4) {
+          // Max 4 periodic updates sent for this session
+          continue;
+        }
+
         const sessionKey = `session_${session.id}`;
         const lastSent = lastSentMap.get(sessionKey) || 0;
         const timeSinceLast = now - lastSent;
 
-        // Enforce strict 5-minute gap between emails for each session
+        // Enforce strict gap between periodic emails for each session
         if (timeSinceLast < PERIODIC_INTERVAL_MS) {
           const remainingSecs = Math.ceil((PERIODIC_INTERVAL_MS - timeSinceLast) / 1000);
           console.log(`⏳ [SOS Periodic Worker] Session #${session.id}: next email in ${remainingSecs}s — skipping.`);
@@ -80,7 +114,8 @@ export const startSosPeriodicWorker = () => {
 
         // Mark this session as sent NOW (before sending, to prevent race conditions)
         lastSentMap.set(sessionKey, now);
-        console.log(`📡 [SOS Periodic Worker] Dispatching 5-min location update for session #${session.id}...`);
+        lastSentMap.set(countKey, currentCount + 1);
+        console.log(`📡 [SOS Periodic Worker] Dispatching location update #${currentCount + 1} for session #${session.id}...`);
 
         const victim = session.user;
         const latestLocation = session.locations?.[0];
@@ -90,8 +125,16 @@ export const startSosPeriodicWorker = () => {
         const trackingUrl = `${clientBaseUrl}/live-track/${session.shareToken}`;
         const googleMapsUrl = `https://www.google.com/maps?q=${latitude},${longitude}`;
 
-        // Collect all target recipient emails (Victim + Admin + Parent + Guardians)
-        const recipientEmails = collectEmergencyRecipients(victim);
+        // Collect all verified target recipient emails (Guardians + Parents + DB Admins - NOT the victim herself)
+        const recipientEmailSet = new Set(await collectEmergencyRecipients(victim, victim?.trustedContacts, { includeVictim: false }));
+        if (Array.isArray(victim?.parentLinks)) {
+          victim.parentLinks.forEach((link) => {
+            if (isValidEmail(link.parent?.email)) {
+              recipientEmailSet.add(link.parent.email.trim().toLowerCase());
+            }
+          });
+        }
+        const recipientEmails = Array.from(recipientEmailSet);
 
         // Send 5-minute periodic email alert concurrently to each recipient
         await Promise.all(

@@ -44,15 +44,15 @@ export async function seedDatabase() {
   }
 
   // 1. Seed SuperAdmin Account with ID = 1
-  const superAdminEmail = 'abhijeetambhore4@gmail.com';
+  const superAdminEmail = 'veaglespace@gmail.com';
   const passwordHash = await bcrypt.hash('Veagle@123', 10);
 
   const superAdmin = await prisma.user.create({
     data: {
       id: 1,
-      fullName: 'Super Admin',
+      fullName: 'Veagle Space',
       email: superAdminEmail,
-      phone: '7756099153',
+      phone: '8237999101',
       passwordHash,
       role: 'SUPER_ADMIN',
       isEmailVerified: true,

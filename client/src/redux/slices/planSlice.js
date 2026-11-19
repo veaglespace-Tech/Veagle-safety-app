@@ -24,11 +24,11 @@ export const fetchPlans = createAsyncThunk('plan/fetchPlans', async (_, { reject
   }
 });
 
-export const initiatePayUCheckout = createAsyncThunk(
-  'plan/initiatePayUCheckout',
+export const initiateRazorpayCheckout = createAsyncThunk(
+  'plan/initiateRazorpayCheckout',
   async ({ planId, amount }, { rejectWithValue }) => {
     try {
-      const res = await api.post('/payment/payu-initiate', { planId, amount });
+      const res = await api.post('/payment/razorpay-create-order', { planId, amount });
       return res.data;
     } catch (err) {
       return rejectWithValue(err.response?.data?.error || 'Payment initiation failed');
@@ -64,7 +64,7 @@ const planSlice = createSlice({
         state.plans = [SINGLE_YEARLY_PLAN];
       })
 
-      .addCase(initiatePayUCheckout.fulfilled, (state, action) => {
+      .addCase(initiateRazorpayCheckout.fulfilled, (state, action) => {
         state.paymentData = action.payload;
       });
   },

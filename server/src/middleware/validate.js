@@ -10,9 +10,10 @@ export const validate = (schema) => (req, res, next) => {
         field: issue.path.join('.'),
         message: issue.message,
       }));
+      const firstError = error.issues[0]?.message || 'Validation failed';
       return res.status(400).json({
         success: false,
-        error: 'Validation failed',
+        error: firstError,
         details: errorMessages,
       });
     }

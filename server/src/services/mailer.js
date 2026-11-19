@@ -23,13 +23,11 @@ export const sendEmailVerificationOtp = async (arg1, arg2, arg3) => {
     otp = arg3;
   }
 
-  console.log(`🔑 [OTP GENERATED] Email: ${recipientEmail} | OTP Code: ${otp}`);
-
   try {
     await transporter.sendMail({
       from: `"Sakhi Suraksha SOS" <${config.emailService.user || 'no-reply@sakhisuraksha.org'}>`,
       to: recipientEmail,
-      subject: `🔐 Email Verification OTP: ${otp} - Sakhi Suraksha SOS`,
+      subject: 'Email verification code - Sakhi Suraksha SOS',
       html: `
         <div style="font-family: 'Segoe UI', Helvetica, Arial, sans-serif; max-width: 600px; margin: 0 auto; border: 2px solid #FF5C8A; border-radius: 16px; padding: 32px; background-color: #FFF0F3;">
           <div style="text-align: center; margin-bottom: 24px;">

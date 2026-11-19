@@ -16,10 +16,10 @@ export const registerSchema = z.object({
   city: z.string().optional(),
   state: z.string().optional(),
   country: z.string().optional(),
-  pincode: z.string().regex(/^\d{6}$/, "Please enter a valid 6-digit Pincode").optional().or(z.literal('')),
-  medicalNotes: z.string().optional(),
-  orgReferralCode: z.string().optional(),
-  partnerReferralCode: z.string().optional(),
+  pincode: z.string().optional().or(z.literal('')),
+  medicalNotes: z.string().optional().or(z.literal('')),
+  orgReferralCode: z.string().optional().or(z.literal('')),
+  partnerReferralCode: z.string().optional().or(z.literal('')),
 });
 
 export const loginSchema = z.object({
@@ -31,4 +31,5 @@ export const loginSchema = z.object({
 export const verifyEmailSchema = z.object({
   email: z.string().email("Please enter a valid email address").toLowerCase().trim(),
   otp: z.string().length(6, "OTP must be 6 digits"),
+  pendingToken: z.string().nullish(),
 });

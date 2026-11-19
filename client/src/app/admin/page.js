@@ -67,6 +67,12 @@ export default function SuperAdminOverviewPage() {
         if (data && data.location) {
           const lat = parseFloat(data.location.latitude);
           const lng = parseFloat(data.location.longitude);
+          const latestPoint = {
+            latitude: lat,
+            longitude: lng,
+            accuracy: data.location.accuracy,
+            recordedAt: data.location.recordedAt,
+          };
           
           if (!isNaN(lat) && !isNaN(lng)) {
             setTrackingSos(prev => {
@@ -75,7 +81,7 @@ export default function SuperAdminOverviewPage() {
                   ...prev,
                   latitude: lat,
                   longitude: lng,
-                  locations: [{ latitude: lat, longitude: lng }],
+                  locations: [latestPoint],
                   locationHistory: data.history || []
                 };
               }
@@ -147,16 +153,33 @@ export default function SuperAdminOverviewPage() {
 
         socket.on('SOS_LOCATION_UPDATE', (data) => {
           const incomingId = parseInt(data.sosSessionId, 10);
+          const latestPoint = {
+            latitude: Number(data.latitude),
+            longitude: Number(data.longitude),
+            accuracy: data.accuracy,
+            recordedAt: data.recordedAt || data.timestamp,
+          };
           console.log('[Admin] SOS_LOCATION_UPDATE received:', incomingId, data.latitude, data.longitude);
 
           setTrackingSos((prev) => {
             if (prev && parseInt(prev.id, 10) === incomingId) {
               console.log('[Admin] Updating tracking modal marker position');
+              const priorHistory = prev.locationHistory?.length
+                ? prev.locationHistory
+                : [...(prev.locations || [])].reverse();
+              const lastPoint = priorHistory[priorHistory.length - 1];
+              const locationHistory =
+                lastPoint &&
+                Number(lastPoint.latitude) === latestPoint.latitude &&
+                Number(lastPoint.longitude) === latestPoint.longitude
+                  ? priorHistory
+                  : [...priorHistory, latestPoint].slice(-200);
               return {
                 ...prev,
                 latitude: data.latitude,
                 longitude: data.longitude,
-                locations: [{ latitude: data.latitude, longitude: data.longitude }],
+                locations: [latestPoint],
+                locationHistory,
               };
             }
             return prev;
@@ -172,7 +195,7 @@ export default function SuperAdminOverviewPage() {
                     ...sos,
                     latitude: data.latitude,
                     longitude: data.longitude,
-                    locations: [{ latitude: data.latitude, longitude: data.longitude }],
+                    locations: [latestPoint],
                   };
                 }
                 return sos;
@@ -486,7 +509,13 @@ export default function SuperAdminOverviewPage() {
                   lat={trackingSos.locations?.[0]?.latitude}
                   lng={trackingSos.locations?.[0]?.longitude}
                   isEmergency={true}
-                  locationHistory={trackingSos?.locations ? [...trackingSos.locations].reverse() : []}
+                  locationHistory={
+                    trackingSos.locationHistory?.length
+                      ? trackingSos.locationHistory
+                      : trackingSos?.locations
+                        ? [...trackingSos.locations].reverse()
+                        : []
+                  }
                 />
               </div>
 

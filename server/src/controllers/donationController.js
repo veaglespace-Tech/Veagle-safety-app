@@ -1,7 +1,7 @@
 import { prisma } from '../config/prisma.js';
 import { config } from '../config/index.js';
 import { asyncHandler } from '../middleware/asyncHandler.js';
-import { generatePayUHash, verifyPayUResponseHash } from '../utils/payu.js';
+import { getRazorpayClient, verifyRazorpaySignature, resolveRazorpayCredentials } from '../utils/razorpay.js';
 
 export const initiateDonation = asyncHandler(async (req, res) => {
   const { name, email, phone, amount } = req.body;
@@ -10,16 +10,37 @@ export const initiateDonation = asyncHandler(async (req, res) => {
     return res.status(400).json({ error: 'All fields are required' });
   }
 
+  const parsedAmount = parseFloat(amount);
+  if (isNaN(parsedAmount) || parsedAmount <= 0) {
+    return res.status(400).json({ error: 'Invalid donation amount' });
+  }
+
   const txnid = `DONATION_${Date.now()}_${Math.floor(100 + Math.random() * 900)}`;
   const productinfo = 'Donation for Women Safety Support';
-  
-  const hash = generatePayUHash({
-    txnid,
-    amount: amount,
-    productinfo,
-    firstname: name,
-    email,
-  });
+
+  // Razorpay amount in paise
+  const amountInPaise = Math.round(parsedAmount * 100);
+  const { keyId: activeKeyId } = resolveRazorpayCredentials();
+
+  let razorpayOrder;
+  try {
+    razorpayOrder = await getRazorpayClient().orders.create({
+      amount: amountInPaise,
+      currency: 'INR',
+      receipt: txnid,
+      notes: {
+        name,
+        email,
+        phone,
+        purpose: productinfo,
+      },
+    });
+  } catch (rzpErr) {
+    console.error('[Donation Order Creation Error]:', rzpErr);
+    return res.status(400).json({
+      error: rzpErr?.error?.description || rzpErr?.message || 'Payment gateway initialization failed. Please try again.',
+    });
+  }
 
   // Save pending donation
   await prisma.donation.create({
@@ -27,114 +48,88 @@ export const initiateDonation = asyncHandler(async (req, res) => {
       name,
       email,
       phone,
-      amount: parseFloat(amount),
+      amount: parsedAmount,
       status: 'PENDING',
       txnid,
-      hash
-    }
+      hash: razorpayOrder.id, // Store Razorpay order ID
+    },
   });
 
-  const surl = `${config.payu.serverBaseUrl}/api/donations/payu-success`;
-  const furl = `${config.payu.serverBaseUrl}/api/donations/payu-failure`;
-
   return res.json({
-    message: 'Donation transaction initiated',
+    message: 'Donation order created',
     paymentData: {
-      actionUrl: config.payu.baseUrl,
-      key: config.payu.key,
+      orderId: razorpayOrder.id,
+      keyId: activeKeyId,
       txnid,
-      amount: parseFloat(amount).toFixed(2),
+      amount: amountInPaise,
+      amountDisplay: parsedAmount.toFixed(2),
+      currency: 'INR',
       productinfo,
-      firstname: name,
+      name,
       email,
       phone,
-      surl,
-      furl,
-      hash,
     },
   });
 });
 
-export const handleDonationSuccess = asyncHandler(async (req, res) => {
-  const payuResponse = Object.keys(req.body).length > 0 ? req.body : req.query;
-  const { txnid, mihpayid, mode, status } = payuResponse;
+export const verifyDonationPayment = asyncHandler(async (req, res) => {
+  const {
+    razorpay_order_id,
+    razorpay_payment_id,
+    razorpay_signature,
+    txnid,
+  } = req.body;
 
-  if (!txnid) {
-    const fallbackUrl = `${config.payu.clientUrl}/donate`;
-    if (req.headers['content-type']?.includes('application/x-www-form-urlencoded') || req.method === 'GET') {
-      return res.redirect(fallbackUrl);
-    }
-    return res.status(400).json({ success: false, message: 'Invalid payment callback data' });
+  if (!razorpay_order_id || !razorpay_payment_id || !razorpay_signature) {
+    return res.status(400).json({ success: false, message: 'Missing Razorpay payment parameters' });
   }
 
-  const verification = verifyPayUResponseHash(payuResponse);
-  const donationRecord = await prisma.donation.findUnique({ where: { txnid } });
+  // Verify signature
+  const isValid = verifyRazorpaySignature({
+    orderId: razorpay_order_id,
+    paymentId: razorpay_payment_id,
+    signature: razorpay_signature,
+  });
 
-  if (status === 'success' || verification.isValid) {
-    if (donationRecord) {
-      await prisma.donation.update({
-        where: { id: donationRecord.id },
-        data: {
-          status: 'SUCCESS',
-          payuMoneyId: mihpayid || payuResponse.payuMoneyId || null,
-          paymentMode: mode || payuResponse.mode || 'ONLINE',
-        },
-      });
+  if (!isValid) {
+    if (txnid) {
+      await prisma.donation.updateMany({ where: { txnid }, data: { status: 'FAILED' } }).catch(() => {});
     }
+    return res.status(400).json({ success: false, message: 'Payment signature verification failed' });
+  }
 
-    const clientRedirectUrl = `${config.payu.clientUrl}/donate/success?status=success&txnid=${txnid}`;
-    if (req.headers['content-type']?.includes('application/x-www-form-urlencoded')) {
-      return res.redirect(clientRedirectUrl);
-    }
+  // Find and update donation record
+  const donationRecord = txnid
+    ? await prisma.donation.findUnique({ where: { txnid } })
+    : await prisma.donation.findFirst({ where: { hash: razorpay_order_id } });
 
-    return res.json({
-      success: true,
-      message: 'Donation completed successfully!',
-      txnid,
-      status: 'SUCCESS',
-    });
-  } else {
-    if (donationRecord) {
-      await prisma.donation.update({
-        where: { id: donationRecord.id },
-        data: { status: 'FAILED' },
-      });
-    }
-
-    const clientRedirectUrl = `${config.payu.clientUrl}/donate/success?status=failed&txnid=${txnid}`;
-    if (req.headers['content-type']?.includes('application/x-www-form-urlencoded')) {
-      return res.redirect(clientRedirectUrl);
-    }
-
-    return res.status(400).json({
-      success: false,
-      message: 'Payment hash verification failed or transaction declined',
+  if (donationRecord) {
+    await prisma.donation.update({
+      where: { id: donationRecord.id },
+      data: {
+        status: 'SUCCESS',
+        payuMoneyId: razorpay_payment_id,
+        paymentMode: 'ONLINE',
+      },
     });
   }
+
+  return res.json({
+    success: true,
+    message: 'Donation completed successfully! Thank you for your contribution.',
+    txnid: txnid || razorpay_order_id,
+    razorpayPaymentId: razorpay_payment_id,
+    status: 'SUCCESS',
+  });
 });
 
 export const handleDonationFailure = asyncHandler(async (req, res) => {
-  const payuResponse = Object.keys(req.body).length > 0 ? req.body : req.query;
-  const { txnid } = payuResponse;
-
-  if (!txnid) {
-    const fallbackUrl = `${config.payu.clientUrl}/donate`;
-    if (req.headers['content-type']?.includes('application/x-www-form-urlencoded') || req.method === 'GET') {
-      return res.redirect(fallbackUrl);
-    }
-    return res.status(400).json({ success: false, message: 'Invalid payment callback data' });
-  }
+  const { txnid, razorpay_order_id } = req.body;
 
   if (txnid) {
-    await prisma.donation.updateMany({
-      where: { txnid },
-      data: { status: 'FAILED' },
-    });
-  }
-
-  const clientRedirectUrl = `${config.payu.clientUrl}/donate/success?status=failed&txnid=${txnid || ''}`;
-  if (req.headers['content-type']?.includes('application/x-www-form-urlencoded')) {
-    return res.redirect(clientRedirectUrl);
+    await prisma.donation.updateMany({ where: { txnid }, data: { status: 'FAILED' } }).catch(() => {});
+  } else if (razorpay_order_id) {
+    await prisma.donation.updateMany({ where: { hash: razorpay_order_id }, data: { status: 'FAILED' } }).catch(() => {});
   }
 
   return res.status(400).json({

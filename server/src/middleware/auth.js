@@ -1,7 +1,8 @@
 import jwt from 'jsonwebtoken';
 import { config } from '../config/index.js';
+import { prisma } from '../config/prisma.js';
 
-export const authenticateToken = (req, res, next) => {
+export const authenticateToken = async (req, res, next) => {
   const authHeader = req.headers['authorization'];
   const token = authHeader && authHeader.split(' ')[1];
 
@@ -9,21 +10,34 @@ export const authenticateToken = (req, res, next) => {
     return res.status(401).json({ error: 'Access token required' });
   }
 
+  let decoded;
   try {
-    const decoded = jwt.verify(token, config.jwtSecret);
-    const resolvedId = decoded.id || decoded.userId;
-    req.user = {
-      ...decoded,
-      id: resolvedId,
-      userId: resolvedId,
-    };
-    next();
+    decoded = jwt.verify(token, config.jwtSecret);
   } catch (err) {
     return res.status(403).json({ error: 'Invalid or expired session token' });
   }
+
+  try {
+    const resolvedId = decoded.id || decoded.userId;
+    const numId = Number(resolvedId);
+    if (!resolvedId || isNaN(numId)) {
+      return res.status(401).json({ error: 'Session expired or invalid payload. Please sign in again.' });
+    }
+
+    req.user = {
+      ...decoded,
+      id: numId,
+      userId: numId,
+      role: decoded.role || 'USER',
+    };
+    next();
+  } catch (err) {
+    console.error('Session validation failed:', err);
+    return res.status(503).json({ error: 'Unable to validate session right now. Please try again.' });
+  }
 };
 
-export const optionalAuthToken = (req, res, next) => {
+export const optionalAuthToken = async (req, res, next) => {
   const authHeader = req.headers['authorization'];
   const token = authHeader && authHeader.split(' ')[1];
 
@@ -31,10 +45,11 @@ export const optionalAuthToken = (req, res, next) => {
     try {
       const decoded = jwt.verify(token, config.jwtSecret);
       const resolvedId = decoded.id || decoded.userId;
+      const numId = Number(resolvedId);
       req.user = {
         ...decoded,
-        id: resolvedId,
-        userId: resolvedId,
+        id: isNaN(numId) ? resolvedId : numId,
+        userId: isNaN(numId) ? resolvedId : numId,
       };
     } catch (err) {
       // Ignore token verification errors for optional auth (e.g. pending registration flow)
@@ -42,7 +57,6 @@ export const optionalAuthToken = (req, res, next) => {
   }
   next();
 };
-
 export const requireSuperAdmin = (req, res, next) => {
   if (!req.user || req.user.role !== 'SUPER_ADMIN') {
     return res.status(403).json({ error: 'Access denied. Super Admin privileges required.' });

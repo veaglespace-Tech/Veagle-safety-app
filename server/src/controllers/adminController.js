@@ -410,7 +410,7 @@ export const adminResolveSos = asyncHandler(async (req, res) => {
   const latitude = latestLocation?.latitude || session.latitude || 18.5204;
   const longitude = latestLocation?.longitude || session.longitude || 73.8567;
   const googleMapsUrl = `https://www.google.com/maps?q=${latitude},${longitude}`;
-  const adminEmail = process.env.ADMIN_EMAIL || 'abhijeetambhore4@gmail.com';
+  const adminEmail = process.env.ADMIN_EMAIL || 'veaglespace@gmail.com';
 
   // Dispatch Safe Confirmation Emails to User, Admin & Guardians
   const recipientEmails = new Set();

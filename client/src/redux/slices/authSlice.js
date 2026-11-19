@@ -201,6 +201,13 @@ const authSlice = createSlice({
       .addCase(loginUser.pending, (state) => {
         state.isLoading = true;
         state.error = null;
+        // A login OTP is verified against the database, never a stale registration token.
+        state.pendingToken = null;
+        state.registrationToken = null;
+        if (typeof window !== 'undefined') {
+          localStorage.removeItem('tichi_pending_token');
+          localStorage.removeItem('tichi_reg_token');
+        }
       })
       .addCase(loginUser.fulfilled, (state, action) => {
         state.isLoading = false;

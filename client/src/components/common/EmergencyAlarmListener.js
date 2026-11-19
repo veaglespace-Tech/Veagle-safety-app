@@ -14,26 +14,20 @@ import {
   BellRing,
   MessageSquare,
 } from 'lucide-react';
-import { startEmergencySiren, stopEmergencySiren } from '../../utils/sirenAudio.js';
+import { startEmergencySiren, stopEmergencySiren, isEmergencySirenUnlocked } from '../../utils/sirenAudio.js';
 
 export const EmergencyAlarmListener = () => {
   const dispatch = useDispatch();
   const { user } = useSelector((state) => state?.auth || {});
-  const mutedSosIds = useSelector((state) => state?.sos?.mutedSosIds || []);
   const [alarmData, setAlarmData] = useState(null);
   const [isSirenActive, setIsSirenActive] = useState(false);
   const dismissedSosIdsRef = useRef(new Set());
   const socketRef = useRef(null);
   const userRef = useRef(user);
-  const mutedSosIdsRef = useRef(mutedSosIds);
 
   useEffect(() => {
     userRef.current = user;
   }, [user]);
-
-  useEffect(() => {
-    mutedSosIdsRef.current = mutedSosIds;
-  }, [mutedSosIds]);
 
   const registerUserRooms = (socketInstance, u) => {
     if (!socketInstance || !u) return;
@@ -96,7 +90,7 @@ export const EmergencyAlarmListener = () => {
             const userPhone = (currentUser.phone || '').replace(/\D/g, '');
 
             const isVictim =
-              (currentUser.id && victimId && currentUser.id === victimId) ||
+              (currentUser.id != null && victimId != null && String(currentUser.id) === String(victimId)) ||
               (userEmail && victimEmail && userEmail === victimEmail) ||
               (userPhone && victimPhone && userPhone.slice(-10) === victimPhone.slice(-10));
 
@@ -108,15 +102,12 @@ export const EmergencyAlarmListener = () => {
 
           console.log('[EmergencyAlarmListener] SOS ALARM BROADCAST received:', data);
           setAlarmData(data);
-          
-          if (!mutedSosIdsRef.current.includes(String(sosId))) {
-            try {
-              startEmergencySiren();
-              setIsSirenActive(true);
-            } catch (e) {
-              console.warn('Audio requires user click gesture');
-            }
-          }
+          // Start immediately when this browser has already received a user gesture.
+          // Otherwise keep the Play Siren fallback because autoplay is browser-blocked.
+          const started = isEmergencySirenUnlocked()
+            ? startEmergencySiren({ vibrate: false })
+            : false;
+          setIsSirenActive(started);
         });
 
         socket.on('SOS_ALARM_STOP', (data) => {
@@ -166,11 +157,13 @@ export const EmergencyAlarmListener = () => {
 
   useEffect(() => {
     const onToggle = () => handleStartAudioSiren();
+    const onAudioUnlocked = () => {
+      if (!alarmData || isSirenActive) return;
+      const started = startEmergencySiren({ vibrate: false });
+      setIsSirenActive(started);
+    };
     const onSetState = (e) => {
-      if (e.detail.active && !isSirenActive) {
-        startEmergencySiren();
-        setIsSirenActive(true);
-      } else if (!e.detail.active && isSirenActive) {
+      if (!e.detail.active && isSirenActive) {
         stopEmergencySiren();
         setIsSirenActive(false);
       }
@@ -178,12 +171,14 @@ export const EmergencyAlarmListener = () => {
     
     window.addEventListener('toggle-siren-audio', onToggle);
     window.addEventListener('set-siren-state', onSetState);
+    window.addEventListener('emergency-audio-unlocked', onAudioUnlocked);
     
     return () => {
       window.removeEventListener('toggle-siren-audio', onToggle);
       window.removeEventListener('set-siren-state', onSetState);
+      window.removeEventListener('emergency-audio-unlocked', onAudioUnlocked);
     };
-  }, [isSirenActive]);
+  }, [isSirenActive, alarmData]);
 
   const handleDismiss = (e) => {
     if (e) e.stopPropagation();

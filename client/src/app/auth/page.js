@@ -34,7 +34,10 @@ import {
   MapPin,
   Map,
   Users,
+  FileCheck,
+  Shield,
 } from 'lucide-react';
+import { UserConsentModal } from '../../components/checkout/UserConsentModal.jsx';
 
 function UserAuthForm() {
   const searchParams = useSearchParams();
@@ -86,6 +89,10 @@ function UserAuthForm() {
   const [captchaNum1, setCaptchaNum1] = useState(0);
   const [captchaNum2, setCaptchaNum2] = useState(0);
   const [userCaptcha, setUserCaptcha] = useState('');
+
+  // Consent & Guidelines State
+  const [hasAgreedToConsent, setHasAgreedToConsent] = useState(false);
+  const [showConsentModal, setShowConsentModal] = useState(false);
 
   const generateCaptcha = () => {
     setCaptchaNum1(Math.floor(Math.random() * 10) + 1);
@@ -248,6 +255,12 @@ function UserAuthForm() {
         setValidationError(
           'Please enter a valid 10-digit mobile number for Emergency Contact.'
         );
+        return false;
+      }
+
+      if (!hasAgreedToConsent) {
+        setValidationError('You must agree to the Statutory User Consent & Safety Guidelines to register.');
+        setShowConsentModal(true);
         return false;
       }
     }
@@ -800,6 +813,45 @@ function UserAuthForm() {
                           email along with admin alerts.
                         </p>
                       </div>
+
+                      {/* USER STATUTORY CONSENT CHECKBOX (Directly on Form before Submit) */}
+                      <div className="bg-[#FFF0F3] p-3.5 rounded-2xl border border-[#FFCCE1] space-y-2.5 text-left mt-2">
+                        <div className="flex items-start space-x-2.5">
+                          <input
+                            type="checkbox"
+                            id="registerConsentCheckbox"
+                            checked={hasAgreedToConsent}
+                            onChange={(e) => {
+                              setHasAgreedToConsent(e.target.checked);
+                              if (e.target.checked) setValidationError('');
+                            }}
+                            className="accent-[#FF2A6D] w-4 h-4 rounded cursor-pointer mt-0.5 shrink-0"
+                          />
+                          <label htmlFor="registerConsentCheckbox" className="text-xs text-[#2A0826] font-bold leading-relaxed cursor-pointer select-none">
+                            I agree to the{' '}
+                            <button
+                              type="button"
+                              onClick={() => setShowConsentModal(true)}
+                              className="text-[#FF2A6D] font-black underline hover:text-[#E01A4F] inline-flex items-center space-x-1"
+                            >
+                              <span>User Safety Consent Form (7 Statutory Clauses)</span>
+                              <FileCheck className="w-3.5 h-3.5 inline ml-0.5" />
+                            </button>{' '}
+                            &amp; operational safety guidelines for emergency protection and life-safety response. *
+                          </label>
+                        </div>
+
+                        {!hasAgreedToConsent && (
+                          <button
+                            type="button"
+                            onClick={() => setShowConsentModal(true)}
+                            className="w-full text-center py-2 bg-white rounded-xl border border-[#FFCCE1] text-[11px] font-black text-[#FF2A6D] hover:bg-rose-50 transition-all cursor-pointer flex items-center justify-center space-x-1.5 shadow-2xs"
+                          >
+                            <Shield className="w-3.5 h-3.5" />
+                            <span>Click to Review All 7 Safety Consent Clauses &amp; Rules</span>
+                          </button>
+                        )}
+                      </div>
                     </>
                   )}
                 </div>
@@ -1041,6 +1093,17 @@ function UserAuthForm() {
           </div>
         </div>
       )}
+
+      {/* USER STATUTORY CONSENT MODAL */}
+      <UserConsentModal
+        isOpen={showConsentModal}
+        onClose={() => setShowConsentModal(false)}
+        onAcceptAll={() => {
+          setHasAgreedToConsent(true);
+          setValidationError('');
+          setShowConsentModal(false);
+        }}
+      />
 
       <Footer />
     </div>

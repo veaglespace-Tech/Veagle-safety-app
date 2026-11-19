@@ -163,7 +163,8 @@ export const SOSHeroButton = ({ onTriggerComplete }) => {
       router.push('/active-sos');
     } catch (e) {
       console.error('[SOS Trigger Error]:', e);
-      alert('Failed to trigger SOS. Please check your connection.');
+      const errMsg = typeof e === 'string' ? e : e?.message || 'Failed to trigger SOS. Please check your connection.';
+      alert(errMsg);
     }
   };
 

@@ -7,7 +7,9 @@ export const authApi = {
   },
 
   verifyEmail: async ({ email, otp, pendingToken }) => {
-    const response = await apiClient.post('/auth/verify-email', { email, otp, pendingToken });
+    const body = { email, otp };
+    if (pendingToken) body.pendingToken = pendingToken;
+    const response = await apiClient.post('/auth/verify-email', body);
     return response.data;
   },
 

@@ -1,10 +1,11 @@
 import { prisma } from '../config/prisma.js';
 import { asyncHandler } from '../middleware/asyncHandler.js';
-import { sendSosEmergencyAlert } from '../services/mailer.js';
+import { sendSosEmergencyAlert, sendSosSafeAlert } from '../services/mailer.js';
 import { getIO } from '../socket.js';
 import { sendEmergencyPushToEmails } from './pushController.js';
 import { sendEmergencySirenPush } from '../services/fcmService.js';
 import { config } from '../config/index.js';
+import { isValidEmail, collectEmergencyRecipients } from '../utils/recipientHelper.js';
 
 /**
  * Get Parent Portal Overview & Linked Children Safety Status
@@ -18,14 +19,14 @@ export const getParentOverview = asyncHandler(async (req, res) => {
   if (parentUser) {
     const parentEmailClean = parentUser.email ? parentUser.email.trim().toLowerCase() : '';
     const parentPhoneClean = parentUser.phone ? parentUser.phone.replace(/\D/g, '') : '';
-    const phoneLast10 = parentPhoneClean.length >= 10 ? parentPhoneClean.slice(-10) : parentPhoneClean;
+    const phoneLast10 = parentPhoneClean.length >= 10 ? parentPhoneClean.slice(-10) : '';
 
     const userConditions = [];
-    if (parentEmailClean) {
+    if (isValidEmail(parentEmailClean)) {
       userConditions.push({ parentEmail: parentEmailClean });
     }
-    if (phoneLast10 && phoneLast10.length >= 6) {
-      userConditions.push({ emergencyContactPhone: { contains: phoneLast10 } });
+    if (phoneLast10 && phoneLast10.length === 10) {
+      userConditions.push({ emergencyContactPhone: phoneLast10 });
     }
 
     // Find children who listed this parent's email or phone in their user record
@@ -40,11 +41,11 @@ export const getParentOverview = asyncHandler(async (req, res) => {
       : [];
 
     const contactConditions = [];
-    if (parentEmailClean) {
+    if (isValidEmail(parentEmailClean)) {
       contactConditions.push({ email: parentEmailClean });
     }
-    if (phoneLast10 && phoneLast10.length >= 6) {
-      contactConditions.push({ phone: { contains: phoneLast10 } });
+    if (phoneLast10 && phoneLast10.length === 10) {
+      contactConditions.push({ phone: phoneLast10 });
     }
 
     // Find children who listed this parent's email/phone in TrustedContact records
@@ -256,17 +257,27 @@ export const linkChild = asyncHandler(async (req, res) => {
     return res.status(400).json({ error: 'Please enter child mobile number or email address.' });
   }
 
-  const cleanEmail = identifier.trim().toLowerCase();
+  const isEmail = identifier.includes('@');
+  const cleanEmail = isEmail ? identifier.trim().toLowerCase() : '';
   const cleanPhone = identifier.replace(/\D/g, '');
-  const phoneLast10 = cleanPhone.length >= 10 ? cleanPhone.slice(-10) : cleanPhone;
+  const phone10 = cleanPhone.length >= 10 ? cleanPhone.slice(-10) : '';
+
+  if (!cleanEmail && !phone10) {
+    return res.status(400).json({ error: 'Please enter a valid 10-digit mobile number or email address.' });
+  }
+
+  const searchConditions = [];
+  if (cleanEmail && isValidEmail(cleanEmail)) searchConditions.push({ email: cleanEmail });
+  if (phone10 && phone10.length === 10) searchConditions.push({ phone: { endsWith: phone10 } });
+
+  if (searchConditions.length === 0) {
+    return res.status(400).json({ error: 'Invalid search criteria. Please provide a valid 10-digit phone or email.' });
+  }
 
   // Find child by email or phone
   const childUser = await prisma.user.findFirst({
     where: {
-      OR: [
-        { email: cleanEmail },
-        phoneLast10 ? { phone: { contains: phoneLast10 } } : undefined,
-      ].filter(Boolean),
+      OR: searchConditions,
     },
   });
 
@@ -503,44 +514,53 @@ export const triggerChildSos = asyncHandler(async (req, res) => {
     include: { parent: true },
   }).catch(() => []);
 
-  const clientBaseUrl = process.env.CLIENT_URL || config.payu?.clientUrl || 'http://localhost:3000';
+  const clientBaseUrl = process.env.CLIENT_URL || config.razorpay?.clientUrl || 'http://localhost:3000';
   const trackingUrl = `${clientBaseUrl}/live-track/${session.shareToken}`;
   const googleMapsUrl = `https://www.google.com/maps?q=${latitude},${longitude}`;
 
-  // 8. Build recipient email lists
+  // 8. Build recipient email lists (Guardians & Linked Parents only - NOT the victim herself)
   const primaryEmails = new Set();
   parentLinks.forEach((pl) => {
-    if (pl.parent?.email) primaryEmails.add(pl.parent.email.trim().toLowerCase());
+    if (isValidEmail(pl.parent?.email)) primaryEmails.add(pl.parent.email.trim().toLowerCase());
   });
-  if (child.parentEmail) primaryEmails.add(child.parentEmail.trim().toLowerCase());
+  if (isValidEmail(child.parentEmail)) primaryEmails.add(child.parentEmail.trim().toLowerCase());
   contacts.forEach((c) => {
-    if (c.email) primaryEmails.add(c.email.trim().toLowerCase());
+    if (isValidEmail(c.email)) primaryEmails.add(c.email.trim().toLowerCase());
   });
-  if (child.email) primaryEmails.add(child.email.trim().toLowerCase());
   // Also notify the triggering parent explicitly
-  if (link.parent?.email) primaryEmails.add(link.parent.email.trim().toLowerCase());
+  if (isValidEmail(link.parent?.email)) primaryEmails.add(link.parent.email.trim().toLowerCase());
 
   const ccEmails = new Set();
-  if (child.organization?.email) ccEmails.add(child.organization.email.trim().toLowerCase());
+  if (isValidEmail(child.organization?.email)) ccEmails.add(child.organization.email.trim().toLowerCase());
 
-  const superAdmins = await prisma.user.findMany({
-    where: { role: 'SUPER_ADMIN' },
+  const adminEnv = process.env.ADMIN_EMAIL || 'veaglespace@gmail.com';
+  if (isValidEmail(adminEnv)) {
+    ccEmails.add(adminEnv.trim().toLowerCase());
+  }
+
+  const systemAdmins = await prisma.user.findMany({
+    where: { role: { in: ['SUPER_ADMIN', 'ADMIN'] } },
     select: { email: true },
-  }).catch(() => []);
-  superAdmins.forEach((a) => { if (a.email) ccEmails.add(a.email.trim().toLowerCase()); });
-
-  const defaultAdminEmail = process.env.ADMIN_EMAIL || 'abhijeetambhore4@gmail.com';
-  if (defaultAdminEmail) ccEmails.add(defaultAdminEmail.trim().toLowerCase());
+  }).catch((err) => {
+    console.error('[Parent SOS Admin Email Lookup Error]:', err.message);
+    return [];
+  });
+  systemAdmins.forEach((admin) => {
+    if (isValidEmail(admin.email)) ccEmails.add(admin.email.trim().toLowerCase());
+  });
 
   const ccList = Array.from(ccEmails);
   const toList = Array.from(primaryEmails);
-  const primaryRecipients = toList.length > 0 ? toList : (ccList.length > 0 ? [ccList[0]] : []);
+  const primaryRecipients = Array.from(new Set([...toList, ...ccList]));
+  if (primaryRecipients.length === 0) {
+    console.warn(`[Parent SOS Email Dispatch] No valid guardian/admin recipients found for session #${session.id}`);
+  }
 
-  // 9. Send emergency emails
+  // 9. Send emergency emails to guardians (without duplicate CC spam)
   await Promise.all(
     primaryRecipients.map(async (email) => {
       try {
-        await sendSosEmergencyAlert({
+        const delivered = await sendSosEmergencyAlert({
           recipientEmail: email,
           recipientName: 'Safety Guardian',
           userName: child.fullName || 'Sakhi User',
@@ -552,8 +572,6 @@ export const triggerChildSos = asyncHandler(async (req, res) => {
           latitude,
           longitude,
           sosId: session.id,
-          cc: ccList.filter((c) => c !== email),
-          // Note in email that parent triggered this
           extraNote: `⚠️ This SOS was triggered by ${link.parent.fullName} (Parent) on behalf of ${child.fullName}.`,
         });
 
@@ -562,11 +580,22 @@ export const triggerChildSos = asyncHandler(async (req, res) => {
             sosSessionId: session.id,
             channel: 'EMAIL',
             recipient: email,
-            status: 'SENT',
+            status: delivered ? 'SENT' : 'FAILED',
           },
         }).catch(() => {});
+        if (!delivered) {
+          console.error(`[Parent-Triggered SOS Email Error] Delivery failed for recipient ${email}`);
+        }
       } catch (emailErr) {
         console.error(`[Parent-Triggered SOS Email Error] Failed for ${email}:`, emailErr.message);
+        await prisma.sosAlert.create({
+          data: {
+            sosSessionId: session.id,
+            channel: 'EMAIL',
+            recipient: email,
+            status: 'FAILED',
+          },
+        }).catch(() => {});
       }
     })
   );
@@ -758,6 +787,150 @@ export const triggerChildSos = asyncHandler(async (req, res) => {
       whatsappAlerts,
       whatsappShareUrl,
       triggeredByParent: true,
+    },
+  });
+});
+
+/**
+ * Resolve / Mark Child Safe from Parent Account
+ * Parent can resolve the active SOS for their child when child is confirmed safe.
+ */
+export const resolveChildSos = asyncHandler(async (req, res) => {
+  const parentId = req.user.id;
+  const { childId, sosSessionId } = req.body;
+
+  if (!childId) {
+    return res.status(400).json({ error: 'childId is required.' });
+  }
+
+  // 1. Verify parent-child link
+  const link = await prisma.parentChildLink.findFirst({
+    where: {
+      parentId,
+      childId: Number(childId),
+      status: 'ACTIVE',
+    },
+    include: {
+      parent: { select: { id: true, fullName: true, email: true, phone: true } },
+      child: {
+        select: {
+          id: true,
+          fullName: true,
+          email: true,
+          phone: true,
+          profilePhoto: true,
+          parentEmail: true,
+          trustedContacts: true,
+        },
+      },
+    },
+  });
+
+  if (!link) {
+    return res.status(403).json({ error: 'Unauthorized. You can only resolve SOS for your linked children.' });
+  }
+
+  const child = link.child;
+
+  // 2. Find active SOS session for child
+  let session = null;
+  if (sosSessionId) {
+    session = await prisma.sosSession.findFirst({
+      where: {
+        id: Number(sosSessionId),
+        userId: child.id,
+        status: 'ACTIVE',
+      },
+      include: {
+        locations: { orderBy: { recordedAt: 'desc' }, take: 1 },
+      },
+    });
+  }
+
+  if (!session) {
+    session = await prisma.sosSession.findFirst({
+      where: {
+        userId: child.id,
+        status: 'ACTIVE',
+      },
+      include: {
+        locations: { orderBy: { recordedAt: 'desc' }, take: 1 },
+      },
+    });
+  }
+
+  if (!session) {
+    return res.status(404).json({ error: `No active SOS session found for ${child.fullName}.` });
+  }
+
+  // 3. Update session to RESOLVED
+  const resolvedSession = await prisma.sosSession.update({
+    where: { id: session.id },
+    data: {
+      status: 'RESOLVED',
+      resolvedAt: new Date(),
+      resolutionNote: `Resolved by parent: ${link.parent.fullName || 'Parent Guardian'} (ID: ${parentId})`,
+    },
+  });
+
+  // 4. Update child's safetyStatus to SAFE
+  await prisma.user.update({
+    where: { id: child.id },
+    data: { safetyStatus: 'SAFE' },
+  }).catch(() => {});
+
+  // 5. Emit socket events to stop siren and notify listening dashboards
+  const io = getIO();
+  if (io) {
+    io.emit('SOS_ALARM_STOP', { sosSessionId: session.id, victimId: child.id });
+    io.to('admin-ops').emit('SOS_ALARM_STOP', { sosSessionId: session.id, victimId: child.id });
+    io.to(`user_${child.id}`).emit('SOS_RESOLVED', { sosSessionId: session.id });
+  }
+
+  // 6. Send "I AM SAFE NOW" email to verified guardians & parents
+  const latestLocation = session.locations?.[0];
+  const latitude = latestLocation?.latitude || 18.5204;
+  const longitude = latestLocation?.longitude || 73.8567;
+  const googleMapsUrl = `https://www.google.com/maps?q=${latitude},${longitude}`;
+
+  const recipientEmails = await collectEmergencyRecipients(child, child.trustedContacts, { includeVictim: false });
+
+  await Promise.all(
+    recipientEmails.map(async (email) => {
+      try {
+        await sendSosSafeAlert({
+          recipientEmail: email,
+          userName: child.fullName || 'Sakhi Member',
+          userPhone: child.phone || 'N/A',
+          userEmail: child.email || null,
+          userPhoto: child.profilePhoto || null,
+          googleMapsUrl,
+          latitude,
+          longitude,
+          resolvedAt: resolvedSession.resolvedAt,
+        });
+
+        await prisma.sosAlert.create({
+          data: {
+            sosSessionId: session.id,
+            channel: 'EMAIL_SAFE_CONFIRMATION',
+            recipient: email,
+            status: 'SENT',
+          },
+        }).catch(() => {});
+      } catch (safeEmailErr) {
+        console.error(`[Parent Resolve Safe Email Error] Failed for ${email}:`, safeEmailErr.message);
+      }
+    })
+  );
+
+  return res.status(200).json({
+    success: true,
+    message: `✅ Emergency SOS for ${child.fullName} marked as SAFE and resolved successfully.`,
+    sosSession: {
+      id: resolvedSession.id,
+      status: resolvedSession.status,
+      resolvedAt: resolvedSession.resolvedAt,
     },
   });
 });

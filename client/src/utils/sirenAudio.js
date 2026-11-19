@@ -66,11 +66,24 @@ let cachedSirenUri = null;
 // Global interaction listener to resume audio contexts on mobile/desktop browsers
 if (typeof window !== 'undefined') {
   const unlockAudioOnInteraction = () => {
-    if (audioCtx && audioCtx.state === 'suspended') {
-      audioCtx.resume().catch(() => {});
-    }
-    if (htmlAudioElement && isPlaying && htmlAudioElement.paused) {
-      htmlAudioElement.play().catch(() => {});
+    try {
+      const AudioContextClass = window.AudioContext || window.webkitAudioContext;
+      if (!AudioContextClass) return;
+      if (!audioCtx || audioCtx.state === 'closed') audioCtx = new AudioContextClass();
+      if (audioCtx.state === 'suspended') {
+        audioCtx.resume().then(() => {
+          if (audioCtx?.state === 'running') {
+            window.dispatchEvent(new CustomEvent('emergency-audio-unlocked'));
+          }
+        }).catch(() => {});
+      } else if (audioCtx.state === 'running') {
+        window.dispatchEvent(new CustomEvent('emergency-audio-unlocked'));
+      }
+      if (htmlAudioElement && isPlaying && htmlAudioElement.paused) {
+        htmlAudioElement.play().catch(() => {});
+      }
+    } catch (_) {
+      // Audio remains available through the on-screen Play Siren control.
     }
   };
 
@@ -82,15 +95,17 @@ if (typeof window !== 'undefined') {
   });
 }
 
+export const isEmergencySirenUnlocked = () => audioCtx?.state === 'running';
+
 /**
  * High-Decibel Dual-Engine Emergency Siren Synthesizer & Audio Player
  */
-export const startEmergencySiren = () => {
+export const startEmergencySiren = ({ vibrate = true } = {}) => {
   isPlaying = true;
 
   // ENGINE 1: HTML5 Audio Element with dynamically synthesized Siren WAV
   try {
-    if (typeof window !== 'undefined') {
+    if (typeof window !== 'undefined' && !(window.AudioContext || window.webkitAudioContext)) {
       if (!cachedSirenUri) {
         cachedSirenUri = generateSirenWavDataUri();
       }
@@ -155,10 +170,15 @@ export const startEmergencySiren = () => {
 
   // Trigger mobile device vibration pattern
   if (typeof window !== 'undefined' && 'navigator' in window && navigator.vibrate) {
-    try {
-      navigator.vibrate([1000, 300, 1000, 300, 1000, 300, 1000]);
-    } catch (ve) {}
+    if (vibrate) {
+      try {
+        navigator.vibrate([1000, 300, 1000, 300, 1000, 300, 1000]);
+      } catch (ve) {}
+    }
   }
+  return audioCtx?.state === 'running' || (
+    typeof window !== 'undefined' && !(window.AudioContext || window.webkitAudioContext)
+  );
 };
 
 /**

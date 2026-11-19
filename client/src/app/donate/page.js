@@ -3,7 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import { PublicNavbar } from '../../components/layout/PublicNavbar.js';
 import { Footer } from '../../components/layout/Footer.js';
-import { Heart, User, Mail, Phone, IndianRupee, ExternalLink, ShieldCheck } from 'lucide-react';
+import { Heart, User, Mail, Phone, IndianRupee, ShieldCheck } from 'lucide-react';
 import { apiClient } from '../../redux/api/apiClient.js';
 import { useRouter } from 'next/navigation';
 
@@ -20,14 +20,14 @@ export default function DonatePage() {
   const [error, setError] = useState(null);
 
   useEffect(() => {
-    // Reset processing state if user navigates back from PayU
-    const handlePageShow = (e) => {
-      if (e.persisted) {
-        setIsProcessing(false);
-      }
+    // Load Razorpay checkout script
+    const script = document.createElement('script');
+    script.src = 'https://checkout.razorpay.com/v1/checkout.js';
+    script.async = true;
+    document.body.appendChild(script);
+    return () => {
+      document.body.removeChild(script);
     };
-    window.addEventListener('pageshow', handlePageShow);
-    return () => window.removeEventListener('pageshow', handlePageShow);
   }, []);
 
   const predefinedAmounts = ['50', '100', '500'];
@@ -77,39 +77,56 @@ export default function DonatePage() {
 
       const payData = res.data?.paymentData;
 
-      if (!payData || !payData.actionUrl || !payData.hash) {
+      if (!payData || !payData.orderId || !payData.keyId) {
         throw new Error('Payment gateway initialization failed.');
       }
 
-      // Create a hidden form to submit POST request to PayU Gateway
-      const form = document.createElement('form');
-      form.method = 'POST';
-      form.action = payData.actionUrl;
-
-      const fields = {
-        key: payData.key,
-        txnid: payData.txnid,
+      const options = {
+        key: payData.keyId,
         amount: payData.amount,
-        productinfo: payData.productinfo,
-        firstname: payData.firstname,
-        email: payData.email,
-        phone: payData.phone,
-        surl: payData.surl,
-        furl: payData.furl,
-        hash: payData.hash,
-        service_provider: 'payu_paisa',
+        currency: payData.currency || 'INR',
+        name: 'Veagle Safety',
+        description: payData.productinfo || 'Donation for Women Safety',
+        order_id: payData.orderId,
+        handler: async (response) => {
+          try {
+            const verifyRes = await apiClient.post('/donations/razorpay-verify', {
+              razorpay_order_id: response.razorpay_order_id,
+              razorpay_payment_id: response.razorpay_payment_id,
+              razorpay_signature: response.razorpay_signature,
+              txnid: payData.txnid,
+            });
+            if (verifyRes.data?.success) {
+              router.push(`/donate/success?status=success&txnid=${payData.txnid}`);
+            } else {
+              throw new Error('Payment verification failed.');
+            }
+          } catch (err) {
+            await apiClient.post('/donations/failure', { txnid: payData.txnid }).catch(() => {});
+            setError(err.response?.data?.error || err.message || 'Payment verification failed.');
+            setIsProcessing(false);
+          }
+        },
+        prefill: {
+          name: formData.name,
+          email: formData.email,
+          contact: formData.phone,
+        },
+        theme: { color: '#FF2A6D' },
+        modal: {
+          ondismiss: () => {
+            setIsProcessing(false);
+          },
+        },
       };
 
-      Object.entries(fields).forEach(([k, v]) => {
-        const input = document.createElement('input');
-        input.type = 'hidden';
-        input.name = k;
-        input.value = v || '';
-        form.appendChild(input);
+      const rzp = new window.Razorpay(options);
+      rzp.on('payment.failed', async (response) => {
+        await apiClient.post('/donations/failure', { txnid: payData.txnid }).catch(() => {});
+        setError(response.error?.description || 'Payment failed. Please try again.');
+        setIsProcessing(false);
       });
-
-      document.body.appendChild(form);
-      form.submit();
+      rzp.open();
     } catch (err) {
       console.error('Donation Initiate Error:', err);
       setError(
@@ -265,7 +282,7 @@ export default function DonatePage() {
                   ) : (
                     <>
                       <span>DONATE ₹{getFinalAmount() || '0'} SECURELY</span>
-                      <ExternalLink className="w-4 h-4" />
+                      <ShieldCheck className="w-4 h-4" />
                     </>
                   )}
                 </button>

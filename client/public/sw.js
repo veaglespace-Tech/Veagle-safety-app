@@ -74,6 +74,14 @@ self.addEventListener('notificationclick', (event) => {
 
 // Basic fetch handler for PWA requirements (bypass for live tracking)
 self.addEventListener('fetch', (event) => {
-  // Pass everything to network so live tracking and real-time updates aren't broken by aggressive caching
-  event.respondWith(fetch(event.request));
+  // Only intercept HTTP/HTTPS GET requests; let browser handle non-GET or internal schemes safely
+  if (event.request.method !== 'GET' || !event.request.url.startsWith('http')) {
+    return;
+  }
+  event.respondWith(
+    fetch(event.request).catch((err) => {
+      // In development or when offline, avoid unhandled promise rejection in service worker
+      return new Response('', { status: 503, statusText: 'Service Unavailable' });
+    })
+  );
 });

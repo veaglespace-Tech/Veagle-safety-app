@@ -1,8 +1,8 @@
 import { apiClient } from './apiClient.js';
 
 export const paymentApi = {
-  initiatePayU: async ({ planId }) => {
-    const response = await apiClient.post('/payment/payu-initiate', { planId });
+  createRazorpayOrder: async ({ planId }) => {
+    const response = await apiClient.post('/payment/razorpay-create-order', { planId });
     return response.data;
   },
 

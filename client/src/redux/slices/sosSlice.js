@@ -84,7 +84,9 @@ const sosSlice = createSlice({
       .addCase(startEmergencySos.fulfilled, (state, action) => {
         state.isTriggering = false;
         state.activeSession = action.payload;
-        state.isAlarmPlaying = true;
+        // The member who triggered SOS must not start a siren on their own device.
+        // Sirens are started on guardian/admin devices by EmergencyAlarmListener.
+        state.isAlarmPlaying = false;
       })
       .addCase(startEmergencySos.rejected, (state, action) => {
         state.isTriggering = false;

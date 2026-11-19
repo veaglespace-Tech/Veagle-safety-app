@@ -50,10 +50,6 @@ export default function DashboardAppPage() {
 
   useEffect(() => {
     setMounted(true);
-    if (user && user.role === 'USER' && user.subscriptionStatus !== 'ACTIVE') {
-      router.replace('/pricing');
-      return;
-    }
     dispatch(fetchUser());
     dispatch(fetchContacts());
     dispatch(checkActiveSos());
@@ -66,6 +62,13 @@ export default function DashboardAppPage() {
     window.addEventListener('sos-status-changed', handleRefresh);
     return () => window.removeEventListener('sos-status-changed', handleRefresh);
   }, [dispatch]);
+
+  // Immediately redirect unpaid regular users to pricing
+  useEffect(() => {
+    if (user && user.role === 'USER' && user.subscriptionStatus !== 'ACTIVE') {
+      router.replace('/pricing');
+    }
+  }, [user, router]);
 
   const fetchActiveJourney = async () => {
     try {
@@ -128,6 +131,19 @@ export default function DashboardAppPage() {
   const readinessScore =
     contacts.length >= 3 && status === 'LIVE' ? 100 : contacts.length > 0 ? 85 : 45;
 
+  // Block rendering dashboard entirely if user is an unpaid regular member
+  if (mounted && user && user.role === 'USER' && user.subscriptionStatus !== 'ACTIVE') {
+    return (
+      <AppLayout>
+        <div className="min-h-screen bg-[#FFF0F3] flex flex-col items-center justify-center p-6 text-center">
+          <div className="w-10 h-10 border-4 border-[#FF2A6D] border-t-transparent rounded-full animate-spin mb-4" />
+          <p className="text-sm font-black text-[#2A0826] uppercase tracking-wider">Active Protection Plan Required</p>
+          <p className="text-xs font-bold text-[#684E67] mt-1">Redirecting you to select a protection plan...</p>
+        </div>
+      </AppLayout>
+    );
+  }
+
   return (
     <AppLayout>
       <div className="bg-[#FFF0F3] text-tichi-text font-sans relative overflow-hidden">
@@ -158,32 +174,6 @@ export default function DashboardAppPage() {
               >
                 <span>OPEN LIVE COMMAND VIEW</span>
                 <ArrowUpRight className="w-4 h-4" />
-              </Link>
-            </div>
-          )}
-
-          {/* INACTIVE SUBSCRIPTION BANNER */}
-          {mounted && Boolean(user) && user?.subscriptionStatus !== 'ACTIVE' && (
-            <div className="bg-gradient-to-r from-amber-500 via-rose-500 to-[#FF2A6D] text-white p-5 rounded-3xl shadow-lg flex flex-col sm:flex-row items-center justify-between gap-4 border-2 border-white">
-              <div className="flex items-center space-x-3 text-center sm:text-left">
-                <div className="w-12 h-12 rounded-2xl bg-white/20 flex items-center justify-center backdrop-blur-md shrink-0">
-                  <Sparkles className="w-6 h-6 text-amber-200 animate-spin" />
-                </div>
-                <div>
-                  <p className="font-black text-base uppercase tracking-wider">
-                    PROTECTION PLAN PENDING ACTIVATION
-                  </p>
-                  <p className="text-xs text-white/90 font-bold">
-                    Activate 24/7 Live GPS Guardian & Encrypted Emergency Dispatcher Coverage
-                  </p>
-                </div>
-              </div>
-              <Link
-                href="/pricing"
-                className="w-full sm:w-auto bg-white text-[#FF2A6D] hover:bg-amber-50 font-black text-xs px-6 py-3.5 rounded-2xl shadow-xl transition-all flex items-center justify-center space-x-2 uppercase tracking-wider shrink-0 cursor-pointer"
-              >
-                <Zap className="w-4 h-4 text-amber-500 fill-amber-500" />
-                <span>ACTIVATE PLAN NOW (PAYMENT)</span>
               </Link>
             </div>
           )}

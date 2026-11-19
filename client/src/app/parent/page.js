@@ -79,6 +79,7 @@ function ParentDashboardContent() {
 
   // Parent-triggered SOS state
   const [triggeringSosForChildId, setTriggeringSosForChildId] = useState(null);
+  const [resolvingSosForChildId, setResolvingSosForChildId] = useState(null);
   const [parentSosError, setParentSosError] = useState('');
   const [parentSosSuccess, setParentSosSuccess] = useState('');
 
@@ -402,6 +403,39 @@ function ParentDashboardContent() {
     }
   };
 
+  // Handle Parent Resolving SOS / Marking Child Safe
+  const handleResolveChildSos = async (childId, childName, sosSessionId) => {
+    setParentSosError('');
+    setParentSosSuccess('');
+
+    const confirmed = window.confirm(
+      `✅ MARK ${childName.toUpperCase()} SAFE NOW\n\nAre you sure ${childName} is safe now?\n\nThis will:\n• Resolve the active emergency SOS alert\n• Stop the emergency siren on all guardian devices\n• Send safe confirmation notifications to all guardians\n• Reset status to Normal Safe Zone`
+    );
+
+    if (!confirmed) return;
+
+    try {
+      setResolvingSosForChildId(childId);
+      const res = await api.post('/parent/resolve-child-sos', { childId, sosSessionId });
+      if (res.data?.success) {
+        if (sosSessionId) {
+          dispatch(toggleSosMute(sosSessionId));
+        }
+        setParentSosSuccess(
+          res.data.message || `Emergency SOS resolved! ${childName} is marked safe.`
+        );
+        setTimeout(() => setParentSosSuccess(''), 6000);
+        fetchOverview(false);
+      }
+    } catch (err) {
+      const errMsg = err?.response?.data?.error || `Failed to mark ${childName} safe. Please try again.`;
+      setParentSosError(errMsg);
+      setTimeout(() => setParentSosError(''), 6000);
+    } finally {
+      setResolvingSosForChildId(null);
+    }
+  };
+
   if (!mounted) return null;
 
   return (
@@ -525,44 +559,39 @@ function ParentDashboardContent() {
 
           {/* 2. EMERGENCY SOS ALERTS */}
           <div
-            className={`p-4 sm:p-5 rounded-3xl border-2 shadow-sm space-y-2 transition-all ${
-              stats.activeSosCount > 0
-                ? 'bg-rose-50 border-rose-500 shadow-rose-500/20 animate-pulse'
-                : 'bg-white border-[#FFCCE1]'
-            }`}
+            className={`p-4 sm:p-5 rounded-3xl border-2 shadow-sm space-y-2 transition-all ${stats.activeSosCount > 0
+              ? 'bg-rose-50 border-rose-500 shadow-rose-500/20 animate-pulse'
+              : 'bg-white border-[#FFCCE1]'
+              }`}
           >
             <div className="flex items-center justify-between">
               <span
-                className={`text-[10.5px] font-black uppercase tracking-wider ${
-                  stats.activeSosCount > 0 ? 'text-rose-700' : 'text-[#684E67]'
-                }`}
+                className={`text-[10.5px] font-black uppercase tracking-wider ${stats.activeSosCount > 0 ? 'text-rose-700' : 'text-[#684E67]'
+                  }`}
               >
                 Active SOS Alerts
               </span>
               <div
-                className={`w-8 h-8 rounded-xl flex items-center justify-center ${
-                  stats.activeSosCount > 0
-                    ? 'bg-rose-600 text-white animate-bounce'
-                    : 'bg-emerald-50 text-emerald-600'
-                }`}
+                className={`w-8 h-8 rounded-xl flex items-center justify-center ${stats.activeSosCount > 0
+                  ? 'bg-rose-600 text-white animate-bounce'
+                  : 'bg-emerald-50 text-emerald-600'
+                  }`}
               >
                 <AlertTriangle className="w-4 h-4" />
               </div>
             </div>
             <div className="flex items-baseline space-x-2">
               <span
-                className={`text-2xl sm:text-3xl font-black ${
-                  stats.activeSosCount > 0 ? 'text-rose-600' : 'text-[#2A0826]'
-                }`}
+                className={`text-2xl sm:text-3xl font-black ${stats.activeSosCount > 0 ? 'text-rose-600' : 'text-[#2A0826]'
+                  }`}
               >
                 {stats.activeSosCount}
               </span>
               <span className="text-xs font-bold text-[#684E67]">Incidents</span>
             </div>
             <p
-              className={`text-[10px] font-bold ${
-                stats.activeSosCount > 0 ? 'text-rose-600' : 'text-emerald-600'
-              }`}
+              className={`text-[10px] font-bold ${stats.activeSosCount > 0 ? 'text-rose-600' : 'text-emerald-600'
+                }`}
             >
               {stats.activeSosCount > 0 ? '🚨 IMMEDIATE ACTION NEEDED' : '🛡️ All Children Safe'}
             </p>
@@ -628,7 +657,23 @@ function ParentDashboardContent() {
               </div>
             </div>
 
-            <div className="flex items-center gap-2.5 w-full sm:w-auto">
+            <div className="flex flex-wrap items-center gap-2.5 w-full sm:w-auto">
+              {childrenList.find(c => c.activeSos) && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    const activeChild = childrenList.find(c => c.activeSos);
+                    if (activeChild) {
+                      handleResolveChildSos(activeChild.id, activeChild.fullName, activeChild.activeSos.id);
+                    }
+                  }}
+                  disabled={Boolean(resolvingSosForChildId)}
+                  className="flex-1 sm:flex-initial bg-emerald-500 hover:bg-emerald-600 text-white px-4 py-2.5 rounded-2xl text-xs font-black uppercase tracking-wider flex items-center justify-center space-x-1.5 shadow border border-emerald-300 cursor-pointer disabled:opacity-60"
+                >
+                  <CheckCircle2 className="w-4 h-4" />
+                  <span>MARK CHILD SAFE NOW</span>
+                </button>
+              )}
               <a
                 href="tel:112"
                 className="flex-1 sm:flex-initial bg-white text-rose-600 hover:bg-rose-50 px-4 py-2.5 rounded-2xl text-xs font-black uppercase tracking-wider flex items-center justify-center space-x-1.5 shadow"
@@ -645,301 +690,318 @@ function ParentDashboardContent() {
 
         {/* SAFETY COMMAND CENTER CONTENT */}
         <div className="space-y-6">
-            {/* LINKED CHILDREN SAFETY CARDS */}
-            {childrenList.length === 0 ? (
-              <div className="text-center py-14 bg-white rounded-[32px] border-2 border-dashed border-[#FFCCE1] p-8 space-y-4 shadow-sm">
-                <div className="w-16 h-16 rounded-3xl bg-[#FFF0F3] text-[#FF5C8A] flex items-center justify-center mx-auto border border-[#FFCCE1]">
-                  <Heart className="w-8 h-8" />
-                </div>
-                <div className="space-y-1">
-                  <h3 className="text-lg font-black text-[#2A0826]">No Children Linked Yet</h3>
-                  <p className="text-xs font-bold text-[#684E67] max-w-md mx-auto">
-                    Link your daughter's or child's account to view real-time GPS safety status, track journey routes, and receive instant emergency alarms.
-                  </p>
-                </div>
-                <button
-                  type="button"
-                  onClick={() => setShowLinkModal(true)}
-                  className="btn-3d-rose-pop px-7 py-3 rounded-full text-xs font-black uppercase tracking-wider cursor-pointer shadow-md"
-                >
-                  LINK CHILD ACCOUNT NOW
-                </button>
+          {/* LINKED CHILDREN SAFETY CARDS */}
+          {childrenList.length === 0 ? (
+            <div className="text-center py-14 bg-white rounded-[32px] border-2 border-dashed border-[#FFCCE1] p-8 space-y-4 shadow-sm">
+              <div className="w-16 h-16 rounded-3xl bg-[#FFF0F3] text-[#FF5C8A] flex items-center justify-center mx-auto border border-[#FFCCE1]">
+                <Heart className="w-8 h-8" />
               </div>
-            ) : (
-              <div className="space-y-4">
-                {childrenList.map((item) => {
-                  const c = item.child;
-                  const isSos = item.activeSos || c.safetyStatus === 'SOS_ACTIVE';
-                  const isTrip = item.activeJourney || c.safetyStatus === 'JOURNEY_ACTIVE';
+              <div className="space-y-1">
+                <h3 className="text-lg font-black text-[#2A0826]">No Children Linked Yet</h3>
+                <p className="text-xs font-bold text-[#684E67] max-w-md mx-auto">
+                  Link your daughter's or child's account to view real-time GPS safety status, track journey routes, and receive instant emergency alarms.
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={() => setShowLinkModal(true)}
+                className="btn-3d-rose-pop px-7 py-3 rounded-full text-xs font-black uppercase tracking-wider cursor-pointer shadow-md"
+              >
+                LINK CHILD ACCOUNT NOW
+              </button>
+            </div>
+          ) : (
+            <div className="space-y-4">
+              {childrenList.map((item) => {
+                const c = item.child;
+                const isSos = item.activeSos || c.safetyStatus === 'SOS_ACTIVE';
+                const isTrip = item.activeJourney || c.safetyStatus === 'JOURNEY_ACTIVE';
 
-                  return (
-                    <div
-                      key={item.linkId}
-                      className={`p-6 sm:p-7 rounded-[32px] border-2 shadow-md transition-all space-y-5 ${
-                        isSos
-                          ? 'bg-[#FFF0F3] border-[#FF2A6D] shadow-rose-500/10'
-                          : isTrip
-                            ? 'bg-teal-50/40 border-teal-300'
-                            : 'bg-white border-[#FFCCE1]'
+                return (
+                  <div
+                    key={item.linkId}
+                    className={`p-6 sm:p-7 rounded-[32px] border-2 shadow-md transition-all space-y-5 ${isSos
+                      ? 'bg-[#FFF0F3] border-[#FF2A6D] shadow-rose-500/10'
+                      : isTrip
+                        ? 'bg-teal-50/40 border-teal-300'
+                        : 'bg-white border-[#FFCCE1]'
                       }`}
-                    >
-                      {/* HEADER ROW */}
-                      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 border-b border-[#FFCCE1]/60 pb-5">
-                        <div className="flex items-center space-x-4">
-                          <div
-                            className={`w-14 h-14 rounded-2xl flex items-center justify-center font-black text-lg text-white shadow-md shrink-0 overflow-hidden ${
-                              isSos
-                                ? 'bg-[#FF2A6D] animate-pulse'
-                                : isTrip
-                                  ? 'bg-teal-500'
-                                  : 'bg-gradient-to-tr from-[#FF5C8A] to-[#FF2A6D]'
+                  >
+                    {/* HEADER ROW */}
+                    <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 border-b border-[#FFCCE1]/60 pb-5">
+                      <div className="flex items-center space-x-4">
+                        <div
+                          className={`w-14 h-14 rounded-2xl flex items-center justify-center font-black text-lg text-white shadow-md shrink-0 overflow-hidden ${isSos
+                            ? 'bg-[#FF2A6D] animate-pulse'
+                            : isTrip
+                              ? 'bg-teal-500'
+                              : 'bg-gradient-to-tr from-[#FF5C8A] to-[#FF2A6D]'
                             }`}
-                          >
-                            {c.profilePhoto ? (
-                              <img
-                                src={c.profilePhoto}
-                                alt={c.fullName}
-                                className="w-full h-full object-cover"
-                              />
-                            ) : (
-                              c.fullName?.charAt(0) || 'C'
-                            )}
-                          </div>
-
-                          <div>
-                            <div className="flex items-center space-x-2.5">
-                              <h3 className="text-xl font-black text-[#2A0826]">{c.fullName}</h3>
-                              <span className="bg-[#FFF0F3] text-[#FF2A6D] text-[10px] font-black px-3 py-1 rounded-full border border-[#FFCCE1]">
-                                {item.relationship}
-                              </span>
-                              {c.bloodGroup && (
-                                <span className="bg-rose-50 text-rose-700 text-[10px] font-black px-2 py-0.5 rounded-md border border-rose-200">
-                                  {c.bloodGroup}
-                                </span>
-                              )}
-                            </div>
-                            <div className="flex flex-wrap items-center gap-3 text-xs font-bold text-[#684E67] mt-1">
-                              <span className="flex items-center gap-1">
-                                <Phone className="w-3.5 h-3.5 text-[#FF2A6D]" />
-                                <span>{c.phone}</span>
-                              </span>
-                              <span>•</span>
-                              <span className="flex items-center gap-1">
-                                <Mail className="w-3.5 h-3.5 text-[#684E67]" />
-                                <span>{c.email}</span>
-                              </span>
-                            </div>
-                          </div>
-                        </div>
-
-                        {/* STATUS BADGE */}
-                        <div>
-                          {isSos ? (
-                            <span className="bg-[#FF2A6D] text-white text-xs font-black px-4 py-2 rounded-full animate-pulse flex items-center space-x-2 shadow-sm">
-                              <AlertTriangle className="w-4 h-4" />
-                              <span>EMERGENCY SOS ACTIVE</span>
-                            </span>
-                          ) : isTrip ? (
-                            <span className="bg-teal-600 text-white text-xs font-black px-4 py-2 rounded-full flex items-center space-x-2 shadow-sm">
-                              <Navigation className="w-4 h-4 animate-spin" />
-                              <span>IN-TRANSIT TRIP</span>
-                            </span>
+                        >
+                          {c.profilePhoto ? (
+                            <img
+                              src={c.profilePhoto}
+                              alt={c.fullName}
+                              className="w-full h-full object-cover"
+                              onError={(e) => {
+                                e.currentTarget.style.display = 'none';
+                              }}
+                            />
                           ) : (
-                            <span className="bg-emerald-50 text-emerald-700 border border-emerald-300 text-xs font-black px-4 py-2 rounded-full flex items-center space-x-2 shadow-xs">
-                              <ShieldCheck className="w-4 h-4 text-emerald-600" />
-                              <span>100% PROTECTED & SAFE</span>
-                            </span>
+                            c.fullName?.charAt(0) || 'C'
                           )}
                         </div>
-                      </div>
 
-                      {/* GPS & JOURNEY DETAILS ROW */}
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-3.5 text-xs font-bold text-[#684E67]">
-                        {/* GPS GEO STATUS */}
-                        <div className="bg-white/80 p-4 rounded-2xl border border-[#FFCCE1] flex items-center space-x-3.5 shadow-xs">
-                          <div className="w-10 h-10 rounded-xl bg-rose-50 text-[#FF2A6D] flex items-center justify-center shrink-0">
-                            <MapPin className="w-5 h-5" />
-                          </div>
-                          <div className="min-w-0 flex-1">
-                            <span className="block text-[10px] font-black uppercase text-[#FF2A6D]">
-                              Live GPS Coordinates
+                        <div>
+                          <div className="flex items-center space-x-2.5">
+                            <h3 className="text-xl font-black text-[#2A0826]">{c.fullName}</h3>
+                            <span className="bg-[#FFF0F3] text-[#FF2A6D] text-[10px] font-black px-3 py-1 rounded-full border border-[#FFCCE1]">
+                              {item.relationship}
                             </span>
-                            <span className="text-[#2A0826] font-mono font-bold truncate block">
-                              {item.activeSos?.latestLocation ? (
-                                `Lat: ${item.activeSos.latestLocation.latitude.toFixed(5)}, Lng: ${item.activeSos.latestLocation.longitude.toFixed(5)} (±${item.activeSos.latestLocation.accuracy || 10}m)`
-                              ) : item.lastKnownLocation ? (
-                                `Last Lat: ${Number(item.lastKnownLocation.latitude).toFixed(5)}, Lng: ${Number(item.lastKnownLocation.longitude).toFixed(5)}`
-                              ) : (
-                                'Geo-Protected (Active Standby)'
-                              )}
+                            {c.bloodGroup && (
+                              <span className="bg-rose-50 text-rose-700 text-[10px] font-black px-2 py-0.5 rounded-md border border-rose-200">
+                                {c.bloodGroup}
+                              </span>
+                            )}
+                          </div>
+                          <div className="flex flex-wrap items-center gap-3 text-xs font-bold text-[#684E67] mt-1">
+                            <span className="flex items-center gap-1">
+                              <Phone className="w-3.5 h-3.5 text-[#FF2A6D]" />
+                              <span>{c.phone}</span>
+                            </span>
+                            <span>•</span>
+                            <span className="flex items-center gap-1">
+                              <Mail className="w-3.5 h-3.5 text-[#684E67]" />
+                              <span>{c.email}</span>
                             </span>
                           </div>
                         </div>
-
-                        {/* TRIP / CHECK-IN MONITOR */}
-                        {item.activeJourney ? (
-                          <div className="bg-white/80 p-4 rounded-2xl border border-teal-200 flex items-center space-x-3.5 shadow-xs">
-                            <div className="w-10 h-10 rounded-xl bg-teal-50 text-teal-600 flex items-center justify-center shrink-0">
-                              <Navigation className="w-5 h-5" />
-                            </div>
-                            <div className="min-w-0 flex-1">
-                              <span className="block text-[10px] font-black uppercase text-teal-600">
-                                Destination Route
-                              </span>
-                              <span className="text-[#2A0826] truncate block font-bold">
-                                {item.activeJourney.destinationName}
-                              </span>
-                            </div>
-                          </div>
-                        ) : (
-                          <div className="bg-white/80 p-4 rounded-2xl border border-[#FFCCE1] flex items-center space-x-3.5 shadow-xs">
-                            <div className="w-10 h-10 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center shrink-0">
-                              <ShieldCheck className="w-5 h-5" />
-                            </div>
-                            <div className="min-w-0 flex-1">
-                              <span className="block text-[10px] font-black uppercase text-emerald-600">
-                                Safety Sentinel Status
-                              </span>
-                              <span className="text-[#2A0826] font-bold">
-                                Normal Safe Zone • No active trip in progress
-                              </span>
-                            </div>
-                          </div>
-                        )}
                       </div>
 
-                      {/* QUICK ACTION BUTTONS TOOLBAR */}
-                      <div className="pt-1 flex flex-wrap items-center gap-2.5">
-                        {/* 1. CALL CHILD */}
-                        <a
-                          href={`tel:${c.phone}`}
-                          className="btn-3d-white-pop px-4 py-2.5 rounded-xl text-xs font-black uppercase tracking-wider flex items-center space-x-2 border border-[#FFCCE1] text-[#2A0826] hover:text-[#FF2A6D]"
-                        >
-                          <PhoneCall className="w-4 h-4 text-[#FF2A6D]" />
-                          <span>CALL {c.fullName.split(' ')[0].toUpperCase()}</span>
-                        </a>
-
-                        {/* 2. SEND SAFETY CHECK-IN PING */}
-                        <button
-                          type="button"
-                          onClick={() => handlePingCheckin(c.id, c.fullName)}
-                          disabled={pingingChildId === c.id}
-                          className="btn-3d-white-pop px-4 py-2.5 rounded-xl text-xs font-black uppercase tracking-wider flex items-center space-x-2 border border-[#FFCCE1] text-[#2A0826] hover:text-[#FF2A6D] cursor-pointer"
-                        >
-                          <Bell className={`w-4 h-4 text-amber-500 ${pingingChildId === c.id ? 'animate-spin' : ''}`} />
-                          <span>
-                            {pingingChildId === c.id ? 'SENDING PING...' : 'PING CHECK-IN'}
+                      {/* STATUS BADGE */}
+                      <div>
+                        {isSos ? (
+                          <span className="bg-[#FF2A6D] text-white text-xs font-black px-4 py-2 rounded-full animate-pulse flex items-center space-x-2 shadow-sm">
+                            <AlertTriangle className="w-4 h-4" />
+                            <span>EMERGENCY SOS ACTIVE</span>
                           </span>
-                        </button>
-
-                        {/* 3. TRACK LIVE GPS (IF SOS OR STANDBY) */}
-                        <button
-                          type="button"
-                          onClick={() => setTrackingChild(item)}
-                          className={`flex-1 py-2.5 px-4 rounded-xl text-xs font-black uppercase tracking-wider flex items-center justify-center space-x-2 shadow-sm cursor-pointer transition-all ${
-                            isSos
-                              ? 'bg-[#FF2A6D] hover:bg-[#E01A4F] text-white shadow-rose-500/20'
-                              : 'bg-gradient-to-r from-[#FF5C8A] to-[#FF2A6D] text-white'
-                          }`}
-                        >
-                          <Eye className="w-4 h-4 text-white" />
-                          <span>TRACK LIVE GPS MAP</span>
-                        </button>
-
-                        {/* 4. SIREN MUTE/UNMUTE IF SOS ACTIVE */}
-                        {item.activeSos && (
-                          <button
-                            type="button"
-                            onClick={() => item.activeSos && dispatch(toggleSosMute(item.activeSos.id))}
-                            className={`px-4 py-2.5 rounded-xl text-xs font-black uppercase tracking-wider flex items-center justify-center space-x-1.5 transition-all border shadow-xs ${
-                              item.activeSos && !mutedSosIds.includes(String(item.activeSos.id))
-                                ? 'bg-emerald-500 text-white border-emerald-600'
-                                : 'bg-white text-rose-600 border-rose-300'
-                            }`}
-                          >
-                            {item.activeSos && !mutedSosIds.includes(String(item.activeSos.id)) ? (
-                              <VolumeX className="w-4 h-4" />
-                            ) : (
-                              <Volume2 className="w-4 h-4" />
-                            )}
-                            <span>
-                              {item.activeSos && !mutedSosIds.includes(String(item.activeSos.id))
-                                ? 'MUTE SIREN'
-                                : 'SIREN'}
-                            </span>
-                          </button>
-                        )}
-
-                        {/* 5. OPEN FULL JOURNEY MAP IF IN TRIP */}
-                        {item.activeJourney && item.activeJourney.shareToken && !item.activeSos && (
-                          <a
-                            href={`/live-track/${item.activeJourney.shareToken}`}
-                            target="_blank"
-                            rel="noreferrer"
-                            className="bg-teal-600 hover:bg-teal-700 text-white px-4 py-2.5 rounded-xl text-xs font-black uppercase tracking-wider flex items-center space-x-1.5 shadow-sm"
-                          >
-                            <Navigation className="w-4 h-4" />
-                            <span>JOURNEY ROUTE</span>
-                            <ArrowUpRight className="w-3.5 h-3.5" />
-                          </a>
-                        )}
-
-                        {/* 6. PARENT TRIGGER SOS — only when child has NO active SOS & subscription is ACTIVE */}
-                        {!item.activeSos && c.subscriptionStatus === 'ACTIVE' && (
-                          <button
-                            type="button"
-                            onClick={() => handleTriggerChildSos(c.id, c.fullName)}
-                            disabled={triggeringSosForChildId === c.id}
-                            className="w-full mt-1 py-3 px-4 rounded-2xl text-xs font-black uppercase tracking-wider flex items-center justify-center space-x-2 shadow-md cursor-pointer transition-all bg-gradient-to-r from-orange-500 via-red-500 to-rose-600 hover:from-orange-600 hover:to-rose-700 text-white border-2 border-orange-400 disabled:opacity-60 disabled:cursor-not-allowed"
-                            title={`Trigger emergency SOS for ${c.fullName} from your account`}
-                          >
-                            <AlertOctagon className={`w-4 h-4 ${triggeringSosForChildId === c.id ? 'animate-spin' : 'animate-pulse'}`} />
-                            <span>
-                              {triggeringSosForChildId === c.id
-                                ? `TRIGGERING SOS FOR ${c.fullName.split(' ')[0].toUpperCase()}...`
-                                : `🚨 TRIGGER SOS FOR ${c.fullName.split(' ')[0].toUpperCase()}`}
-                            </span>
-                          </button>
+                        ) : isTrip ? (
+                          <span className="bg-teal-600 text-white text-xs font-black px-4 py-2 rounded-full flex items-center space-x-2 shadow-sm">
+                            <Navigation className="w-4 h-4 animate-spin" />
+                            <span>IN-TRANSIT TRIP</span>
+                          </span>
+                        ) : (
+                          <span className="bg-emerald-50 text-emerald-700 border border-emerald-300 text-xs font-black px-4 py-2 rounded-full flex items-center space-x-2 shadow-xs">
+                            <ShieldCheck className="w-4 h-4 text-emerald-600" />
+                            <span>100% PROTECTED & SAFE</span>
+                          </span>
                         )}
                       </div>
                     </div>
-                  );
-                })}
-              </div>
-            )}
 
-            {/* DIRECT EMERGENCY HELPLINE CALL BAR */}
-            <div className="bg-gradient-to-r from-rose-50 via-white to-rose-50 p-5 rounded-3xl border-2 border-[#FFCCE1] shadow-sm flex flex-col sm:flex-row items-center justify-between gap-4">
-              <div className="flex items-center space-x-3">
-                <div className="w-10 h-10 rounded-2xl bg-rose-100 text-[#FF2A6D] flex items-center justify-center shrink-0">
-                  <PhoneCall className="w-5 h-5" />
-                </div>
-                <div>
-                  <h4 className="font-black text-sm text-[#2A0826]">
-                    Immediate National Emergency Helplines
-                  </h4>
-                  <p className="text-xs font-bold text-[#684E67]">
-                    Tap to dial direct 24/7 government safety services
-                  </p>
-                </div>
-              </div>
+                    {/* GPS & JOURNEY DETAILS ROW */}
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-3.5 text-xs font-bold text-[#684E67]">
+                      {/* GPS GEO STATUS */}
+                      <div className="bg-white/80 p-4 rounded-2xl border border-[#FFCCE1] flex items-center space-x-3.5 shadow-xs">
+                        <div className="w-10 h-10 rounded-xl bg-rose-50 text-[#FF2A6D] flex items-center justify-center shrink-0">
+                          <MapPin className="w-5 h-5" />
+                        </div>
+                        <div className="min-w-0 flex-1">
+                          <span className="block text-[10px] font-black uppercase text-[#FF2A6D]">
+                            Live GPS Coordinates
+                          </span>
+                          <span className="text-[#2A0826] font-mono font-bold truncate block">
+                            {item.activeSos?.latestLocation ? (
+                              `Lat: ${item.activeSos.latestLocation.latitude.toFixed(5)}, Lng: ${item.activeSos.latestLocation.longitude.toFixed(5)} (±${item.activeSos.latestLocation.accuracy || 10}m)`
+                            ) : item.lastKnownLocation ? (
+                              `Last Lat: ${Number(item.lastKnownLocation.latitude).toFixed(5)}, Lng: ${Number(item.lastKnownLocation.longitude).toFixed(5)}`
+                            ) : (
+                              'Geo-Protected (Active Standby)'
+                            )}
+                          </span>
+                        </div>
+                      </div>
 
-              <div className="flex flex-wrap items-center gap-2.5 w-full sm:w-auto">
-                <a
-                  href="tel:1091"
-                  className="flex-1 sm:flex-initial bg-white border border-[#FF2A6D] text-[#FF2A6D] hover:bg-[#FFF0F3] px-3.5 py-2 rounded-xl text-xs font-black flex items-center justify-center space-x-1.5"
-                >
-                  <span>1091 (WOMEN HELPLINE)</span>
-                </a>
-                <a
-                  href="tel:112"
-                  className="flex-1 sm:flex-initial bg-[#FF2A6D] text-white hover:bg-[#E01A4F] px-4 py-2 rounded-xl text-xs font-black flex items-center justify-center space-x-1.5 shadow-xs"
-                >
-                  <span>112 (ALL EMERGENCY)</span>
-                </a>
+                      {/* TRIP / CHECK-IN MONITOR */}
+                      {item.activeJourney ? (
+                        <div className="bg-white/80 p-4 rounded-2xl border border-teal-200 flex items-center space-x-3.5 shadow-xs">
+                          <div className="w-10 h-10 rounded-xl bg-teal-50 text-teal-600 flex items-center justify-center shrink-0">
+                            <Navigation className="w-5 h-5" />
+                          </div>
+                          <div className="min-w-0 flex-1">
+                            <span className="block text-[10px] font-black uppercase text-teal-600">
+                              Destination Route
+                            </span>
+                            <span className="text-[#2A0826] truncate block font-bold">
+                              {item.activeJourney.destinationName}
+                            </span>
+                          </div>
+                        </div>
+                      ) : (
+                        <div className="bg-white/80 p-4 rounded-2xl border border-[#FFCCE1] flex items-center space-x-3.5 shadow-xs">
+                          <div className="w-10 h-10 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center shrink-0">
+                            <ShieldCheck className="w-5 h-5" />
+                          </div>
+                          <div className="min-w-0 flex-1">
+                            <span className="block text-[10px] font-black uppercase text-emerald-600">
+                              Safety Sentinel Status
+                            </span>
+                            <span className="text-[#2A0826] font-bold">
+                              Normal Safe Zone • No active trip in progress
+                            </span>
+                          </div>
+                        </div>
+                      )}
+                    </div>
+
+                    {/* QUICK ACTION BUTTONS TOOLBAR */}
+                    <div className="pt-1 flex flex-wrap items-center gap-2.5">
+                      {/* 1. CALL CHILD */}
+                      <a
+                        href={`tel:${c.phone}`}
+                        className="btn-3d-white-pop px-4 py-2.5 rounded-xl text-xs font-black uppercase tracking-wider flex items-center space-x-2 border border-[#FFCCE1] text-[#2A0826] hover:text-[#FF2A6D]"
+                      >
+                        <PhoneCall className="w-4 h-4 text-[#FF2A6D]" />
+                        <span>CALL {c.fullName.split(' ')[0].toUpperCase()}</span>
+                      </a>
+
+                      {/* 2. SEND SAFETY CHECK-IN PING */}
+                      <button
+                        type="button"
+                        onClick={() => handlePingCheckin(c.id, c.fullName)}
+                        disabled={pingingChildId === c.id}
+                        className="btn-3d-white-pop px-4 py-2.5 rounded-xl text-xs font-black uppercase tracking-wider flex items-center space-x-2 border border-[#FFCCE1] text-[#2A0826] hover:text-[#FF2A6D] cursor-pointer"
+                      >
+                        <Bell className={`w-4 h-4 text-amber-500 ${pingingChildId === c.id ? 'animate-spin' : ''}`} />
+                        <span>
+                          {pingingChildId === c.id ? 'SENDING PING...' : 'PING CHECK-IN'}
+                        </span>
+                      </button>
+
+                      {/* 3. TRACK LIVE GPS (IF SOS OR STANDBY) */}
+                      <button
+                        type="button"
+                        onClick={() => setTrackingChild(item)}
+                        className={`flex-1 py-2.5 px-4 rounded-xl text-xs font-black uppercase tracking-wider flex items-center justify-center space-x-2 shadow-sm cursor-pointer transition-all ${isSos
+                          ? 'bg-[#FF2A6D] hover:bg-[#E01A4F] text-white shadow-rose-500/20'
+                          : 'bg-gradient-to-r from-[#FF5C8A] to-[#FF2A6D] text-white'
+                          }`}
+                      >
+                        <Eye className="w-4 h-4 text-white" />
+                        <span>TRACK LIVE GPS MAP</span>
+                      </button>
+
+                      {/* 4. SIREN MUTE/UNMUTE IF SOS ACTIVE */}
+                      {item.activeSos && (
+                        <button
+                          type="button"
+                          onClick={() => item.activeSos && dispatch(toggleSosMute(item.activeSos.id))}
+                          className={`px-4 py-2.5 rounded-xl text-xs font-black uppercase tracking-wider flex items-center justify-center space-x-1.5 transition-all border shadow-xs ${item.activeSos && !mutedSosIds.includes(String(item.activeSos.id))
+                            ? 'bg-emerald-500 text-white border-emerald-600'
+                            : 'bg-white text-rose-600 border-rose-300'
+                            }`}
+                        >
+                          {item.activeSos && !mutedSosIds.includes(String(item.activeSos.id)) ? (
+                            <VolumeX className="w-4 h-4" />
+                          ) : (
+                            <Volume2 className="w-4 h-4" />
+                          )}
+                          <span>
+                            {item.activeSos && !mutedSosIds.includes(String(item.activeSos.id))
+                              ? 'MUTE SIREN'
+                              : 'SIREN'}
+                          </span>
+                        </button>
+                      )}
+
+                      {/* 5. OPEN FULL JOURNEY MAP IF IN TRIP */}
+                      {item.activeJourney && item.activeJourney.shareToken && !item.activeSos && (
+                        <a
+                          href={`/live-track/${item.activeJourney.shareToken}`}
+                          target="_blank"
+                          rel="noreferrer"
+                          className="bg-teal-600 hover:bg-teal-700 text-white px-4 py-2.5 rounded-xl text-xs font-black uppercase tracking-wider flex items-center space-x-1.5 shadow-sm"
+                        >
+                          <Navigation className="w-4 h-4" />
+                          <span>JOURNEY ROUTE</span>
+                          <ArrowUpRight className="w-3.5 h-3.5" />
+                        </a>
+                      )}
+
+                      {/* 6. PARENT RESOLVE SOS / MARK SAFE NOW — when child HAS active SOS */}
+                      {(item.activeSos || c.safetyStatus === 'SOS_ACTIVE') && (
+                        <button
+                          type="button"
+                          onClick={() => handleResolveChildSos(c.id, c.fullName, item.activeSos?.id)}
+                          disabled={resolvingSosForChildId === c.id}
+                          className="w-full mt-2 py-3 px-4 rounded-2xl text-xs font-black uppercase tracking-wider flex items-center justify-center space-x-2 shadow-md cursor-pointer transition-all bg-gradient-to-r from-emerald-500 via-teal-500 to-emerald-600 hover:from-emerald-600 hover:to-teal-700 text-white border-2 border-emerald-400 disabled:opacity-60 disabled:cursor-not-allowed"
+                          title={`Mark ${c.fullName} safe now and resolve the active SOS alert`}
+                        >
+                          <CheckCircle2 className={`w-4 h-4 ${resolvingSosForChildId === c.id ? 'animate-spin' : ''}`} />
+                          <span>
+                            {resolvingSosForChildId === c.id
+                              ? `MARKING ${c.fullName.split(' ')[0].toUpperCase()} SAFE...`
+                              : `✅ MARK ${c.fullName.split(' ')[0].toUpperCase()} SAFE NOW`}
+                          </span>
+                        </button>
+                      )}
+
+                      {/* 7. PARENT TRIGGER SOS — only when child has NO active SOS & subscription is ACTIVE */}
+                      {!item.activeSos && c.safetyStatus !== 'SOS_ACTIVE' && c.subscriptionStatus === 'ACTIVE' && (
+                        <button
+                          type="button"
+                          onClick={() => handleTriggerChildSos(c.id, c.fullName)}
+                          disabled={triggeringSosForChildId === c.id}
+                          className="w-full mt-1 py-3 px-4 rounded-2xl text-xs font-black uppercase tracking-wider flex items-center justify-center space-x-2 shadow-md cursor-pointer transition-all bg-gradient-to-r from-orange-500 via-red-500 to-rose-600 hover:from-orange-600 hover:to-rose-700 text-white border-2 border-orange-400 disabled:opacity-60 disabled:cursor-not-allowed"
+                          title={`Trigger emergency SOS for ${c.fullName} from your account`}
+                        >
+                          <AlertOctagon className={`w-4 h-4 ${triggeringSosForChildId === c.id ? 'animate-spin' : 'animate-pulse'}`} />
+                          <span>
+                            {triggeringSosForChildId === c.id
+                              ? `TRIGGERING SOS FOR ${c.fullName.split(' ')[0].toUpperCase()}...`
+                              : `🚨 TRIGGER SOS FOR ${c.fullName.split(' ')[0].toUpperCase()}`}
+                          </span>
+                        </button>
+                      )}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+
+          {/* DIRECT EMERGENCY HELPLINE CALL BAR */}
+          <div className="bg-gradient-to-r from-rose-50 via-white to-rose-50 p-5 rounded-3xl border-2 border-[#FFCCE1] shadow-sm flex flex-col sm:flex-row items-center justify-between gap-4">
+            <div className="flex items-center space-x-3">
+              <div className="w-10 h-10 rounded-2xl bg-rose-100 text-[#FF2A6D] flex items-center justify-center shrink-0">
+                <PhoneCall className="w-5 h-5" />
+              </div>
+              <div>
+                <h4 className="font-black text-sm text-[#2A0826]">
+                  Immediate National Emergency Helplines
+                </h4>
+                <p className="text-xs font-bold text-[#684E67]">
+                  Tap to dial direct 24/7 government safety services
+                </p>
               </div>
             </div>
+
+            <div className="flex flex-wrap items-center gap-2.5 w-full sm:w-auto">
+              <a
+                href="tel:1091"
+                className="flex-1 sm:flex-initial bg-white border border-[#FF2A6D] text-[#FF2A6D] hover:bg-[#FFF0F3] px-3.5 py-2 rounded-xl text-xs font-black flex items-center justify-center space-x-1.5"
+              >
+                <span>1091 (WOMEN HELPLINE)</span>
+              </a>
+              <a
+                href="tel:112"
+                className="flex-1 sm:flex-initial bg-[#FF2A6D] text-white hover:bg-[#E01A4F] px-4 py-2 rounded-xl text-xs font-black flex items-center justify-center space-x-1.5 shadow-xs"
+              >
+                <span>112 (ALL EMERGENCY)</span>
+              </a>
+            </div>
           </div>
+        </div>
       </div>
 
       {/* LINK CHILD MODAL */}

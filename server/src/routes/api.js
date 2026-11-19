@@ -47,20 +47,16 @@ router.get('/stats/visitor-render', settingController.getVisitorRenderCount);
 // Public Plans & Pricing
 router.get('/plans', adminController.getPlans);
 
-// PayU Payment Routes
-router.post('/payment/payu-initiate', optionalAuthToken, paymentController.initiatePayUPayment);
-router.post('/payment/payu-success', paymentController.handlePayUSuccess);
-router.get('/payment/payu-success', paymentController.handlePayUSuccess);
-router.post('/payment/payu-failure', paymentController.handlePayUFailure);
-router.get('/payment/payu-failure', paymentController.handlePayUFailure);
+// Razorpay Payment Routes
+router.post('/payment/razorpay-create-order', optionalAuthToken, paymentController.createRazorpayOrder);
+router.post('/payment/razorpay-verify', paymentController.verifyRazorpayPayment);
+router.post('/payment/failure', paymentController.handlePaymentFailure);
 router.get('/payment/history', authenticateToken, paymentController.getUserPaymentHistory);
 
 // Donations
 router.post('/donations/initiate', donationController.initiateDonation);
-router.post('/donations/payu-success', donationController.handleDonationSuccess);
-router.get('/donations/payu-success', donationController.handleDonationSuccess);
-router.post('/donations/payu-failure', donationController.handleDonationFailure);
-router.get('/donations/payu-failure', donationController.handleDonationFailure);
+router.post('/donations/razorpay-verify', donationController.verifyDonationPayment);
+router.post('/donations/failure', donationController.handleDonationFailure);
 
 // Contacts
 router.get('/contacts', authenticateToken, requireActiveSubscription, contactController.getContacts);
@@ -122,6 +118,7 @@ router.post('/parent/link-child', authenticateToken, parentController.linkChild)
 router.delete('/parent/children/:linkId', authenticateToken, parentController.unlinkChild);
 router.post('/parent/ping-checkin', authenticateToken, parentController.pingChildCheckin);
 router.post('/parent/trigger-child-sos', authenticateToken, requireActiveSubscription, parentController.triggerChildSos);
+router.post('/parent/resolve-child-sos', authenticateToken, requireActiveSubscription, parentController.resolveChildSos);
 
 // Push Notifications (Web Push & Mobile FCM Device Tokens)
 router.get('/push/vapid-key', pushController.getVapidPublicKey);

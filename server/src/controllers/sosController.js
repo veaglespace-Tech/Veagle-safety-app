@@ -4,7 +4,7 @@ import { sendSosEmergencyAlert, sendSosSafeAlert } from '../services/mailer.js';
 import { getIO } from '../socket.js';
 import { sendEmergencyPushToEmails } from './pushController.js';
 import { sendEmergencySirenPush } from '../services/fcmService.js';
-import { collectEmergencyRecipients } from '../utils/recipientHelper.js';
+import { collectEmergencyRecipients, isValidEmail } from '../utils/recipientHelper.js';
 
 export const startSos = async (req, res) => {
   try {
@@ -76,62 +76,62 @@ export const startSos = async (req, res) => {
 
     // Organization memberships removed — model does not exist in current schema
 
-    const clientBaseUrl = process.env.CLIENT_URL || config.payu?.clientUrl || 'http://localhost:3000';
+    const clientBaseUrl = process.env.CLIENT_URL || config.razorpay?.clientUrl || 'http://localhost:3000';
     const trackingUrl = `${clientBaseUrl}/live-track/${session.shareToken}`;
     const googleMapsUrl = `https://www.google.com/maps?q=${latitude},${longitude}`;
 
-    // 1. Collect Recipient Emails (Primary TO: Guardians, Parents, Emergency Contact)
+    // 1. Collect Recipient Emails (Primary TO: Guardians, Parents, Emergency Contacts - NOT the victim herself)
     const primaryEmails = new Set();
     
-    // Linked parents
+    // Linked parents (verified active links only)
     parentLinks.forEach((link) => {
-      if (link.parent?.email) primaryEmails.add(link.parent.email.trim().toLowerCase());
+      if (isValidEmail(link.parent?.email)) primaryEmails.add(link.parent.email.trim().toLowerCase());
     });
     // Parent email on profile
-    if (currentUser?.parentEmail) {
+    if (isValidEmail(currentUser?.parentEmail)) {
       primaryEmails.add(currentUser.parentEmail.trim().toLowerCase());
     }
     // Trusted guardian contacts
     contacts.forEach((c) => {
-      if (c.email) primaryEmails.add(c.email.trim().toLowerCase());
+      if (isValidEmail(c.email)) primaryEmails.add(c.email.trim().toLowerCase());
     });
-    // User's own email
-    if (currentUser?.email) {
-      primaryEmails.add(currentUser.email.trim().toLowerCase());
-    }
 
-    // CC Emails: Organization Admin + Super Admins + System Admin
+    // Include every registered system admin as well as the optional deployment
+    // override, so SOS email delivery does not depend on ADMIN_EMAIL being set.
     const ccEmails = new Set();
-    if (currentUser?.organization?.email) {
+    if (isValidEmail(currentUser?.organization?.email)) {
       ccEmails.add(currentUser.organization.email.trim().toLowerCase());
     }
 
-    const superAdmins = await prisma.user.findMany({
-      where: { role: 'SUPER_ADMIN' },
-      select: { email: true }
-    }).catch(() => []);
-    
-    superAdmins.forEach((admin) => {
-      if (admin.email) ccEmails.add(admin.email.trim().toLowerCase());
-    });
-
-    const defaultAdminEmail = process.env.ADMIN_EMAIL || 'abhijeetambhore4@gmail.com';
-    if (defaultAdminEmail) {
-      ccEmails.add(defaultAdminEmail.trim().toLowerCase());
+    // Always alert designated admin email from environment, or fallback to default superadmin
+    const adminEnv = process.env.ADMIN_EMAIL || 'veaglespace@gmail.com';
+    if (isValidEmail(adminEnv)) {
+      ccEmails.add(adminEnv.trim().toLowerCase());
     }
 
+    // Also include any registered SUPER_ADMIN from database
+    const systemAdmins = await prisma.user.findMany({
+      where: { role: { in: ['SUPER_ADMIN', 'ADMIN'] } },
+      select: { email: true },
+    }).catch(() => []);
+    systemAdmins.forEach((adm) => {
+      if (isValidEmail(adm.email)) ccEmails.add(adm.email.trim().toLowerCase());
+    });
+
     const ccList = Array.from(ccEmails);
-
-    // 2. Dispatch High-Priority Emergency Emails
     const toList = Array.from(primaryEmails);
-    const primaryRecipients = toList.length > 0 ? toList : (ccList.length > 0 ? [ccList[0]] : []);
+    const primaryRecipients = Array.from(new Set([...toList, ...ccList]));
+    if (primaryRecipients.length === 0) {
+      console.warn(`[SOS Email Dispatch] No valid guardian/admin recipients found for session #${session.id}`);
+    }
 
+    // 2. Dispatch High-Priority Emergency Emails to Guardians
     await Promise.all(
       primaryRecipients.map(async (email) => {
         try {
-          await sendSosEmergencyAlert({
+          const delivered = await sendSosEmergencyAlert({
             recipientEmail: email,
-            recipientName: 'Safety Guardian',
+            recipientName: ccList.includes(email) ? 'Safety Command Center' : 'Safety Guardian',
             userName: currentUser?.fullName || 'Sakhi User',
             userPhone: currentUser?.phone || 'N/A',
             userEmail: currentUser?.email || 'N/A',
@@ -141,7 +141,6 @@ export const startSos = async (req, res) => {
             latitude,
             longitude,
             sosId: session.id,
-            cc: ccList.filter(c => c !== email),
           });
 
           await prisma.sosAlert.create({
@@ -149,11 +148,22 @@ export const startSos = async (req, res) => {
               sosSessionId: session.id,
               channel: 'EMAIL',
               recipient: email,
-              status: 'SENT',
+              status: delivered ? 'SENT' : 'FAILED',
             },
           }).catch(() => {});
+          if (!delivered) {
+            console.error(`[Emergency Email Error] Delivery failed for recipient ${email}`);
+          }
         } catch (emailErr) {
           console.error(`[Emergency Email Error] Failed for ${email}:`, emailErr.message);
+          await prisma.sosAlert.create({
+            data: {
+              sosSessionId: session.id,
+              channel: 'EMAIL',
+              recipient: email,
+              status: 'FAILED',
+            },
+          }).catch(() => {});
         }
       })
     );
@@ -675,10 +685,16 @@ export const resolveSos = async (req, res) => {
       },
     });
 
-    const targetUserId = userId || session.userId;
-    if (targetUserId) {
+    // Ensure the victim (session.userId) is marked SAFE
+    if (session.userId) {
       await prisma.user.update({
-        where: { id: targetUserId },
+        where: { id: session.userId },
+        data: { safetyStatus: 'SAFE' },
+      }).catch(() => {});
+    }
+    if (userId && userId !== session.userId) {
+      await prisma.user.update({
+        where: { id: userId },
         data: { safetyStatus: 'SAFE' },
       }).catch(() => {});
     }
@@ -688,8 +704,8 @@ export const resolveSos = async (req, res) => {
     const longitude = latestLocation?.longitude || session.longitude || 73.8567;
     const googleMapsUrl = `https://www.google.com/maps?q=${latitude},${longitude}`;
 
-    // 1. Collect Recipient Emails for Safe Confirmation (User + Admin + Parent + Guardians)
-    const recipientEmails = collectEmergencyRecipients(session.user);
+    // 1. Collect Recipient Emails for Safe Confirmation (Parent + Guardians + SuperAdmins)
+    const recipientEmails = await collectEmergencyRecipients(session.user, session.user?.trustedContacts, { includeVictim: false });
 
     console.log('[resolveSos] ===== SAFE EMAIL DEBUG =====');
     console.log('[resolveSos] User:', session.user?.fullName, '| email:', session.user?.email);
@@ -772,7 +788,7 @@ export const getActiveSosSession = async (req, res) => {
     });
 
     if (session) {
-      const clientBaseUrl = process.env.CLIENT_URL || config.payu?.clientUrl || 'http://localhost:3000';
+      const clientBaseUrl = process.env.CLIENT_URL || config.razorpay?.clientUrl || 'http://localhost:3000';
       session.trackingUrl = `${clientBaseUrl}/live-track/${session.shareToken}`;
       
       const latitude = session.locations?.[0]?.latitude || 18.5204;
@@ -798,7 +814,7 @@ export const getSosLocation = async (req, res) => {
       select: {
         id: true,
         locations: {
-          orderBy: { recordedAt: 'asc' }, // Ascending so we get timeline from start to finish
+          orderBy: { recordedAt: 'desc' },
           take: 200,
         }
       }
@@ -809,8 +825,8 @@ export const getSosLocation = async (req, res) => {
     }
 
     return res.json({ 
-      location: session.locations[session.locations.length - 1] || null,
-      history: session.locations 
+      location: session.locations[0] || null,
+      history: session.locations.slice().reverse(),
     });
   } catch (error) {
     return res.status(500).json({ error: 'Failed to fetch location' });
