@@ -136,13 +136,21 @@ export async function openUniversalSmsComposer(phoneNumbers, message) {
 
   console.log(`📱 [SMSService] Opening Universal SMS Composer for ${phoneNumbers.length} contact(s)...`);
 
+  // On Android, passing multiple numbers into Google Messages triggers
+  // an invalid "RCS Group Chat" error ("Group chats are for 3 or more people").
+  // To avoid this RCS group bug, on Android we target the primary emergency contact
+  // so Google Messages opens a clean 1-on-1 SMS composer without group errors.
+  const targetNumbers = (Platform.OS === 'android' && phoneNumbers.length > 1)
+    ? [phoneNumbers[0]]
+    : phoneNumbers;
+
   // Option A: Try official expo-sms (native composer on both Android & iOS)
   try {
     const SMS = require('expo-sms');
     if (SMS && typeof SMS.isAvailableAsync === 'function') {
       const isAvailable = await SMS.isAvailableAsync();
       if (isAvailable) {
-        const result = await SMS.sendSMSAsync(phoneNumbers, message);
+        const result = await SMS.sendSMSAsync(targetNumbers, message);
         console.log('📱 [SMSService] expo-sms completed:', result);
         return result?.result === 'sent';
       }
@@ -153,8 +161,11 @@ export async function openUniversalSmsComposer(phoneNumbers, message) {
 
   // Option B: Fallback to system sms: URL scheme
   try {
+    const primaryNumber = targetNumbers[0] || '';
     const separator = Platform.OS === 'ios' ? '&' : '?';
-    const joined = phoneNumbers.join(Platform.OS === 'ios' ? ',' : ';');
+    const joined = Platform.OS === 'ios'
+      ? targetNumbers.join(',')
+      : primaryNumber;
     const url = `sms:${joined}${separator}body=${encodeURIComponent(message)}`;
     const canOpen = await Linking.canOpenURL(url).catch(() => false);
     if (canOpen) {
