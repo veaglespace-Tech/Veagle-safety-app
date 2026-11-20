@@ -129,6 +129,9 @@ model SosSession {
   resolutionNote String?
   locations      SosLocation[]
   alerts         SosAlert[]
+
+  @@index([userId, status])
+  @@index([status])
 }
 
 model SosLocation {
@@ -142,6 +145,9 @@ model SosLocation {
   speed        Float?
   heading      Float?
   recordedAt   DateTime   @default(now())
+
+  @@index([sosSessionId])
+  @@index([sosSessionId, recordedAt])
 }
 
 model SosAlert {
@@ -152,6 +158,8 @@ model SosAlert {
   recipient    String
   status       String     @default("SENT") // SENT, FAILED
   sentAt       DateTime   @default(now())
+
+  @@index([sosSessionId])
 }
 
 model Journey {
@@ -179,6 +187,9 @@ model JourneyLocation {
   latitude   Float
   longitude  Float
   recordedAt DateTime @default(now())
+
+  @@index([journeyId])
+  @@index([journeyId, recordedAt])
 }
 
 model SafetyCheckin {

@@ -149,8 +149,12 @@ export default function ActiveSOSScreen({ navigation }) {
         <View style={styles.topBarLeft}>
           <Ionicons name="warning" size={22} color="#fff" />
           <View>
-            <Text style={styles.topBarTitle}>🚨 SOS ACTIVE</Text>
-            <Text style={styles.topBarSub}>Alerting trusted contacts</Text>
+            <Text style={styles.topBarTitle}>
+              {activeSession?.isOffline ? '🚨 OFFLINE SOS' : '🚨 SOS ACTIVE'}
+            </Text>
+            <Text style={styles.topBarSub}>
+              {activeSession?.isOffline ? 'SMS Alerting active (Offline)' : 'Alerting trusted contacts'}
+            </Text>
           </View>
         </View>
         <View style={styles.topBarRight}>

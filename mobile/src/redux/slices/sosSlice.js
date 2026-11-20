@@ -4,8 +4,8 @@ import { sosApi } from '../../api/sosApi';
 import { startBackgroundLocationTracking, stopBackgroundLocationTracking } from '../../services/backgroundLocationService';
 import { sendEmergencySmsToAll } from '../../services/smsService';
 
-// Identical thunks as web app's sosSlice
-export const startEmergencySos = createAsyncThunk('sos/startEmergencySos', async (payload, { rejectWithValue }) => {
+// Identical thunks as web app's sosSlice with resilient Offline SOS Fallback
+export const startEmergencySos = createAsyncThunk('sos/startEmergencySos', async (payload, { rejectWithValue, getState }) => {
   try {
     const data = await sosApi.startSos(payload);
     const session = data?.sosSession || data?.session || data?.data || data?.sos || data;
@@ -34,17 +34,68 @@ export const startEmergencySos = createAsyncThunk('sos/startEmergencySos', async
 
     return session;
   } catch (err) {
+    const isNetworkError = !err?.response || String(err?.message || '').toLowerCase().includes('network') || err?.code === 'ERR_NETWORK';
+    if (isNetworkError) {
+      console.warn('⚠️ [SOS] Network offline — activating Emergency Offline SOS Fallback via native SIM SMS...');
+      const state = getState();
+      const localContacts = state?.contacts?.contacts || [];
+      const currentUser = state?.auth?.user;
+      const lastLat = payload?.initialLat || state?.location?.latitude || 18.5204;
+      const lastLng = payload?.initialLng || state?.location?.longitude || 73.8567;
+      const victimName = currentUser?.fullName || currentUser?.name || payload?.victimName || 'Sakhi Member';
+
+      const offlineContacts = localContacts.length > 0
+        ? localContacts.map((c) => ({ name: c.name, phone: c.phone }))
+        : (currentUser?.emergencyContactPhone ? [{ name: currentUser.emergencyContactName || 'Guardian', phone: currentUser.emergencyContactPhone }] : []);
+
+      const offlineGmapUrl = `https://www.google.com/maps?q=${lastLat},${lastLng}`;
+
+      if (offlineContacts.length > 0) {
+        sendEmergencySmsToAll({
+          emergencyContacts: offlineContacts,
+          victimName: `${victimName} [OFFLINE SOS]`,
+          trackingUrl: offlineGmapUrl,
+          latitude: lastLat,
+          longitude: lastLng,
+          delayMs: Platform.OS === 'ios' ? 2500 : 0,
+        }).catch((smsErr) => console.warn('[OfflineSOS] SMS dispatch notice:', smsErr?.message));
+      }
+
+      const offlineSession = {
+        id: `offline-${Date.now()}`,
+        isOffline: true,
+        status: 'ACTIVE',
+        isSilent: !!payload?.isSilent,
+        startedAt: new Date().toISOString(),
+        trackingUrl: offlineGmapUrl,
+        googleMapsUrl: offlineGmapUrl,
+        latitude: lastLat,
+        longitude: lastLng,
+        victimName,
+        emergencyContacts: offlineContacts,
+      };
+
+      startBackgroundLocationTracking(offlineSession.id).catch(() => {});
+      return offlineSession;
+    }
+
     return rejectWithValue(err.response?.data?.error || 'Failed to activate Emergency SOS');
   }
 });
 
-export const resolveEmergencySos = createAsyncThunk('sos/resolveEmergencySos', async (sosSessionId, { rejectWithValue }) => {
+export const resolveEmergencySos = createAsyncThunk('sos/resolveEmergencySos', async (sosSessionId, { rejectWithValue, getState }) => {
   try {
+    const state = getState();
+    if (state?.sos?.activeSession?.isOffline || String(sosSessionId).startsWith('offline-')) {
+      stopBackgroundLocationTracking().catch(() => {});
+      return { id: sosSessionId, status: 'RESOLVED', isOffline: true };
+    }
     const data = await sosApi.resolveSos(sosSessionId);
     stopBackgroundLocationTracking().catch(() => {});
     return data?.session || data?.sosSession || data?.data || data;
   } catch (err) {
-    return rejectWithValue(err.response?.data?.error || 'Failed to resolve Emergency SOS');
+    stopBackgroundLocationTracking().catch(() => {});
+    return { id: sosSessionId, status: 'RESOLVED', isOffline: true };
   }
 });
 

@@ -1,11 +1,13 @@
 import express from 'express';
 import http from 'http';
 import cors from 'cors';
+import helmet from 'helmet';
 import path from 'path';
 import { config } from './config/index.js';
 import { prisma } from './config/prisma.js';
 import apiRouter from './routes/api.js';
 import { initSocketIO } from './socket.js';
+import { initErrorAlerting, reportError } from './services/errorAlertService.js';
 
 const app = express();
 const server = http.createServer(app);
@@ -14,6 +16,14 @@ const PORT = config.port;
 
 // Trust Nginx / Cloudflare proxy
 app.set("trust proxy", 1);
+
+// HTTP Security Headers (prevents XSS, Clickjacking, MIME-sniffing)
+app.use(
+  helmet({
+    contentSecurityPolicy: false,
+    crossOriginResourcePolicy: { policy: "cross-origin" },
+  })
+);
 
 // Middleware (Body Parsers BEFORE API Routes)
 app.use(cors());
@@ -87,6 +97,15 @@ app.use((err, req, res, next) => {
     ? "Server settings are updating. Please retry in a moment."
     : err.message || "Server Error";
 
+  if (statusCode >= 500) {
+    reportError(err, {
+      method: req.method,
+      url: req.originalUrl,
+      ip: req.ip,
+      userId: req.user?.id,
+    });
+  }
+
   res.status(statusCode).json({
     success: false,
     message: clientMessage,
@@ -107,6 +126,9 @@ import { initFirebase } from './services/fcmService.js';
 
 // Start Server Routine
 const startServer = async () => {
+  // Initialize Error Alerting & Monitoring
+  await initErrorAlerting();
+
   console.log("prisma connecting...");
   await prisma.$connect();
   console.log("prisma connected");
@@ -125,6 +147,14 @@ const startServer = async () => {
 const shutdownServer = async () => {
   await prisma.$disconnect().catch(() => {});
 };
+
+// Global unhandled error monitors
+process.on('unhandledRejection', (reason) => {
+  reportError(reason instanceof Error ? reason : new Error(String(reason)), { type: 'unhandledRejection' });
+});
+process.on('uncaughtException', (err) => {
+  reportError(err, { type: 'uncaughtException' });
+});
 
 // Main Execution block
 if (process.env.NODE_ENV !== "test") {
