@@ -109,9 +109,9 @@ export const startSos = async (req, res) => {
       ccEmails.add(adminEnv.trim().toLowerCase());
     }
 
-    // Also include any registered SUPER_ADMIN from database
+    // Also include any registered SUPER_ADMIN from database (Platform SuperAdmins only — NOT other orgs)
     const systemAdmins = await prisma.user.findMany({
-      where: { role: { in: ['SUPER_ADMIN', 'ADMIN'] } },
+      where: { role: 'SUPER_ADMIN' },
       select: { email: true },
     }).catch(() => []);
     systemAdmins.forEach((adm) => {
@@ -676,6 +676,8 @@ export const resolveSos = async (req, res) => {
             profilePhoto: true,
             parentEmail: true,
             trustedContacts: true,
+            organizationId: true,
+            organization: { select: { email: true } },
           },
         },
         locations: {

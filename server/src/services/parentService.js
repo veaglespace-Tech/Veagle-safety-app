@@ -27,7 +27,7 @@ export async function syncParentProfileAndLink({
   if (cleanPhone.length < 10) return null;
   const phone10 = cleanPhone.slice(-10);
 
-  const cleanName = (parentName && parentName.trim()) ? parentName.trim() : 'Parent Guardian';
+  const cleanName = (parentName && parentName.trim()) ? parentName.trim() : 'Guardian';
   const cleanEmail = (parentEmail && parentEmail.trim()) ? parentEmail.trim().toLowerCase() : null;
 
   try {
@@ -65,7 +65,7 @@ export async function syncParentProfileAndLink({
       if (parentUser.role === 'USER') {
         // Can access parent portal as well
       }
-      if (cleanName && (!parentUser.fullName || parentUser.fullName === 'Parent Guardian')) {
+      if (cleanName && (!parentUser.fullName || parentUser.fullName === 'Parent' || parentUser.fullName === 'Parent Guardian')) {
         updateData.fullName = cleanName;
       }
       if (Object.keys(updateData).length > 0) {

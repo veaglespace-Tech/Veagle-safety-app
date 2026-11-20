@@ -150,7 +150,7 @@ function ParentChildrenContent() {
 
   // Handle Unlinking Child
   const handleUnlinkChild = async (linkId, childName) => {
-    if (!window.confirm(`Are you sure you want to unlink ${childName} from your Parent Portal?`))
+    if (!window.confirm(`Are you sure you want to unlink ${childName} from your Guardian Portal?`))
       return;
     try {
       const res = await api.delete(`/parent/children/${linkId}`);
@@ -239,7 +239,7 @@ function ParentChildrenContent() {
             <div>
               <h3 className="text-xl font-black text-[#2A0826]">Enrolled Child Profiles</h3>
               <p className="text-xs font-bold text-[#684E67] mt-0.5">
-                Accounts connected to your Parent Safety Guardian Portal
+                Accounts connected to your Guardian Safety Command Portal
               </p>
             </div>
 
@@ -263,7 +263,7 @@ function ParentChildrenContent() {
                 How Automatic Linking Works
               </p>
               <p className="font-bold text-xs mt-1 leading-relaxed">
-                When your daughter or family member creates their account and enters your email address or mobile number as their guardian/parent, their profile connects <strong>automatically</strong> to your Parent Portal upon verification. You can also link them manually above by entering their registered phone number or email.
+                When your daughter or family member creates their account and enters your email address or mobile number as their guardian, their profile connects <strong>automatically</strong> to your Guardian Portal upon verification. You can also link them manually above by entering their registered phone number or email.
               </p>
             </div>
           </div>

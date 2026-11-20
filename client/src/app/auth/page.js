@@ -188,7 +188,7 @@ function UserAuthForm() {
         const cleanPhone = email ? email.replace(/\D/g, '') : '';
         const phoneRegex = /^[6-9]\d{9}$/;
         if (!cleanPhone || !phoneRegex.test(cleanPhone)) {
-          setValidationError('Please enter a valid 10-digit Parent mobile number starting with 6, 7, 8, or 9.');
+          setValidationError('Please enter a valid 10-digit Guardian mobile number starting with 6, 7, 8, or 9.');
           return false;
         }
       } else {
@@ -236,7 +236,7 @@ function UserAuthForm() {
     // Role USER specific fields validation
     if (selectedRole === 'USER') {
       if (parentEmail && parentEmail.trim() && !emailRegex.test(parentEmail.trim())) {
-        setValidationError('Please enter a valid Parent Email address.');
+        setValidationError('Please enter a valid Guardian Email address.');
         return false;
       }
 
@@ -762,11 +762,11 @@ function UserAuthForm() {
                             onChange={(e) => setEmergencyContactRelation(e.target.value)}
                             className="w-full px-3 py-3 bg-[#FFF0F3] border-1.5 border-[#FFCCE1] rounded-xl text-[#2A0826] font-bold focus:border-[#FF2A6D] focus:bg-white transition-all outline-none text-xs cursor-pointer"
                           >
+                            <option value="Guardian">Guardian</option>
                             <option value="Parent">Parent</option>
                             <option value="Spouse">Spouse</option>
                             <option value="Sibling">Sibling</option>
                             <option value="Friend">Friend</option>
-                            <option value="Guardian">Guardian</option>
                             <option value="Relative">Relative</option>
                             <option value="Other">Other</option>
                           </select>
@@ -774,7 +774,7 @@ function UserAuthForm() {
 
                         <div>
                           <label className="block text-[#684E67] font-extrabold mb-1">
-                            Mobile Number *
+                            Guardian Mobile Number *
                           </label>
                           <div className="relative">
                             <Phone className="w-4 h-4 text-[#684E67] absolute left-3.5 top-1/2 -translate-y-1/2" />
@@ -793,23 +793,23 @@ function UserAuthForm() {
                         </div>
                       </div>
 
-                      {/* PARENT EMAIL ALERT FIELD */}
+                      {/* GUARDIAN EMAIL ALERT FIELD */}
                       <div>
                         <label className="block text-[#684E67] font-extrabold mb-1">
-                          Parent Email Address (For Emergency SOS Mail Alerts)
+                          Guardian Email Address (For Emergency SOS Mail Alerts)
                         </label>
                         <div className="relative">
                           <Mail className="w-4 h-4 text-[#684E67] absolute left-3.5 top-1/2 -translate-y-1/2" />
                           <input
                             type="email"
-                            placeholder="parent.email@example.com"
+                            placeholder="guardian.email@example.com"
                             value={parentEmail}
                             onChange={(e) => setParentEmail(e.target.value)}
                             className="w-full pl-10 pr-4 py-3 bg-[#FFF0F3] border-1.5 border-[#FFCCE1] rounded-xl text-[#2A0826] font-bold focus:border-[#FF2A6D] focus:bg-white transition-all outline-none text-xs"
                           />
                         </div>
                         <p className="text-[10px] text-[#684E67] font-semibold mt-1">
-                          💡 Emergency SOS emails will automatically be dispatched to this Parent
+                          💡 Emergency SOS emails will automatically be dispatched to this Guardian
                           email along with admin alerts.
                         </p>
                       </div>
@@ -856,7 +856,7 @@ function UserAuthForm() {
                   )}
                 </div>
               ) : (
-                /* LOGIN FORM - ROLE SELECTOR (MEMBER VS PARENT) */
+                /* LOGIN FORM - ROLE SELECTOR (MEMBER VS GUARDIAN) */
                 <div className="space-y-4">
                   {/* LOGIN TYPE TOGGLE */}
                   <div className="space-y-2">
@@ -895,7 +895,7 @@ function UserAuthForm() {
                           }`}
                       >
                         <Users className="w-3.5 h-3.5" />
-                        <span className="truncate">Parent / Guardian</span>
+                        <span className="truncate">Guardian</span>
                       </button>
                     </div>
 
@@ -903,7 +903,7 @@ function UserAuthForm() {
                       <div className="bg-[#FFF0F3] p-2.5 rounded-xl border border-[#FFCCE1] text-[11px] font-bold text-[#684E67] flex items-center space-x-2">
                         <span className="w-2 h-2 rounded-full bg-[#00C853] shrink-0" />
                         <span>
-                          <strong>Parent Portal:</strong> Enter your 10-digit mobile number and solve the verification sum to log in directly. No password needed.
+                          <strong>Guardian Portal:</strong> Enter your 10-digit mobile number and solve the verification sum to log in directly. No password needed.
                         </span>
                       </div>
                     )}
@@ -912,7 +912,7 @@ function UserAuthForm() {
                   {loginRole === 'PARENT' ? (
                     <div>
                       <label className="block text-[#684E67] font-extrabold mb-1">
-                        Parent Mobile Phone Number *
+                        Guardian Mobile Phone Number *
                       </label>
                       <div className="relative">
                         <Phone className="w-4 h-4 text-[#684E67] absolute left-3.5 top-1/2 -translate-y-1/2" />
@@ -1010,7 +1010,7 @@ function UserAuthForm() {
                     ? 'PROCESSING...'
                     : isLogin
                       ? loginRole === 'PARENT'
-                        ? 'SIGN IN TO PARENT PORTAL'
+                        ? 'SIGN IN TO GUARDIAN PORTAL'
                         : 'SIGN IN TO DASHBOARD'
                       : 'REGISTER & PROCEED TO OTP'}
                 </span>

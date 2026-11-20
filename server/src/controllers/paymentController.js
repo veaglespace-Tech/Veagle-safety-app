@@ -4,6 +4,7 @@ import { config } from '../config/index.js';
 import { asyncHandler } from '../middleware/asyncHandler.js';
 import { getRazorpayClient, verifyRazorpaySignature, resolveRazorpayCredentials } from '../utils/razorpay.js';
 import { syncParentProfileAndLink } from '../services/parentService.js';
+import { sendWelcomeEmail } from '../services/mailer.js';
 
 if (!global.pendingRegistrations) {
   global.pendingRegistrations = new Map();
@@ -90,9 +91,16 @@ export const createRazorpayOrder = asyncHandler(async (req, res) => {
     let activeUser = null;
 
     if (req.user?.id) {
+      const updateData = { subscriptionStatus: 'ACTIVE', subscriptionExpiresAt: expiresAt };
+      if (decodedRegistration?.organizationId) {
+        updateData.organizationId = decodedRegistration.organizationId;
+      }
+      if (decodedRegistration?.referredByPartnerId) {
+        updateData.referredByPartnerId = decodedRegistration.referredByPartnerId;
+      }
       activeUser = await prisma.user.update({
         where: { id: req.user.id },
-        data: { subscriptionStatus: 'ACTIVE', subscriptionExpiresAt: expiresAt },
+        data: updateData,
       });
     } else if (decodedRegistration?.email) {
       activeUser = await prisma.user.findUnique({ where: { email: decodedRegistration.email } });
@@ -114,9 +122,12 @@ export const createRazorpayOrder = asyncHandler(async (req, res) => {
             emergencyContactName: decodedRegistration.emergencyContactName || null,
             emergencyContactPhone: decodedRegistration.emergencyContactPhone || null,
             parentEmail: decodedRegistration.parentEmail || null,
+            medicalNotes: decodedRegistration.medicalNotes || null,
             isEmailVerified: true,
             subscriptionStatus: 'ACTIVE',
             subscriptionExpiresAt: expiresAt,
+            organizationId: decodedRegistration.organizationId || null,
+            referredByPartnerId: decodedRegistration.referredByPartnerId || null,
           },
         });
 
@@ -126,7 +137,7 @@ export const createRazorpayOrder = asyncHandler(async (req, res) => {
               data: {
                 userId: activeUser.id,
                 name: decodedRegistration.emergencyContactName,
-                relationship: 'Primary Guardian / Emergency Contact',
+                relationship: 'Guardian',
                 phone: decodedRegistration.emergencyContactPhone,
                 email: decodedRegistration.parentEmail || '',
                 isVerified: true,
@@ -176,6 +187,15 @@ export const createRazorpayOrder = asyncHandler(async (req, res) => {
         config.jwt.secret,
         { expiresIn: config.jwt.expiresIn }
       );
+
+      // Send Welcome Email to newly registered user
+      if (activeUser?.email) {
+        sendWelcomeEmail({
+          recipientEmail: activeUser.email,
+          userName: activeUser.fullName,
+          userPhoto: activeUser.profilePhoto,
+        }).catch((err) => console.warn('[Free Plan Welcome Email Error]:', err.message));
+      }
 
       return res.json({
         success: true,
@@ -334,9 +354,11 @@ export const verifyRazorpayPayment = asyncHandler(async (req, res) => {
   const expiresAt = new Date(Date.now() + durationDays * 24 * 60 * 60 * 1000);
 
   // 3. Create user if pending registration
+  let isNewlyCreatedUser = false;
   if (decodedRegistration?.email) {
     user = await prisma.user.findUnique({ where: { email: decodedRegistration.email } });
     if (!user) {
+      isNewlyCreatedUser = true;
       user = await prisma.user.create({
         data: {
           fullName: decodedRegistration.fullName,
@@ -358,6 +380,8 @@ export const verifyRazorpayPayment = asyncHandler(async (req, res) => {
           isEmailVerified: true,
           subscriptionStatus: 'ACTIVE',
           subscriptionExpiresAt: expiresAt,
+          organizationId: decodedRegistration.organizationId || null,
+          referredByPartnerId: decodedRegistration.referredByPartnerId || null,
         },
       });
 
@@ -367,7 +391,7 @@ export const verifyRazorpayPayment = asyncHandler(async (req, res) => {
             data: {
               userId: user.id,
               name: decodedRegistration.emergencyContactName,
-              relationship: 'Primary Guardian / Emergency Contact',
+              relationship: 'Guardian',
               phone: decodedRegistration.emergencyContactPhone,
               email: decodedRegistration.parentEmail || '',
               isVerified: true,
@@ -398,9 +422,16 @@ export const verifyRazorpayPayment = asyncHandler(async (req, res) => {
 
   // 4. Activate subscription
   if (user) {
-    await prisma.user.update({
+    const updateData = { subscriptionStatus: 'ACTIVE', subscriptionExpiresAt: expiresAt };
+    if (decodedRegistration?.organizationId && !user.organizationId) {
+      updateData.organizationId = decodedRegistration.organizationId;
+    }
+    if (decodedRegistration?.referredByPartnerId && !user.referredByPartnerId) {
+      updateData.referredByPartnerId = decodedRegistration.referredByPartnerId;
+    }
+    user = await prisma.user.update({
       where: { id: user.id },
-      data: { subscriptionStatus: 'ACTIVE', subscriptionExpiresAt: expiresAt },
+      data: updateData,
     });
   }
 
@@ -455,6 +486,15 @@ export const verifyRazorpayPayment = asyncHandler(async (req, res) => {
         { expiresIn: config.jwt.expiresIn }
       )
     : null;
+
+  // Send Welcome Email to newly registered user after successful payment
+  if (isNewlyCreatedUser && user?.email) {
+    sendWelcomeEmail({
+      recipientEmail: user.email,
+      userName: user.fullName,
+      userPhoto: user.profilePhoto,
+    }).catch((err) => console.warn('[Payment Welcome Email Error]:', err.message));
+  }
 
   return res.json({
     success: true,

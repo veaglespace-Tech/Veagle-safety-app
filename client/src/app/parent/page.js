@@ -361,7 +361,7 @@ function ParentDashboardContent() {
 
   // Handle Unlinking Child
   const handleUnlinkChild = async (linkId, childName) => {
-    if (!window.confirm(`Are you sure you want to unlink ${childName} from your Parent Portal?`))
+    if (!window.confirm(`Are you sure you want to unlink ${childName} from your Guardian Portal?`))
       return;
     try {
       const res = await api.delete(`/parent/children/${linkId}`);
@@ -494,7 +494,7 @@ function ParentDashboardContent() {
             <div className="min-w-0 flex-1">
               <div className="flex flex-wrap items-center gap-2">
                 <span className="text-[10px] font-black uppercase tracking-widest text-white bg-gradient-to-r from-[#FF5C8A] to-[#FF2A6D] px-3 py-1 rounded-full shadow-xs">
-                  PARENTAL SAFETY COMMAND
+                  GUARDIAN SAFETY COMMAND
                 </span>
                 <span className="text-xs font-bold text-[#684E67] flex items-center gap-1.5 bg-white/80 px-2.5 py-0.5 rounded-full border border-[#FFCCE1]">
                   <span className="w-2 h-2 rounded-full bg-[#059669] inline-block shrink-0 animate-pulse" />
@@ -502,7 +502,7 @@ function ParentDashboardContent() {
                 </span>
               </div>
               <h1 className="text-2xl sm:text-3xl font-black text-[#2A0826] tracking-tight mt-1 truncate">
-                {user?.fullName || 'Parent Safety Command'}
+                {user?.fullName || 'Guardian Safety Command'}
               </h1>
               <p className="text-xs font-bold text-[#684E67] mt-0.5">
                 Protecting & tracking your family in real-time • Last sync:{' '}
@@ -1210,7 +1210,7 @@ export default function ParentDashboard() {
     <Suspense
       fallback={
         <div className="min-h-screen bg-[#FFF0F3] flex items-center justify-center text-xs font-bold text-[#FF2A6D] animate-pulse">
-          Loading Parent Safety Command...
+          Loading Guardian Safety Command...
         </div>
       }
     >

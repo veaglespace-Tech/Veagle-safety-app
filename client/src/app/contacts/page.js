@@ -18,13 +18,13 @@ import { CustomSelect } from '../../components/ui/CustomSelect.js';
 export const dynamic = 'force-dynamic';
 
 const RELATIONSHIPS = [
-  'Sister',
+  'Guardian',
   'Mother',
   'Father',
+  'Sister',
   'Brother',
   'Friend',
   'Spouse',
-  'Guardian',
   'Colleague',
 ];
 

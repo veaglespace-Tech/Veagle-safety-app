@@ -112,10 +112,11 @@ export const register = asyncHandler(async (req, res) => {
 
   let organizationId = null;
   if (orgReferralCode) {
-    const orgUser = await prisma.user.findUnique({
-      where: { orgReferralCode }
+    const cleanCode = String(orgReferralCode).trim();
+    const orgUser = await prisma.user.findFirst({
+      where: { orgReferralCode: cleanCode, role: 'ORGANIZATION' }
     });
-    if (orgUser && orgUser.role === 'ORGANIZATION') {
+    if (orgUser) {
       organizationId = orgUser.id;
     }
   }
@@ -273,6 +274,14 @@ export const register = asyncHandler(async (req, res) => {
     }
 
     // Non-USER roles (SuperAdmin, Organization) get immediate JWT login
+    if (user?.email) {
+      sendWelcomeEmail({
+        recipientEmail: user.email,
+        userName: user.fullName,
+        userPhoto: user.profilePhoto,
+      }).catch((welcomeErr) => console.warn('[Register Welcome Email Notice]:', welcomeErr.message));
+    }
+
     const token = createUserAccessToken(user);
 
     return res.status(201).json({
@@ -528,7 +537,7 @@ export const login = asyncHandler(async (req, res) => {
         user = await syncParentProfileAndLink({
           childId: contact.userId,
           parentPhone: phone10,
-          parentName: contact.name || 'Parent Guardian',
+          parentName: contact.name || 'Guardian',
           parentEmail: contact.email || '',
           relationship: contact.relationship || 'Guardian',
         });
@@ -547,7 +556,7 @@ export const login = asyncHandler(async (req, res) => {
         user = await syncParentProfileAndLink({
           childId: childUser.id,
           parentPhone: phone10,
-          parentName: childUser.emergencyContactName || 'Parent Guardian',
+          parentName: childUser.emergencyContactName || 'Guardian',
           parentEmail: childUser.parentEmail || '',
           relationship: 'Parent',
         });
@@ -666,6 +675,14 @@ export const login = asyncHandler(async (req, res) => {
 
   const token = createUserAccessToken(user);
 
+  let orgData = null;
+  if (user.organizationId) {
+    orgData = await prisma.user.findUnique({
+      where: { id: user.organizationId },
+      select: { id: true, fullName: true, email: true, phone: true },
+    });
+  }
+
   res.status(200).json({
     message: 'Logged in successfully',
     token,
@@ -678,6 +695,8 @@ export const login = asyncHandler(async (req, res) => {
       subscriptionStatus: user.subscriptionStatus,
       profilePhoto: user.profilePhoto,
       bloodGroup: user.bloodGroup,
+      organizationId: user.organizationId || null,
+      organization: orgData,
     },
   });
 });
@@ -711,6 +730,15 @@ export const getProfile = asyncHandler(async (req, res) => {
       emergencyContactPhone: true,
       parentEmail: true,
       medicalNotes: true,
+      organizationId: true,
+      organization: {
+        select: {
+          id: true,
+          fullName: true,
+          email: true,
+          phone: true,
+        },
+      },
       childLinks: {
         where: { status: 'ACTIVE' },
         include: {

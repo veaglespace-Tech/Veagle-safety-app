@@ -31,6 +31,7 @@ import {
   Sun,
   SunMedium,
   Moon,
+  Building,
 } from 'lucide-react';
 import { useDispatch, useSelector } from 'react-redux';
 import { fetchContacts } from '../../redux/slices/contactSlice.js';
@@ -269,6 +270,30 @@ export default function DashboardAppPage() {
                 </div>
               </div>
             </div>
+
+            {/* AFFILIATED ORGANIZATION / INSTITUTE BANNER */}
+            {mounted && user?.organization && (
+              <div className="bg-gradient-to-r from-purple-50 via-white to-pink-50 border-2 border-purple-200/80 rounded-2xl p-3.5 sm:p-4 flex items-center justify-between gap-3 shadow-xs">
+                <div className="flex items-center space-x-3 min-w-0">
+                  <div className="w-10 h-10 rounded-xl bg-purple-100 text-purple-700 flex items-center justify-center border border-purple-200 shrink-0">
+                    <Building className="w-5 h-5 text-purple-700" />
+                  </div>
+                  <div className="min-w-0">
+                    <span className="text-[9px] font-black uppercase tracking-widest text-purple-700 bg-purple-100 px-2 py-0.5 rounded-full inline-block">
+                      INSTITUTE AFFILIATION
+                    </span>
+                    <p className="text-xs sm:text-sm font-black text-[#2A0826] truncate mt-0.5">
+                      {user.organization.fullName}
+                    </p>
+                  </div>
+                </div>
+                <div className="shrink-0 flex items-center space-x-1.5 bg-emerald-50 text-emerald-700 border border-emerald-200 px-3 py-1.5 rounded-xl text-[10px] font-black uppercase tracking-wider">
+                  <ShieldCheck className="w-3.5 h-3.5 text-emerald-600" />
+                  <span className="hidden sm:inline">INSTITUTE MONITORED</span>
+                  <span className="sm:hidden">CONNECTED</span>
+                </div>
+              </div>
+            )}
 
             {/* EMERGENCY SOS HERO ACTION BUTTON */}
             <div className="pt-2 pb-3 text-center space-y-3">

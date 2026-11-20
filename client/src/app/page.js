@@ -250,7 +250,7 @@ export default function LandingPage() {
             badgeText="AUTOMATED RESPONSE"
             gradient="bg-gradient-to-br from-[#FF5C8A] via-[#FF2A6D] to-[#E01A4F]"
             points={[
-              '👨‍👩‍👧 Family & Parent Email Registration',
+              '👨‍👩‍👧 Family & Guardian Email Registration',
               '🔔 Multi-Device Guardian Audio Siren',
               '📱 Direct Emergency Phone Calling',
             ]}

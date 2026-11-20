@@ -1,3 +1,4 @@
+import '../src/config/index.js';
 import { PrismaClient } from '@prisma/client';
 import bcrypt from 'bcryptjs';
 
@@ -15,14 +16,21 @@ export async function seedDatabase() {
       'SosAlert',
       'SosLocation',
       'SosSession',
-      'Checkin',
+      'JourneyLocation',
       'Journey',
+      'SafetyCheckin',
+      'ParentChildLink',
       'TrustedContact',
-      'PaymentHistory',
+      'DeviceToken',
       'PushSubscription',
-      'User',
-      'Plan',
+      'PaymentHistory',
+      'Donation',
+      'Coupon',
+      'ReferralPartner',
+      'ContactEnquiry',
       'SystemSetting',
+      'Plan',
+      'User',
     ];
 
     for (const table of tables) {
@@ -43,15 +51,14 @@ export async function seedDatabase() {
     console.warn('⚠️ Table reset notice:', err.message);
   }
 
-  // 1. Seed SuperAdmin Account with ID = 1
-  const superAdminEmail = 'veaglespace@gmail.com';
+  // 1. Seed SuperAdmin Accounts with ID = 1 and ID = 2
   const passwordHash = await bcrypt.hash('Veagle@123', 10);
 
-  const superAdmin = await prisma.user.create({
+  const superAdmin1 = await prisma.user.create({
     data: {
       id: 1,
-      fullName: 'Veagle Space',
-      email: superAdminEmail,
+      fullName: 'Abhijeet Ambhore',
+      email: 'abhijeetambhore4@gmail.com',
       phone: '8237999101',
       passwordHash,
       role: 'SUPER_ADMIN',
@@ -60,7 +67,22 @@ export async function seedDatabase() {
       onboardingStep: 7,
     },
   });
-  console.log(`✅ [Seed] SuperAdmin Account Created (ID: ${superAdmin.id}): ${superAdmin.email} (Password: Veagle@123)`);
+  console.log(`✅ [Seed] SuperAdmin Account Created (ID: ${superAdmin1.id}): ${superAdmin1.email} (Password: Veagle@123)`);
+
+  const superAdmin2 = await prisma.user.create({
+    data: {
+      id: 2,
+      fullName: 'Veagle Space Command',
+      email: 'veaglespace@gmail.com',
+      phone: '9225241608',
+      passwordHash,
+      role: 'SUPER_ADMIN',
+      isEmailVerified: true,
+      subscriptionStatus: 'ACTIVE',
+      onboardingStep: 7,
+    },
+  });
+  console.log(`✅ [Seed] SuperAdmin Account Created (ID: ${superAdmin2.id}): ${superAdmin2.email} (Password: Veagle@123)`);
 
   // 2. Seed Subscription Plans (Free Plan + 365 Yearly Protection Plan)
   const plans = [

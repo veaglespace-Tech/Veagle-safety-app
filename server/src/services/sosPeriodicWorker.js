@@ -53,6 +53,7 @@ export const startSosPeriodicWorker = () => {
               parentEmail: true,
               emergencyContactName: true,
               trustedContacts: true,
+              organization: { select: { email: true } },
               parentLinks: {
                 where: { status: 'ACTIVE' },
                 include: {

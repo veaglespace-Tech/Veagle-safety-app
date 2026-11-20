@@ -814,7 +814,7 @@ export const createUserByAdmin = asyncHandler(async (req, res) => {
   }
 
   return res.status(201).json({
-    message: `${assignedRole === 'ORGANIZATION' ? 'Organization HQ' : assignedRole === 'PARENT' ? 'Parent Guardian' : assignedRole} account created successfully for ${newUser.fullName}!`,
+    message: `${assignedRole === 'ORGANIZATION' ? 'Organization HQ' : assignedRole === 'PARENT' ? 'Guardian' : assignedRole} account created successfully for ${newUser.fullName}!`,
     user: newUser,
   });
 });
