@@ -1,0 +1,2 @@
+-keep class expo.modules.directsms.** { *; }
+-keepclassmembers class expo.modules.directsms.** { *; }

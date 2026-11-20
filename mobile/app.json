@@ -107,6 +107,9 @@
       [
         "expo-build-properties",
         {
+          "android": {
+            "extraProguardRules": "-keep class expo.modules.directsms.** { *; }\n-keepclassmembers class expo.modules.directsms.** { *; }"
+          },
           "ios": {
             "useFrameworks": "dynamic"
           }
