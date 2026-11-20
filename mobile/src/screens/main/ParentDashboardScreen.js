@@ -45,7 +45,7 @@ export default function ParentDashboardScreen({ navigation }) {
   // Modal State for Linking Child
   const [showLinkModal, setShowLinkModal] = useState(false);
   const [linkInput, setLinkInput] = useState('');
-  const [relationship, setRelationship] = useState('Parent');
+  const [relationship, setRelationship] = useState('Guardian');
   const [isLinking, setIsLinking] = useState(false);
 
   // Modal State for Live Map Tracking
@@ -951,7 +951,7 @@ export default function ParentDashboardScreen({ navigation }) {
             <View style={styles.inputWrap}>
               <Text style={styles.inputLabel}>Your Relationship</Text>
               <View style={styles.relSelectionRow}>
-                {['Parent', 'Mother', 'Father', 'Guardian'].map((rel) => (
+                {['Guardian', 'Parent', 'Mother', 'Father'].map((rel) => (
                   <TouchableOpacity
                     key={rel}
                     style={[styles.relOption, relationship === rel && styles.relOptionActive]}

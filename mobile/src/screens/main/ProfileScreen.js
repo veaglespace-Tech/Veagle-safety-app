@@ -33,7 +33,7 @@ export default function ProfileScreen({ navigation }) {
   const [pincode, setPincode] = useState('');
   const [emergencyContactName, setEmergencyContactName] = useState('');
   const [emergencyContactPhone, setEmergencyContactPhone] = useState('');
-  const [emergencyContactRelation, setEmergencyContactRelation] = useState('Parent');
+  const [emergencyContactRelation, setEmergencyContactRelation] = useState('Guardian');
   const [saved, setSaved] = useState(false);
 
   useEffect(() => {
@@ -51,7 +51,7 @@ export default function ProfileScreen({ navigation }) {
       setPincode(user.pincode || '');
       setEmergencyContactName(user.emergencyContactName || '');
       setEmergencyContactPhone(user.emergencyContactPhone || '');
-      setEmergencyContactRelation(user.emergencyContactRelation || 'Parent');
+      setEmergencyContactRelation(user.emergencyContactRelation || 'Guardian');
     }
   }, [user]);
 
@@ -120,6 +120,27 @@ export default function ProfileScreen({ navigation }) {
           </View>
         )}
 
+        {/* AFFILIATED ORGANIZATION / INSTITUTE BADGE */}
+        {user?.organization && (
+          <Animated.View entering={FadeInUp.delay(50).duration(500)} style={styles.orgCard}>
+            <View style={styles.orgHeader}>
+              <View style={styles.orgIconWrap}>
+                <Ionicons name="business" size={22} color="#7C3AED" />
+              </View>
+              <View style={{ flex: 1 }}>
+                <View style={styles.orgBadge}>
+                  <Text style={styles.orgBadgeText}>ENROLLED VIA INSTITUTE / ORGANIZATION</Text>
+                </View>
+                <Text style={styles.orgTitle}>{user.organization.fullName}</Text>
+                {user.organization.email ? (
+                  <Text style={styles.orgSubtitle}>Email: {user.organization.email}</Text>
+                ) : null}
+                <Text style={styles.orgStatusText}>🏛️ Enrolled Member • Direct SOS Monitoring Active</Text>
+              </View>
+            </View>
+          </Animated.View>
+        )}
+
         {/* PERSONAL INFO */}
         <Animated.View entering={FadeInUp.delay(100).duration(500)} style={styles.section}>
           <Text style={styles.sectionTitle}>Personal Information</Text>
@@ -152,6 +173,9 @@ export default function ProfileScreen({ navigation }) {
               <InfoRow icon="call-outline" label="Phone" value={user?.phone} />
               <InfoRow icon="heart-outline" label="Blood Group" value={user?.bloodGroup} />
               <InfoRow icon="location-outline" label="City" value={user?.city} />
+              {user?.organization && (
+                <InfoRow icon="business-outline" label="Institute" value={user.organization.fullName} />
+              )}
             </View>
           )}
         </Animated.View>
@@ -186,15 +210,15 @@ export default function ProfileScreen({ navigation }) {
         {/* EMERGENCY CONTACT (Only for regular members who need guardian protection) */}
         {showEmergencyContact && (
           <Animated.View entering={FadeInUp.delay(200).duration(500)} style={styles.section}>
-            <Text style={styles.sectionTitle}>Emergency Contact</Text>
+            <Text style={styles.sectionTitle}>Primary Emergency Guardian Contact</Text>
             {isEditing ? (
               <View style={{ gap: 12 }}>
                 <View>
-                  <Text style={styles.fieldLabel}>Contact Name</Text>
-                  <TextInput style={styles.fieldInput} value={emergencyContactName} onChangeText={setEmergencyContactName} placeholder="Parent / Guardian name" placeholderTextColor={COLORS.primaryBorder} />
+                  <Text style={styles.fieldLabel}>Guardian Name</Text>
+                  <TextInput style={styles.fieldInput} value={emergencyContactName} onChangeText={setEmergencyContactName} placeholder="Emergency Guardian name" placeholderTextColor={COLORS.primaryBorder} />
                 </View>
                 <View>
-                  <Text style={styles.fieldLabel}>Contact Phone</Text>
+                  <Text style={styles.fieldLabel}>Guardian Phone</Text>
                   <TextInput style={styles.fieldInput} value={emergencyContactPhone} onChangeText={setEmergencyContactPhone} placeholder="+91 98765 00000" placeholderTextColor={COLORS.primaryBorder} keyboardType="phone-pad" />
                 </View>
                 <View>
@@ -211,9 +235,9 @@ export default function ProfileScreen({ navigation }) {
               </View>
             ) : (
               <View style={{ gap: 2 }}>
-                <InfoRow icon="person-add-outline" label="Contact Name" value={user?.emergencyContactName} />
-                <InfoRow icon="call-outline" label="Contact Phone" value={user?.emergencyContactPhone} />
-                <InfoRow icon="people-outline" label="Relationship" value={user?.emergencyContactRelation} />
+                <InfoRow icon="person-add-outline" label="Guardian Name" value={user?.emergencyContactName} />
+                <InfoRow icon="call-outline" label="Guardian Phone" value={user?.emergencyContactPhone} />
+                <InfoRow icon="people-outline" label="Relationship" value={user?.emergencyContactRelation || 'Guardian'} />
               </View>
             )}
           </Animated.View>
@@ -351,6 +375,15 @@ const styles = StyleSheet.create({
 
   savedBanner: { flexDirection: 'row', alignItems: 'center', gap: 8, backgroundColor: '#F0FDF4', borderWidth: 1.5, borderColor: '#86EFAC', borderRadius: 14, padding: 12 },
   savedBannerText: { fontSize: 13, fontWeight: '700', color: COLORS.success },
+
+  orgCard: { backgroundColor: '#FAF5FF', borderWidth: 1.5, borderColor: '#DDD6FE', borderRadius: 20, padding: 16, shadowColor: '#7C3AED', shadowOffset: { width: 0, height: 3 }, shadowOpacity: 0.08, shadowRadius: 8, elevation: 3 },
+  orgHeader: { flexDirection: 'row', alignItems: 'flex-start', gap: 12 },
+  orgIconWrap: { width: 40, height: 40, borderRadius: 12, backgroundColor: '#EDE9FE', alignItems: 'center', justifyContent: 'center', marginTop: 2 },
+  orgBadge: { alignSelf: 'flex-start', backgroundColor: '#EDE9FE', paddingHorizontal: 8, paddingVertical: 3, borderRadius: 999, marginBottom: 4 },
+  orgBadgeText: { fontSize: 8.5, fontWeight: '900', color: '#6D28D9', letterSpacing: 0.5 },
+  orgTitle: { fontSize: 14, fontWeight: '900', color: '#4C1D95' },
+  orgSubtitle: { fontSize: 11, fontWeight: '600', color: '#6D28D9', marginTop: 2 },
+  orgStatusText: { fontSize: 11, fontWeight: '700', color: '#7C3AED', marginTop: 6 },
 
   section: { backgroundColor: COLORS.surface, borderWidth: 1.5, borderColor: COLORS.primaryBorder, borderRadius: 22, padding: 18, gap: 12, shadowColor: COLORS.primary, shadowOffset: { width: 0, height: 3 }, shadowOpacity: 0.08, shadowRadius: 8, elevation: 3 },
   sectionTitle: { fontSize: 11, fontWeight: '900', color: COLORS.primary, textTransform: 'uppercase', letterSpacing: 1, marginBottom: 2 },

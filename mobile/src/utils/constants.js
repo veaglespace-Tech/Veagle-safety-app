@@ -15,12 +15,12 @@ export const SUPPORT_WHATSAPP = 'https://wa.me/919225241608';
 export const SUPPORT_EMAIL = 'support@sakhisuraksha.com';
 
 export const RELATIONSHIPS = [
-  'Sister', 'Mother', 'Father', 'Brother',
-  'Friend', 'Spouse', 'Guardian', 'Colleague'
+  'Guardian', 'Sister', 'Mother', 'Father', 'Brother',
+  'Friend', 'Spouse', 'Colleague', 'Other'
 ];
 
 export const BLOOD_GROUPS = ['A+', 'A-', 'B+', 'B-', 'AB+', 'AB-', 'O+', 'O-'];
 
 export const EMERGENCY_RELATIONS = [
-  'Parent', 'Spouse', 'Sibling', 'Friend', 'Guardian'
+  'Guardian', 'Parent', 'Spouse', 'Sibling', 'Friend', 'Relative', 'Other'
 ];

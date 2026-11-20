@@ -22,7 +22,7 @@ export default function ContactsScreen() {
   const [showModal, setShowModal] = useState(false);
   const [editingContact, setEditingContact] = useState(null);
   const [name, setName] = useState('');
-  const [relationship, setRelationship] = useState('Sister');
+  const [relationship, setRelationship] = useState('Guardian');
   const [phone, setPhone] = useState('');
   const [email, setEmail] = useState('');
   const [saving, setSaving] = useState(false);
@@ -34,7 +34,7 @@ export default function ContactsScreen() {
 
   const openAddModal = () => {
     setEditingContact(null);
-    setName(''); setRelationship('Sister'); setPhone(''); setEmail('');
+    setName(''); setRelationship('Guardian'); setPhone(''); setEmail('');
     setSaved(false);
     setShowModal(true);
   };
