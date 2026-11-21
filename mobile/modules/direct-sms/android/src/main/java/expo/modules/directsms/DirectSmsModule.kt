@@ -45,11 +45,22 @@ class DirectSmsModule : Module() {
           SmsManager.getDefault()
         }
 
-        val parts = smsManager.divideMessage(message)
-        if (parts != null && parts.size > 1) {
-          smsManager.sendMultipartTextMessage(cleanPhone, null, parts, null, null)
-        } else {
-          smsManager.sendTextMessage(cleanPhone, null, message, null, null)
+        try {
+          val parts = smsManager.divideMessage(message)
+          if (parts != null && parts.size > 1) {
+            smsManager.sendMultipartTextMessage(cleanPhone, null, parts, null, null)
+          } else {
+            smsManager.sendTextMessage(cleanPhone, null, message, null, null)
+          }
+        } catch (dispatchErr: Throwable) {
+          android.util.Log.w("DirectSms", "Primary send failed, fallback to SmsManager.getDefault(): ${dispatchErr.message}")
+          val fallbackManager = @Suppress("DEPRECATION") SmsManager.getDefault()
+          val fallbackParts = fallbackManager.divideMessage(message)
+          if (fallbackParts != null && fallbackParts.size > 1) {
+            fallbackManager.sendMultipartTextMessage(cleanPhone, null, fallbackParts, null, null)
+          } else {
+            fallbackManager.sendTextMessage(cleanPhone, null, message, null, null)
+          }
         }
         true
       } catch (e: Throwable) {

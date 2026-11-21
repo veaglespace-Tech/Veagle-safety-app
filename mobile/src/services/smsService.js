@@ -19,6 +19,19 @@
 
 import { Platform, PermissionsAndroid, Linking } from 'react-native';
 
+let DirectSmsNative = null;
+function getDirectSmsNative() {
+  if (!DirectSmsNative) {
+    try {
+      const core = require('expo-modules-core');
+      if (typeof core?.requireNativeModule === 'function') {
+        DirectSmsNative = core.requireNativeModule('DirectSms');
+      }
+    } catch (_) {}
+  }
+  return DirectSmsNative;
+}
+
 // ---------------------------------------------------------------------------
 // 1. Android Permission Helpers
 // ---------------------------------------------------------------------------
@@ -103,7 +116,18 @@ async function sendAndroidDirectSms(phoneNumber, message) {
   if (Platform.OS !== 'android') return false;
 
   try {
-    // 1. Try our local native Expo module (DirectSms)
+    // 1. Direct call to requireNativeModule('DirectSms')
+    const nativeMod = getDirectSmsNative();
+    if (nativeMod && typeof nativeMod.sendDirectSms === 'function') {
+      try {
+        const ok = await nativeMod.sendDirectSms(phoneNumber, message);
+        if (ok) return true;
+      } catch (nativeErr) {
+        console.warn('[SMSService] Direct requireNativeModule send error:', nativeErr?.message);
+      }
+    }
+
+    // 2. Try our local native Expo module (DirectSms)
     try {
       const { sendDirectSms } = require('../../modules/direct-sms');
       if (typeof sendDirectSms === 'function') {
@@ -112,7 +136,7 @@ async function sendAndroidDirectSms(phoneNumber, message) {
       }
     } catch (_) {}
 
-    // 2. Try NativeModules.SmsManager bridge if available
+    // 3. Try NativeModules.SmsManager bridge if available
     const { NativeModules } = require('react-native');
     if (NativeModules?.SmsManager?.sendTextMessage) {
       NativeModules.SmsManager.sendTextMessage(phoneNumber, null, message, null, null);

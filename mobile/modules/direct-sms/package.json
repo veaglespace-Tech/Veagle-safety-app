@@ -1,0 +1,6 @@
+{
+  "name": "direct-sms",
+  "version": "1.0.0",
+  "description": "Local Expo direct SMS module for Android",
+  "main": "index.js"
+}

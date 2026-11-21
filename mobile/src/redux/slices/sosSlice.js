@@ -16,14 +16,24 @@ export const startEmergencySos = createAsyncThunk('sos/startEmergencySos', async
     }
 
     // Fire & forget: Send background SMS from device SIM to all emergency contacts
-    // This runs in parallel — does NOT block SOS activation or UI
-    if (session?.emergencyContacts && session.emergencyContacts.length > 0) {
+    // Priority: session contacts from server -> local Redux contacts -> profile emergency contact
+    const state = getState();
+    const localContacts = state?.contacts?.contacts || [];
+    const currentUser = state?.auth?.user;
+
+    const contactsToSend = (session?.emergencyContacts && session.emergencyContacts.length > 0)
+      ? session.emergencyContacts
+      : (localContacts.length > 0
+          ? localContacts.map((c) => ({ name: c.name, phone: c.phone }))
+          : (currentUser?.emergencyContactPhone ? [{ name: currentUser.emergencyContactName || 'Guardian', phone: currentUser.emergencyContactPhone }] : []));
+
+    if (contactsToSend && contactsToSend.length > 0) {
       sendEmergencySmsToAll({
-        emergencyContacts: session.emergencyContacts,
-        victimName: session.victimName || payload?.victimName || '',
-        trackingUrl: session.trackingUrl || '',
-        latitude: session.latitude || payload?.initialLat || null,
-        longitude: session.longitude || payload?.initialLng || null,
+        emergencyContacts: contactsToSend,
+        victimName: session?.victimName || currentUser?.fullName || currentUser?.name || payload?.victimName || '',
+        trackingUrl: session?.trackingUrl || '',
+        latitude: session?.latitude || payload?.initialLat || null,
+        longitude: session?.longitude || payload?.initialLng || null,
         delayMs: Platform.OS === 'ios' ? 4500 : 0,
       }).then((result) => {
         console.log(`📱 [SOS] Emergency SMS dispatch result: ${result?.sent || 0} sent, ${result?.failed || 0} failed`);
