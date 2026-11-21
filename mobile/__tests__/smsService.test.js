@@ -135,6 +135,54 @@ describe('Emergency SMS Service', () => {
       expect(sendDirectSms).toHaveBeenCalledTimes(2);
     });
 
+    it('dispatches 1-tap pre-filled composer on iOS with all contacts', async () => {
+      Platform.OS = 'ios';
+      const SMS = require('expo-sms');
+      const contacts = [
+        { name: 'Mom', phone: '9876543210' },
+        { name: 'Brother', phone: '9876543211' },
+      ];
+
+      const res = await sendEmergencySmsToAll({
+        emergencyContacts: contacts,
+        victimName: 'Tester iOS',
+      });
+
+      expect(res.sent).toBe(2);
+      expect(res.failed).toBe(0);
+      expect(res.platform).toBe('ios');
+      expect(res.mode).toBe('composer');
+      expect(SMS.sendSMSAsync).toHaveBeenCalledWith(
+        ['+919876543210', '+919876543211'],
+        expect.stringContaining('Tester iOS')
+      );
+    });
+
+    it('falls back to 1-on-1 composer on Android when background SMS returns false', async () => {
+      Platform.OS = 'android';
+      const SMS = require('expo-sms');
+      const { sendDirectSms } = require('../modules/direct-sms');
+      sendDirectSms.mockResolvedValueOnce(false).mockResolvedValueOnce(false);
+
+      const contacts = [
+        { name: 'Mom', phone: '9876543210' },
+        { name: 'Brother', phone: '9876543211' },
+      ];
+
+      const res = await sendEmergencySmsToAll({
+        emergencyContacts: contacts,
+        victimName: 'Tester Fallback',
+      });
+
+      expect(res.mode).toBe('fallback_composer');
+      expect(res.platform).toBe('android');
+      // Must target only primary guardian to prevent RCS group chat error
+      expect(SMS.sendSMSAsync).toHaveBeenCalledWith(
+        ['+919876543210'],
+        expect.stringContaining('Tester Fallback')
+      );
+    });
+
     it('skips gracefully when contacts list is empty', async () => {
       const res = await sendEmergencySmsToAll({
         emergencyContacts: [],
