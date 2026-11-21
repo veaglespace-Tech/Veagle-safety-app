@@ -1,5 +1,5 @@
-import React, { useState, useEffect, useRef } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, ScrollView, Vibration, Platform } from 'react-native';
+import React, { useState, useEffect } from 'react';
+import { View, Text, StyleSheet, TouchableOpacity, ScrollView } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import Animated, { 
@@ -7,33 +7,14 @@ import Animated, {
   useAnimatedStyle, 
   withRepeat, 
   withTiming, 
-  withSequence,
-  FadeIn,
-  FadeOut
+  withSequence
 } from 'react-native-reanimated';
 import { LinearGradient } from 'expo-linear-gradient';
 import { COLORS } from '../../theme/colors';
 import { playEmergencySiren, stopEmergencySiren } from '../../utils/soundPlayer';
 
-const safeVibrate = (pattern) => {
-  if (Platform.OS !== 'web') {
-    try {
-      Vibration.vibrate(pattern, true);
-    } catch (e) {}
-  }
-};
-
-const safeCancelVibration = () => {
-  if (Platform.OS !== 'web') {
-    try {
-      Vibration.cancel();
-    } catch (e) {}
-  }
-};
-
 export default function AlarmScreen() {
   const [isSirenActive, setIsSirenActive] = useState(false);
-  const [showFakeCall, setShowFakeCall] = useState(false);
   
   // Animation values for Siren
   const pulseScale = useSharedValue(1);
@@ -81,8 +62,8 @@ export default function AlarmScreen() {
       <ScrollView contentContainerStyle={styles.scroll} showsVerticalScrollIndicator={false}>
         
         <View style={styles.header}>
-          <Text style={styles.title}>Safety Tools</Text>
-          <Text style={styles.subtitle}>Discreet and loud tools to deter threats.</Text>
+          <Text style={styles.title}>Emergency Siren</Text>
+          <Text style={styles.subtitle}>High-decibel acoustic deterrence to summon help immediately.</Text>
         </View>
 
         {/* LOUD SIREN TOOL */}
@@ -124,74 +105,8 @@ export default function AlarmScreen() {
             <Text style={styles.infoText}>Use the alarm in public spaces to draw attention. The device will vibrate intensely and flash.</Text>
           </View>
         </View>
-
-        {/* FAKE CALL TOOL */}
-        <View style={styles.toolCard}>
-          <View style={styles.fakeCallContent}>
-            <View style={styles.iconCircle}>
-              <Ionicons name="call" size={28} color="#FFF" />
-            </View>
-            <View style={{ flex: 1 }}>
-              <Text style={styles.cardTitle}>Fake Phone Call</Text>
-              <Text style={styles.cardDesc}>Simulate an incoming phone call to excuse yourself from uncomfortable situations.</Text>
-            </View>
-          </View>
-          
-          <TouchableOpacity 
-            onPress={() => {
-              // Vibrate briefly to simulate phone ringing, then show fake call overlay
-              safeVibrate([0, 1000, 2000, 1000]);
-              setShowFakeCall(true);
-            }}
-            activeOpacity={0.85}
-          >
-            <LinearGradient colors={['#34D399', '#10B981']} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={styles.fakeCallBtn}>
-              <Text style={styles.fakeCallBtnText}>TRIGGER FAKE CALL NOW</Text>
-            </LinearGradient>
-          </TouchableOpacity>
-        </View>
         
       </ScrollView>
-
-      {/* FAKE CALL OVERLAY */}
-      {showFakeCall && (
-        <Animated.View entering={FadeIn} exiting={FadeOut} style={styles.fakeCallOverlay}>
-          <View style={styles.callTop}>
-            <Text style={styles.callCaller}>Dad</Text>
-            <Text style={styles.callType}>Mobile</Text>
-          </View>
-          
-          <View style={styles.callActions}>
-            <View style={styles.callActionWrapper}>
-              <TouchableOpacity 
-                style={[styles.callBtn, { backgroundColor: '#FF3B30' }]}
-                onPress={() => {
-                  safeCancelVibration();
-                  setShowFakeCall(false);
-                }}
-              >
-                <Ionicons name="call" size={32} color="#FFF" style={{ transform: [{ rotate: '135deg' }] }} />
-              </TouchableOpacity>
-              <Text style={styles.callBtnLabel}>Decline</Text>
-            </View>
-            
-            <View style={styles.callActionWrapper}>
-              <TouchableOpacity 
-                style={[styles.callBtn, { backgroundColor: '#34C759' }]}
-                onPress={() => {
-                  // Actually answering it? Just stop vibration and pretend to be on call, or just close it.
-                  safeCancelVibration();
-                  setShowFakeCall(false);
-                }}
-              >
-                <Ionicons name="call" size={32} color="#FFF" />
-              </TouchableOpacity>
-              <Text style={styles.callBtnLabel}>Accept</Text>
-            </View>
-          </View>
-        </Animated.View>
-      )}
-
     </SafeAreaView>
   );
 }
@@ -219,21 +134,5 @@ const styles = StyleSheet.create({
   sirenBtnSub: { color: 'rgba(255,255,255,0.7)', fontSize: 10, fontWeight: '700', marginTop: 2 },
 
   infoBox: { flexDirection: 'row', alignItems: 'flex-start', padding: 16, backgroundColor: '#FFF0F3', gap: 8 },
-  infoText: { flex: 1, fontSize: 11, fontWeight: '700', color: COLORS.textDark, lineHeight: 16 },
-
-  fakeCallContent: { flexDirection: 'row', alignItems: 'center', padding: 20, gap: 16 },
-  iconCircle: { width: 56, height: 56, borderRadius: 28, backgroundColor: '#34C759', alignItems: 'center', justifyContent: 'center' },
-  cardTitle: { fontSize: 16, fontWeight: '900', color: COLORS.textDark },
-  cardDesc: { fontSize: 11, fontWeight: '600', color: COLORS.textMuted, marginTop: 4, lineHeight: 16 },
-  fakeCallBtn: { marginHorizontal: 20, marginBottom: 20, backgroundColor: '#34C759', paddingVertical: 14, borderRadius: 100, alignItems: 'center', shadowColor: '#34C759', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.3, shadowRadius: 8 },
-  fakeCallBtnText: { color: '#FFF', fontSize: 12, fontWeight: '900', letterSpacing: 0.5 },
-
-  fakeCallOverlay: { ...StyleSheet.absoluteFillObject, backgroundColor: '#1C1C1E', zIndex: 999, justifyContent: 'space-between', paddingTop: 80, paddingBottom: 60 },
-  callTop: { alignItems: 'center' },
-  callCaller: { color: '#FFF', fontSize: 36, fontWeight: '300' },
-  callType: { color: 'rgba(255,255,255,0.6)', fontSize: 16, marginTop: 8 },
-  callActions: { flexDirection: 'row', justifyContent: 'space-around', paddingHorizontal: 40 },
-  callActionWrapper: { alignItems: 'center', gap: 12 },
-  callBtn: { width: 72, height: 72, borderRadius: 36, alignItems: 'center', justifyContent: 'center' },
-  callBtnLabel: { color: '#FFF', fontSize: 16, fontWeight: '500' }
+  infoText: { flex: 1, fontSize: 11, fontWeight: '700', color: COLORS.textDark, lineHeight: 16 }
 });
