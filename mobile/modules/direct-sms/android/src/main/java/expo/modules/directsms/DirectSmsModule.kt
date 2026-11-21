@@ -12,8 +12,13 @@ class DirectSmsModule : Module() {
 
     AsyncFunction("sendDirectSms") { phoneNumber: String, message: String ->
       try {
-        val cleanPhone = phoneNumber.trim().replace(" ", "").replace("-", "")
-        if (cleanPhone.isEmpty()) {
+        val trimmed = phoneNumber.trim()
+        val cleanPhone = if (trimmed.startsWith("+")) {
+          "+" + trimmed.substring(1).filter { it.isDigit() }
+        } else {
+          trimmed.filter { it.isDigit() }
+        }
+        if (cleanPhone.length < 7) {
           return@AsyncFunction false
         }
 
